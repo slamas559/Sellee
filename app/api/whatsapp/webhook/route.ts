@@ -23,6 +23,14 @@ type WebhookPayload = {
   }>;
 };
 
+type WebhookDebugResult = {
+  from: string;
+  body: string;
+  inferred_command: string;
+  status: "ok" | "error";
+  error?: string;
+};
+
 type StoreForCommand = {
   id: string;
   name: string;
@@ -437,6 +445,18 @@ async function handleIncomingText(from: string, body: string) {
   });
 }
 
+function inferCommand(body: string): string {
+  const normalized = body.trim().toUpperCase();
+
+  if (normalized.startsWith("LINK ")) return "LINK";
+  if (normalized.startsWith("CONFIRM ")) return "CONFIRM";
+  if (normalized.startsWith("REJECT ")) return "REJECT";
+  if (normalized === "LIST ORDERS") return "LIST ORDERS";
+  if (normalized === "SALES TODAY") return "SALES TODAY";
+  if (normalized === "LOW STOCK") return "LOW STOCK";
+  return "UNKNOWN";
+}
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const mode = searchParams.get("hub.mode");
@@ -457,8 +477,13 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const debugEnabled =
+    process.env.WHATSAPP_WEBHOOK_DEBUG === "true" ||
+    new URL(request.url).searchParams.get("debug") === "1";
+
   try {
     const payload = (await request.json()) as WebhookPayload;
+    const debugResults: WebhookDebugResult[] = [];
 
     const messages = payload.entry
       ?.flatMap((entry) => entry.changes ?? [])
@@ -466,19 +491,67 @@ export async function POST(request: Request) {
       .filter((message) => message.type === "text" && message.from && message.text?.body);
 
     for (const message of messages ?? []) {
+      const from = String(message.from);
+      const body = String(message.text?.body);
+      const inferredCommand = inferCommand(body);
+
       try {
-        await handleIncomingText(String(message.from), String(message.text?.body));
+        await handleIncomingText(from, body);
+
+        if (debugEnabled) {
+          debugResults.push({
+            from,
+            body,
+            inferred_command: inferredCommand,
+            status: "ok",
+          });
+        }
       } catch (error) {
         logDevError("whatsapp.webhook.message", error, {
-          from: message.from,
-          body: message.text?.body,
+          from,
+          body,
         });
+
+        if (debugEnabled) {
+          debugResults.push({
+            from,
+            body,
+            inferred_command: inferredCommand,
+            status: "error",
+            error:
+              error instanceof Error
+                ? error.message
+                : "Unknown command execution error",
+          });
+        }
       }
+    }
+
+    if (debugEnabled) {
+      return NextResponse.json({
+        received: true,
+        debug: {
+          message_count: messages?.length ?? 0,
+          results: debugResults,
+        },
+      });
     }
 
     return NextResponse.json({ received: true });
   } catch (error) {
     logDevError("whatsapp.webhook.unhandled", error);
+
+    if (debugEnabled) {
+      return NextResponse.json(
+        {
+          received: false,
+          error:
+            error instanceof Error ? error.message : "Unknown webhook parse error",
+        },
+        { status: 200 },
+      );
+    }
+
     return NextResponse.json({ received: false }, { status: 200 });
   }
 }
