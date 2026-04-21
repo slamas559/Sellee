@@ -46,4 +46,18 @@ export async function sendWhatsAppTextMessage({
     const body = await response.text();
     throw new Error(`WhatsApp send failed (${response.status}): ${body}`);
   }
+
+  const payload = (await response.json().catch(() => null)) as
+    | {
+        messages?: Array<{ id?: string }>;
+      }
+    | null;
+
+  if (process.env.NODE_ENV === "development") {
+    const messageId = payload?.messages?.[0]?.id ?? "unknown";
+    console.info("[whatsapp.send.success]", {
+      to: normalizedTo,
+      message_id: messageId,
+    });
+  }
 }
