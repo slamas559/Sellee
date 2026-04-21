@@ -222,26 +222,32 @@ async function findOrderByReference(storeId: string, rawRef: string) {
   const ref = rawRef.toLowerCase();
   const isFullUuid = ref.includes("-") && ref.length >= 30;
 
-  let query = supabase
+  if (isFullUuid) {
+    const { data, error } = await supabase
+      .from("orders")
+      .select("id, status, customer_whatsapp, customer_name, total_amount")
+      .eq("store_id", storeId)
+      .eq("id", ref)
+      .maybeSingle();
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    return data;
+  }
+
+  const { data, error } = await supabase
     .from("orders")
     .select("id, status, customer_whatsapp, customer_name, total_amount")
     .eq("store_id", storeId)
-    .order("created_at", { ascending: false })
-    .limit(1);
-
-  if (isFullUuid) {
-    query = query.eq("id", ref);
-  } else {
-    query = query.like("id", `${ref}%`);
-  }
-
-  const { data, error } = await query.maybeSingle();
+    .order("created_at", { ascending: false });
 
   if (error) {
     throw new Error(error.message);
   }
 
-  return data;
+  return (data ?? []).find((order) => String(order.id).toLowerCase().startsWith(ref)) ?? null;
 }
 
 async function handleConfirmReject(
