@@ -178,7 +178,7 @@ export function ProductShowcaseCard({
             href={`/store/${store.slug}/${product.id}`}
             className={`inline-flex items-center rounded-full px-4 py-2 text-sm font-semibold text-white transition ${ctaClass}`}
           >
-            View Details
+            View
           </Link>
         </div>
       </div>
