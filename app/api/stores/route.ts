@@ -9,6 +9,14 @@ import { createAdminSupabaseClient } from "@/lib/supabase-admin";
 const storeSchema = z.object({
   name: z.string().min(2).max(80),
   whatsapp_number: z.string().min(10).max(20),
+  address_line1: z.string().max(120).optional().or(z.literal("")),
+  city: z.string().max(80).optional().or(z.literal("")),
+  state: z.string().max(80).optional().or(z.literal("")),
+  country: z.string().max(80).optional().or(z.literal("")),
+  latitude: z.number().min(-90).max(90).nullable().optional(),
+  longitude: z.number().min(-180).max(180).nullable().optional(),
+  location_source: z.enum(["manual", "gps"]).nullable().optional(),
+  store_template: z.enum(["classic", "bold", "minimal"]).optional().default("classic"),
   theme_color: z.string().regex(/^#([A-Fa-f0-9]{6})$/),
   logo_url: z.string().url().optional().or(z.literal("")),
   is_active: z.boolean().optional().default(true),
@@ -54,7 +62,7 @@ export async function GET() {
 
   const { data, error } = await supabase
     .from("stores")
-    .select("id, vendor_id, name, slug, logo_url, whatsapp_number, theme_color, is_active, created_at")
+    .select("id, vendor_id, name, slug, logo_url, whatsapp_number, address_line1, city, state, country, latitude, longitude, location_source, store_template, rating_avg, rating_count, theme_color, is_active, created_at")
     .eq("vendor_id", session.user.id)
     .order("created_at", { ascending: false });
 
@@ -101,6 +109,9 @@ export async function POST(request: Request) {
     }
 
     const uniqueSlug = await ensureUniqueSlug(baseSlug, existingStore?.id);
+    const latitude = parsed.data.latitude ?? null;
+    const longitude = parsed.data.longitude ?? null;
+    const locationSource = latitude !== null && longitude !== null ? parsed.data.location_source ?? "manual" : null;
 
     if (existingStore) {
       const { data, error } = await supabase
@@ -109,12 +120,20 @@ export async function POST(request: Request) {
           name: parsed.data.name,
           slug: uniqueSlug,
           whatsapp_number: parsed.data.whatsapp_number,
+          address_line1: parsed.data.address_line1 || null,
+          city: parsed.data.city || null,
+          state: parsed.data.state || null,
+          country: parsed.data.country || null,
+          latitude,
+          longitude,
+          location_source: locationSource,
+          store_template: parsed.data.store_template,
           theme_color: parsed.data.theme_color,
           logo_url: parsed.data.logo_url || null,
           is_active: parsed.data.is_active,
         })
         .eq("id", existingStore.id)
-        .select("id, vendor_id, name, slug, logo_url, whatsapp_number, theme_color, is_active, created_at")
+        .select("id, vendor_id, name, slug, logo_url, whatsapp_number, address_line1, city, state, country, latitude, longitude, location_source, store_template, rating_avg, rating_count, theme_color, is_active, created_at")
         .single();
 
       if (error || !data) {
@@ -132,11 +151,19 @@ export async function POST(request: Request) {
         name: parsed.data.name,
         slug: uniqueSlug,
         whatsapp_number: parsed.data.whatsapp_number,
+        address_line1: parsed.data.address_line1 || null,
+        city: parsed.data.city || null,
+        state: parsed.data.state || null,
+        country: parsed.data.country || null,
+        latitude,
+        longitude,
+        location_source: locationSource,
+        store_template: parsed.data.store_template,
         theme_color: parsed.data.theme_color,
         logo_url: parsed.data.logo_url || null,
         is_active: parsed.data.is_active,
       })
-      .select("id, vendor_id, name, slug, logo_url, whatsapp_number, theme_color, is_active, created_at")
+      .select("id, vendor_id, name, slug, logo_url, whatsapp_number, address_line1, city, state, country, latitude, longitude, location_source, store_template, rating_avg, rating_count, theme_color, is_active, created_at")
       .single();
 
     if (error || !data) {

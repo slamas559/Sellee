@@ -10,6 +10,7 @@ import { createAdminSupabaseClient } from "@/lib/supabase-admin";
 const productSchema = z.object({
   name: z.string().min(2).max(120),
   description: z.string().max(500).optional().default(""),
+  category: z.string().max(50).optional().default(""),
   price: z.number().min(0),
   stock_count: z.number().int().min(0),
   is_available: z.boolean().default(true),
@@ -51,6 +52,15 @@ async function uploadProductImage(vendorId: string, file: File): Promise<string>
   return data.publicUrl;
 }
 
+async function uploadProductImages(vendorId: string, files: File[]): Promise<string[]> {
+  const urls: string[] = [];
+  for (const file of files) {
+    const url = await uploadProductImage(vendorId, file);
+    urls.push(url);
+  }
+  return urls;
+}
+
 export async function GET() {
   const session = await getServerSession(authOptions);
 
@@ -68,7 +78,7 @@ export async function GET() {
     const supabase = createAdminSupabaseClient();
     const { data, error } = await supabase
       .from("products")
-      .select("id, store_id, name, description, price, image_url, stock_count, is_available, created_at")
+      .select("id, store_id, name, description, category, price, image_url, image_urls, rating_avg, rating_count, stock_count, is_available, created_at")
       .eq("store_id", storeId)
       .order("created_at", { ascending: false });
 
@@ -97,6 +107,7 @@ export async function POST(request: Request) {
     const parsed = productSchema.safeParse({
       name: formData.get("name"),
       description: formData.get("description") ?? "",
+      category: formData.get("category") ?? "",
       price: Number(formData.get("price")),
       stock_count: Number(formData.get("stock_count")),
       is_available: formData.get("is_available") === "true",
@@ -115,12 +126,17 @@ export async function POST(request: Request) {
       );
     }
 
-    const imageInput = formData.get("image");
-    let imageUrl: string | null = null;
-
-    if (imageInput instanceof File && imageInput.size > 0) {
-      imageUrl = await uploadProductImage(session.user.id, imageInput);
+    const imageFiles = formData
+      .getAll("images")
+      .filter((value): value is File => value instanceof File && value.size > 0);
+    const legacySingleImage = formData.get("image");
+    if (legacySingleImage instanceof File && legacySingleImage.size > 0) {
+      imageFiles.push(legacySingleImage);
     }
+
+    const uploadedImageUrls =
+      imageFiles.length > 0 ? await uploadProductImages(session.user.id, imageFiles) : [];
+    const imageUrl = uploadedImageUrls[0] ?? null;
 
     const supabase = createAdminSupabaseClient();
 
@@ -130,12 +146,14 @@ export async function POST(request: Request) {
         store_id: storeId,
         name: parsed.data.name,
         description: parsed.data.description || null,
+        category: parsed.data.category || null,
         price: parsed.data.price,
         image_url: imageUrl,
+        image_urls: uploadedImageUrls,
         stock_count: parsed.data.stock_count,
         is_available: parsed.data.is_available,
       })
-      .select("id, store_id, name, description, price, image_url, stock_count, is_available, created_at")
+      .select("id, store_id, name, description, category, price, image_url, image_urls, rating_avg, rating_count, stock_count, is_available, created_at")
       .single();
 
     if (error || !data) {

@@ -87,6 +87,7 @@ async function createOrUpdateVendorStore(params: {
     name: storeName,
     slug,
     whatsapp_number: params.phone,
+    store_template: "classic",
     theme_color: "#0ea5e9",
     is_active: true,
   });

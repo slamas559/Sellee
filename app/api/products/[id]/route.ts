@@ -9,6 +9,7 @@ import { createAdminSupabaseClient } from "@/lib/supabase-admin";
 const updateSchema = z.object({
   name: z.string().min(2).max(120),
   description: z.string().max(500).optional().default(""),
+  category: z.string().max(50).optional().default(""),
   price: z.number().min(0),
   stock_count: z.number().int().min(0),
   is_available: z.boolean().default(true),
@@ -51,6 +52,15 @@ async function uploadProductImage(vendorId: string, file: File): Promise<string>
   return data.publicUrl;
 }
 
+async function uploadProductImages(vendorId: string, files: File[]): Promise<string[]> {
+  const urls: string[] = [];
+  for (const file of files) {
+    const url = await uploadProductImage(vendorId, file);
+    urls.push(url);
+  }
+  return urls;
+}
+
 export async function PATCH(
   request: Request,
   context: { params: Promise<{ id: string }> },
@@ -68,6 +78,7 @@ export async function PATCH(
     const parsed = updateSchema.safeParse({
       name: formData.get("name"),
       description: formData.get("description") ?? "",
+      category: formData.get("category") ?? "",
       price: Number(formData.get("price")),
       stock_count: Number(formData.get("stock_count")),
       is_available: formData.get("is_available") === "true",
@@ -88,7 +99,7 @@ export async function PATCH(
 
     const { data: existingProduct, error: existingProductError } = await supabase
       .from("products")
-      .select("id, store_id, image_url")
+      .select("id, store_id, image_url, image_urls")
       .eq("id", id)
       .eq("store_id", storeId)
       .maybeSingle();
@@ -102,15 +113,27 @@ export async function PATCH(
       return NextResponse.json({ error: "Product not found." }, { status: 404 });
     }
 
-    const imageInput = formData.get("image");
+    const imageFiles = formData
+      .getAll("images")
+      .filter((value): value is File => value instanceof File && value.size > 0);
+    const legacySingleImage = formData.get("image");
+    if (legacySingleImage instanceof File && legacySingleImage.size > 0) {
+      imageFiles.push(legacySingleImage);
+    }
+
     let imageUrl: string | null = existingProduct.image_url;
+    let imageUrls: string[] = Array.isArray(existingProduct.image_urls)
+      ? existingProduct.image_urls.filter((item): item is string => typeof item === "string")
+      : [];
 
     if (parsed.data.remove_image) {
       imageUrl = null;
+      imageUrls = [];
     }
 
-    if (imageInput instanceof File && imageInput.size > 0) {
-      imageUrl = await uploadProductImage(session.user.id, imageInput);
+    if (imageFiles.length > 0) {
+      imageUrls = await uploadProductImages(session.user.id, imageFiles);
+      imageUrl = imageUrls[0] ?? null;
     }
 
     const { data, error } = await supabase
@@ -118,14 +141,16 @@ export async function PATCH(
       .update({
         name: parsed.data.name,
         description: parsed.data.description || null,
+        category: parsed.data.category || null,
         price: parsed.data.price,
         stock_count: parsed.data.stock_count,
         is_available: parsed.data.is_available,
         image_url: imageUrl,
+        image_urls: imageUrls,
       })
       .eq("id", id)
       .eq("store_id", storeId)
-      .select("id, store_id, name, description, price, image_url, stock_count, is_available, created_at")
+      .select("id, store_id, name, description, category, price, image_url, image_urls, rating_avg, rating_count, stock_count, is_available, created_at")
       .single();
 
     if (error || !data) {

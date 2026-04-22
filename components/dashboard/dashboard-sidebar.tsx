@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { SignOutButton } from "@/components/auth/sign-out-button";
 
 type DashboardSidebarProps = {
@@ -7,19 +10,23 @@ type DashboardSidebarProps = {
 
 const navItems = [
   { href: "/dashboard", label: "Overview" },
+  { href: "/dashboard/store", label: "Storefront" },
   { href: "/dashboard/products", label: "Products" },
   { href: "/dashboard/orders", label: "Orders" },
   { href: "/dashboard/analytics", label: "Analytics" },
+  { href: "/dashboard/integrations", label: "Integrations" },
 ];
 
 export function DashboardSidebar({ email }: DashboardSidebarProps) {
+  const pathname = usePathname();
+
   return (
-    <aside className="w-full rounded-xl border border-slate-200 bg-white p-5 shadow-sm lg:sticky lg:top-6 lg:w-72 lg:self-start">
+    <aside className="w-full rounded-2xl border border-emerald-100 bg-white p-5 shadow-sm lg:sticky lg:top-6 lg:w-72 lg:self-start">
       <div>
-        <p className="text-xs font-semibold uppercase tracking-wide text-sky-700">
+        <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
           Sellee
         </p>
-        <h2 className="mt-1 text-lg font-semibold text-slate-900">Dashboard</h2>
+        <h2 className="mt-1 text-lg font-semibold text-slate-900">Vendor Console</h2>
         <p className="mt-1 break-all text-xs text-slate-500">{email ?? "Vendor"}</p>
       </div>
 
@@ -28,7 +35,11 @@ export function DashboardSidebar({ email }: DashboardSidebarProps) {
           <Link
             key={item.href}
             href={item.href}
-            className="block rounded-md px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
+            className={`block rounded-lg px-3 py-2 text-sm font-medium transition ${
+              pathname === item.href
+                ? "bg-emerald-600 text-white"
+                : "text-slate-700 hover:bg-emerald-50 hover:text-emerald-700"
+            }`}
           >
             {item.label}
           </Link>

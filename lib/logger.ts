@@ -1,4 +1,5 @@
 const isDevelopment = process.env.NODE_ENV === "development";
+const observabilityEnabled = process.env.OBSERVABILITY_LOGS !== "false";
 
 export function logDevError(scope: string, error: unknown, metadata?: unknown) {
   if (!isDevelopment) {
@@ -18,4 +19,12 @@ export function logDevError(scope: string, error: unknown, metadata?: unknown) {
     error: serializedError,
     metadata,
   });
+}
+
+export function logServerInfo(scope: string, metadata?: unknown) {
+  if (!observabilityEnabled) {
+    return;
+  }
+
+  console.info(`[${scope}]`, metadata ?? {});
 }

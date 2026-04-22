@@ -13,20 +13,22 @@ type ProductsResponse = {
 type ProductFormState = {
   name: string;
   description: string;
+  category: string;
   price: string;
   stock_count: string;
   is_available: boolean;
-  image: File | null;
+  images: File[];
   remove_image: boolean;
 };
 
 const initialForm: ProductFormState = {
   name: "",
   description: "",
+  category: "",
   price: "",
   stock_count: "0",
   is_available: true,
-  image: null,
+  images: [],
   remove_image: false,
 };
 
@@ -68,10 +70,11 @@ export function ProductsManager({ initialProducts }: ProductsManagerProps) {
     setForm({
       name: product.name,
       description: product.description ?? "",
+      category: product.category ?? "",
       price: String(product.price),
       stock_count: String(product.stock_count),
       is_available: product.is_available,
-      image: null,
+      images: [],
       remove_image: false,
     });
     setMessage(null);
@@ -113,13 +116,14 @@ export function ProductsManager({ initialProducts }: ProductsManagerProps) {
     const body = new FormData();
     body.append("name", form.name);
     body.append("description", form.description);
+    body.append("category", form.category);
     body.append("price", String(priceNumber));
     body.append("stock_count", String(stockNumber));
     body.append("is_available", String(form.is_available));
     body.append("remove_image", String(form.remove_image));
 
-    if (form.image) {
-      body.append("image", form.image);
+    for (const image of form.images) {
+      body.append("images", image);
     }
 
     const isEditing = Boolean(editingProductId);
@@ -182,7 +186,7 @@ export function ProductsManager({ initialProducts }: ProductsManagerProps) {
   return (
     <div className="space-y-6">
       <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-        <p className="text-sm font-medium text-sky-700">Product Form</p>
+        <p className="text-sm font-medium text-emerald-700">Product Form</p>
         <h2 className="mt-1 text-xl font-semibold text-slate-900">
           {editingProductId ? "Edit product" : "Add product"}
         </h2>
@@ -194,7 +198,7 @@ export function ProductsManager({ initialProducts }: ProductsManagerProps) {
               required
               value={form.name}
               onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
-              className="w-full rounded-md border border-slate-200 px-3 py-2 outline-none ring-sky-300 focus:ring-2"
+              className="w-full rounded-md border border-slate-200 px-3 py-2 outline-none ring-emerald-300 focus:ring-2"
               placeholder="Jollof Rice"
             />
           </label>
@@ -207,7 +211,7 @@ export function ProductsManager({ initialProducts }: ProductsManagerProps) {
               required
               value={form.price}
               onChange={(event) => setForm((prev) => ({ ...prev, price: event.target.value }))}
-              className="w-full rounded-md border border-slate-200 px-3 py-2 outline-none ring-sky-300 focus:ring-2"
+              className="w-full rounded-md border border-slate-200 px-3 py-2 outline-none ring-emerald-300 focus:ring-2"
               placeholder="1500"
             />
           </label>
@@ -219,8 +223,18 @@ export function ProductsManager({ initialProducts }: ProductsManagerProps) {
               onChange={(event) =>
                 setForm((prev) => ({ ...prev, description: event.target.value }))
               }
-              className="min-h-24 w-full rounded-md border border-slate-200 px-3 py-2 outline-none ring-sky-300 focus:ring-2"
+              className="min-h-24 w-full rounded-md border border-slate-200 px-3 py-2 outline-none ring-emerald-300 focus:ring-2"
               placeholder="Short description for customers"
+            />
+          </label>
+
+          <label className="space-y-2 text-sm">
+            <span className="font-medium text-slate-700">Category (optional)</span>
+            <input
+              value={form.category}
+              onChange={(event) => setForm((prev) => ({ ...prev, category: event.target.value }))}
+              className="w-full rounded-md border border-slate-200 px-3 py-2 outline-none ring-emerald-300 focus:ring-2"
+              placeholder="Groceries"
             />
           </label>
 
@@ -234,7 +248,7 @@ export function ProductsManager({ initialProducts }: ProductsManagerProps) {
               onChange={(event) =>
                 setForm((prev) => ({ ...prev, stock_count: event.target.value }))
               }
-              className="w-full rounded-md border border-slate-200 px-3 py-2 outline-none ring-sky-300 focus:ring-2"
+              className="w-full rounded-md border border-slate-200 px-3 py-2 outline-none ring-emerald-300 focus:ring-2"
             />
           </label>
 
@@ -243,14 +257,18 @@ export function ProductsManager({ initialProducts }: ProductsManagerProps) {
             <input
               type="file"
               accept="image/*"
+              multiple
               onChange={(event) =>
                 setForm((prev) => ({
                   ...prev,
-                  image: event.target.files?.[0] ?? null,
+                  images: Array.from(event.target.files ?? []),
                 }))
               }
               className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm"
             />
+            {form.images.length > 0 ? (
+              <p className="text-xs text-slate-500">{form.images.length} image(s) selected.</p>
+            ) : null}
           </label>
 
           <label className="flex items-center gap-2 text-sm text-slate-700">
@@ -293,7 +311,7 @@ export function ProductsManager({ initialProducts }: ProductsManagerProps) {
             <button
               type="submit"
               disabled={isSaving}
-              className="rounded-md bg-sky-600 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-700 disabled:opacity-60"
+              className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
             >
               {isSaving
                 ? "Saving..."
@@ -318,7 +336,7 @@ export function ProductsManager({ initialProducts }: ProductsManagerProps) {
       <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="mb-4 flex items-center justify-between gap-2">
           <div>
-            <p className="text-sm font-medium text-sky-700">Products</p>
+            <p className="text-sm font-medium text-emerald-700">Products</p>
             <h2 className="mt-1 text-xl font-semibold text-slate-900">Your product list</h2>
           </div>
           <button
@@ -362,6 +380,9 @@ export function ProductsManager({ initialProducts }: ProductsManagerProps) {
                 <p className="mt-1 text-sm font-medium text-slate-700">
                   {formatNaira(Number(product.price))}
                 </p>
+                {product.category ? (
+                  <p className="mt-1 text-xs text-slate-500">Category: {product.category}</p>
+                ) : null}
                 <p className="mt-1 text-xs text-slate-500">Stock: {product.stock_count}</p>
                 <p className="mt-1 text-xs text-slate-500">
                   Status: {product.is_available ? "Available" : "Unavailable"}

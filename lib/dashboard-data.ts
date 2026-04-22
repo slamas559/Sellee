@@ -6,7 +6,7 @@ export async function getVendorStore(vendorId: string): Promise<StoreRecord | nu
 
   const { data } = await supabase
     .from("stores")
-    .select("id, vendor_id, name, slug, logo_url, whatsapp_number, theme_color, is_active, created_at")
+    .select("id, vendor_id, name, slug, logo_url, whatsapp_number, address_line1, city, state, country, latitude, longitude, location_source, store_template, rating_avg, rating_count, theme_color, is_active, created_at")
     .eq("vendor_id", vendorId)
     .order("created_at", { ascending: false })
     .limit(1)
@@ -26,7 +26,7 @@ export async function getVendorProducts(vendorId: string): Promise<ProductRecord
 
   const { data } = await supabase
     .from("products")
-    .select("id, store_id, name, description, price, image_url, stock_count, is_available, created_at")
+    .select("id, store_id, name, description, category, price, image_url, image_urls, rating_avg, rating_count, stock_count, is_available, created_at")
     .eq("store_id", store.id)
     .order("created_at", { ascending: false });
 

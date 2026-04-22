@@ -19,22 +19,40 @@ create table if not exists public.stores (
   slug text unique not null,
   logo_url text,
   whatsapp_number text not null,
+  address_line1 text,
+  city text,
+  state text,
+  country text,
+  latitude numeric(9,6),
+  longitude numeric(9,6),
+  location_source text check (location_source in ('manual', 'gps')),
+  store_template text not null default 'classic' check (store_template in ('classic', 'bold', 'minimal')),
+  rating_avg numeric(3,2) not null default 0 check (rating_avg >= 0 and rating_avg <= 5),
+  rating_count integer not null default 0 check (rating_count >= 0),
   theme_color text default '#0ea5e9',
   is_active boolean not null default true,
   created_at timestamptz not null default now()
 );
+
+create index if not exists idx_stores_lat_lng on public.stores (latitude, longitude);
 
 create table if not exists public.products (
   id uuid primary key default gen_random_uuid(),
   store_id uuid not null references public.stores(id) on delete cascade,
   name text not null,
   description text,
+  category text,
   price numeric(12, 2) not null check (price >= 0),
   image_url text,
+  image_urls text[] not null default '{}',
+  rating_avg numeric(3,2) not null default 0 check (rating_avg >= 0 and rating_avg <= 5),
+  rating_count integer not null default 0 check (rating_count >= 0),
   stock_count integer not null default 0 check (stock_count >= 0),
   is_available boolean not null default true,
   created_at timestamptz not null default now()
 );
+
+create index if not exists idx_products_category on public.products (category);
 
 create table if not exists public.orders (
   id uuid primary key default gen_random_uuid(),
@@ -81,6 +99,28 @@ create table if not exists public.broadcasts (
   created_at timestamptz not null default now()
 );
 
+create table if not exists public.vendor_reviews (
+  id uuid primary key default gen_random_uuid(),
+  store_id uuid not null references public.stores(id) on delete cascade,
+  reviewer_name text not null,
+  rating integer not null check (rating between 1 and 5),
+  comment text,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.product_reviews (
+  id uuid primary key default gen_random_uuid(),
+  product_id uuid not null references public.products(id) on delete cascade,
+  store_id uuid not null references public.stores(id) on delete cascade,
+  reviewer_name text not null,
+  rating integer not null check (rating between 1 and 5),
+  comment text,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists idx_vendor_reviews_store_id on public.vendor_reviews (store_id, created_at desc);
+create index if not exists idx_product_reviews_product_id on public.product_reviews (product_id, created_at desc);
+
 -- RLS setup
 alter table public.users enable row level security;
 alter table public.stores enable row level security;
@@ -90,6 +130,8 @@ alter table public.order_items enable row level security;
 alter table public.payments enable row level security;
 alter table public.reviews enable row level security;
 alter table public.broadcasts enable row level security;
+alter table public.vendor_reviews enable row level security;
+alter table public.product_reviews enable row level security;
 
 -- Basic policies for authenticated reads/writes in Supabase context.
 -- These policies are intentionally strict and can be expanded in later phases.
@@ -237,3 +279,13 @@ using (
     and s.is_active = true
   )
 );
+
+drop policy if exists "vendor_reviews_public_read" on public.vendor_reviews;
+create policy "vendor_reviews_public_read"
+on public.vendor_reviews for select
+using (true);
+
+drop policy if exists "product_reviews_public_read" on public.product_reviews;
+create policy "product_reviews_public_read"
+on public.product_reviews for select
+using (true);

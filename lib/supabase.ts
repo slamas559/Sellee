@@ -1,9 +1,12 @@
 import { createClient } from "@supabase/supabase-js";
-import { getRequiredEnv } from "@/lib/env";
+import { getRequiredEnv, getRequiredEnvAny } from "@/lib/env";
 
 export function createBrowserSupabaseClient() {
   return createClient(
     getRequiredEnv("NEXT_PUBLIC_SUPABASE_URL"),
-    getRequiredEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY"),
+    getRequiredEnvAny([
+      "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
+      "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+    ]),
   );
 }

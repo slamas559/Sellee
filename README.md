@@ -29,8 +29,8 @@ cp .env.example .env.local
 Required keys:
 
 - `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- `SUPABASE_SERVICE_ROLE_KEY`
+- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+- `SUPABASE_SECRET_KEY`
 - `NEXTAUTH_SECRET`
 - `NEXTAUTH_URL`
 
@@ -45,15 +45,20 @@ Required for Meta WhatsApp Cloud API:
 - `WHATSAPP_PHONE_NUMBER_ID`
 - `WHATSAPP_WEBHOOK_VERIFY_TOKEN`
 - `WHATSAPP_API_VERSION` (default `v20.0`)
+- `OBSERVABILITY_LOGS` (optional, default `true`)
 
 ## 3) Configure Supabase
 
 Run SQL files in Supabase SQL editor in this order:
 
 1. `supabase/schema.sql`
-2. `supabase/storage.sql`
-3. `supabase/whatsapp-linking.sql`
-4. `supabase/seed.sql` (optional)
+2. `supabase/location.sql` (for existing projects only)
+3. `supabase/marketplace.sql` (for existing projects only)
+4. `supabase/product-media-ratings.sql` (for existing projects only)
+5. `supabase/store-templates.sql` (for existing projects only)
+6. `supabase/storage.sql`
+7. `supabase/whatsapp-linking.sql`
+8. `supabase/seed.sql` (optional)
 
 ## 4) Run Development Server
 
@@ -69,6 +74,7 @@ npm run dev
 - `/dashboard/products`
 - `/dashboard/orders`
 - `/dashboard/analytics`
+- `/marketplace`
 - `/store/[slug]`
 - `/store/[slug]/[productId]`
 
@@ -78,8 +84,12 @@ npm run dev
 - `GET /api/debug/store`
 - `GET/POST /api/stores`
 - `GET/POST /api/products`
+- `GET /api/products/search`
 - `PATCH/DELETE /api/products/:id`
 - `POST /api/orders`
+- `GET /api/vendors/nearby`
+- `GET/POST /api/reviews/product`
+- `GET/POST /api/reviews/vendor`
 - `GET/POST /api/whatsapp/webhook`
 - `GET/POST /api/whatsapp/link`
 
@@ -91,4 +101,7 @@ npm run dev
 - WhatsApp order button now logs a `pending_whatsapp` order before opening `wa.me`.
 - Webhook supports vendor bot commands: `LIST ORDERS`, `SALES TODAY`, `LOW STOCK`, `CONFIRM <ORDER_REF>`, `REJECT <ORDER_REF>`.
 - Vendors can now generate a link code in dashboard and connect their WhatsApp by sending `LINK <CODE>` to the business number.
+- `GET /api/health` now checks both Supabase DB connectivity and WhatsApp config sanity.
+- `POST /api/whatsapp/webhook?debug=1` debug response is development-only.
+- Vendors can choose storefront template styles: `classic`, `bold`, `minimal`.
 

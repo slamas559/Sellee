@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { formatNaira } from "@/lib/format";
-import { logDevError } from "@/lib/logger";
+import { logDevError, logServerInfo } from "@/lib/logger";
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
 import { normalizeWhatsAppNumber } from "@/lib/whatsapp";
 import { sendWhatsAppTextMessage } from "@/lib/whatsapp-cloud";
@@ -29,6 +29,12 @@ type WebhookDebugResult = {
   inferred_command: string;
   status: "ok" | "error";
   error?: string;
+};
+
+type WebhookStatusEvent = {
+  id?: string;
+  status?: string;
+  recipient_id?: string;
 };
 
 type StoreForCommand = {
@@ -476,25 +482,42 @@ export async function GET(request: Request) {
   }
 
   if (mode === "subscribe" && token === verifyToken && challenge) {
+    logServerInfo("whatsapp.webhook.verify.ok");
     return new Response(challenge, { status: 200 });
   }
 
+  logServerInfo("whatsapp.webhook.verify.forbidden", {
+    mode,
+    hasToken: Boolean(token),
+  });
   return new Response("Forbidden", { status: 403 });
 }
 
 export async function POST(request: Request) {
-  const debugEnabled =
-    process.env.WHATSAPP_WEBHOOK_DEBUG === "true" ||
-    new URL(request.url).searchParams.get("debug") === "1";
+  const query = new URL(request.url).searchParams;
+  const debugRequested = query.get("debug") === "1";
+  const debugAllowed =
+    process.env.NODE_ENV === "development" ||
+    process.env.WHATSAPP_WEBHOOK_DEBUG === "true";
+  const debugEnabled = debugRequested && debugAllowed;
 
   try {
     const payload = (await request.json()) as WebhookPayload;
     const debugResults: WebhookDebugResult[] = [];
+    const rawChanges = payload.entry?.flatMap((entry) => entry.changes ?? []) ?? [];
 
-    const messages = payload.entry
-      ?.flatMap((entry) => entry.changes ?? [])
+    const messages = rawChanges
       .flatMap((change) => change.value?.messages ?? [])
       .filter((message) => message.type === "text" && message.from && message.text?.body);
+    const statusEvents = rawChanges.flatMap(
+      (change) =>
+        ((change.value as { statuses?: WebhookStatusEvent[] } | undefined)?.statuses ?? []),
+    );
+
+    logServerInfo("whatsapp.webhook.received", {
+      message_count: messages?.length ?? 0,
+      status_count: statusEvents.length,
+    });
 
     for (const message of messages ?? []) {
       const from = String(message.from);
@@ -503,6 +526,10 @@ export async function POST(request: Request) {
 
       try {
         await handleIncomingText(from, body);
+        logServerInfo("whatsapp.webhook.message.ok", {
+          from,
+          command: inferredCommand,
+        });
 
         if (debugEnabled) {
           debugResults.push({
@@ -516,6 +543,11 @@ export async function POST(request: Request) {
         logDevError("whatsapp.webhook.message", error, {
           from,
           body,
+        });
+        logServerInfo("whatsapp.webhook.message.error", {
+          from,
+          command: inferredCommand,
+          error: error instanceof Error ? error.message : "Unknown error",
         });
 
         if (debugEnabled) {
@@ -534,18 +566,37 @@ export async function POST(request: Request) {
     }
 
     if (debugEnabled) {
+      const debugInfo = {
+        message_count: messages?.length ?? 0,
+        status_count: statusEvents.length,
+        reasons:
+          (messages?.length ?? 0) === 0
+            ? [
+                statusEvents.length > 0
+                  ? "Payload contains WhatsApp status events but no inbound text messages."
+                  : "No supported text messages found in payload.",
+              ]
+            : [],
+        results: debugResults,
+        status_events: statusEvents.map((event) => ({
+          status: event.status ?? null,
+          recipient_id: event.recipient_id ?? null,
+          id: event.id ?? null,
+        })),
+      };
+
       return NextResponse.json({
         received: true,
-        debug: {
-          message_count: messages?.length ?? 0,
-          results: debugResults,
-        },
+        debug: debugInfo,
       });
     }
 
     return NextResponse.json({ received: true });
   } catch (error) {
     logDevError("whatsapp.webhook.unhandled", error);
+    logServerInfo("whatsapp.webhook.unhandled", {
+      error: error instanceof Error ? error.message : "Unknown parse error",
+    });
 
     if (debugEnabled) {
       return NextResponse.json(

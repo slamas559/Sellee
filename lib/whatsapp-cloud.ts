@@ -1,4 +1,5 @@
 import { getRequiredEnv } from "@/lib/env";
+import { logServerInfo } from "@/lib/logger";
 import { normalizeWhatsAppNumber } from "@/lib/whatsapp";
 
 type SendWhatsAppTextMessageParams = {
@@ -44,6 +45,10 @@ export async function sendWhatsAppTextMessage({
 
   if (!response.ok) {
     const body = await response.text();
+    logServerInfo("whatsapp.send.error", {
+      to: normalizedTo,
+      status: response.status,
+    });
     throw new Error(`WhatsApp send failed (${response.status}): ${body}`);
   }
 
@@ -53,11 +58,9 @@ export async function sendWhatsAppTextMessage({
       }
     | null;
 
-  if (process.env.NODE_ENV === "development") {
-    const messageId = payload?.messages?.[0]?.id ?? "unknown";
-    console.info("[whatsapp.send.success]", {
-      to: normalizedTo,
-      message_id: messageId,
-    });
-  }
+  const messageId = payload?.messages?.[0]?.id ?? "unknown";
+  logServerInfo("whatsapp.send.success", {
+    to: normalizedTo,
+    message_id: messageId,
+  });
 }

@@ -7,3 +7,16 @@ export function getRequiredEnv(name: string): string {
 
   return value;
 }
+
+export function getRequiredEnvAny(names: string[]): string {
+  for (const name of names) {
+    const value = process.env[name];
+    if (value) {
+      return value;
+    }
+  }
+
+  throw new Error(
+    `Missing required environment variable. Set one of: ${names.join(", ")}`,
+  );
+}
