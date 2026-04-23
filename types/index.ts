@@ -1,5 +1,28 @@
 export type UserRole = "vendor" | "customer";
-export type StoreTemplate = "classic" | "bold" | "minimal";
+export type StoreTemplate =
+  | "grocery_promo"
+  | "fashion_editorial"
+  | "lifestyle_showcase"
+  | "modern_grid"
+  | "classic"
+  | "bold"
+  | "minimal";
+
+export type StoreThemePreset =
+  | "emerald_fresh"
+  | "sunlit_market"
+  | "midnight_luxe"
+  | "ocean_breeze"
+  | "rose_boutique";
+
+export type StorefrontConfig = {
+  hero_title: string;
+  hero_subtitle: string;
+  hero_cta_text: string;
+  hero_image_url: string;
+  promo_text: string;
+  secondary_banner_url: string;
+};
 
 export type StoreRecord = {
   id: string;
@@ -16,6 +39,8 @@ export type StoreRecord = {
   longitude: number | null;
   location_source: "manual" | "gps" | null;
   store_template: StoreTemplate;
+  store_theme_preset: StoreThemePreset;
+  storefront_config: StorefrontConfig | null;
   rating_avg: number | null;
   rating_count: number;
   theme_color: string | null;

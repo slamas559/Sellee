@@ -6,7 +6,7 @@ export async function getVendorStore(vendorId: string): Promise<StoreRecord | nu
 
   const { data } = await supabase
     .from("stores")
-    .select("id, vendor_id, name, slug, logo_url, whatsapp_number, address_line1, city, state, country, latitude, longitude, location_source, store_template, rating_avg, rating_count, theme_color, is_active, created_at")
+    .select("id, vendor_id, name, slug, logo_url, whatsapp_number, address_line1, city, state, country, latitude, longitude, location_source, store_template, store_theme_preset, storefront_config, rating_avg, rating_count, theme_color, is_active, created_at")
     .eq("vendor_id", vendorId)
     .order("created_at", { ascending: false })
     .limit(1)

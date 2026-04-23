@@ -1,36 +1,309 @@
 "use client";
 
-import { useState } from "react";
-import type { StoreRecord } from "@/types";
+import { useEffect, useMemo, useState } from "react";
+import {
+  DEFAULT_STOREFRONT_CONFIG,
+  STOREFRONT_TEMPLATE_OPTIONS,
+  STOREFRONT_THEME_PRESETS,
+  normalizeStoreTemplate,
+  normalizeStorefrontConfig,
+  normalizeThemePreset,
+} from "@/lib/storefront";
+import type { StoreRecord, StoreTemplate } from "@/types";
 
 type StoreSetupFormProps = {
   initialStore: StoreRecord | null;
 };
 
-const TEMPLATE_OPTIONS = [
-  {
-    key: "classic" as const,
-    label: "Classic",
-    description: "Balanced hero + grid layout for general stores.",
-    previewClass: "from-white via-emerald-50 to-amber-50",
-  },
-  {
-    key: "bold" as const,
-    label: "Bold",
-    description: "Stronger visuals, high-contrast sections, statement cards.",
-    previewClass: "from-slate-900 via-slate-800 to-emerald-900",
-  },
-  {
-    key: "minimal" as const,
-    label: "Minimal",
-    description: "Clean product-first layout with subtle UI chrome.",
-    previewClass: "from-white via-slate-50 to-white",
-  },
+type UploadKind = "logo" | "hero" | "banner";
+
+type UploadState = {
+  isUploading: boolean;
+  progress: number;
+  fileName: string | null;
+  error: string | null;
+};
+
+const INITIAL_UPLOAD_STATE: UploadState = {
+  isUploading: false,
+  progress: 0,
+  fileName: null,
+  error: null,
+};
+
+const PREVIEW_PRODUCTS = [
+  { name: "Eco Flask", price: "NGN 14,500" },
+  { name: "Kitchen Set", price: "NGN 22,000" },
+  { name: "Daily Essentials", price: "NGN 8,900" },
+  { name: "Smart Organizer", price: "NGN 12,300" },
 ];
 
+function useObjectUrl(file: File | null, fallback: string): string {
+  const [url, setUrl] = useState(fallback);
+
+  useEffect(() => {
+    if (!file) {
+      setUrl(fallback);
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(file);
+    setUrl(objectUrl);
+
+    return () => {
+      URL.revokeObjectURL(objectUrl);
+    };
+  }, [file, fallback]);
+
+  return url;
+}
+
+function UploadDropzone({
+  title,
+  hint,
+  onFile,
+  state,
+}: {
+  title: string;
+  hint: string;
+  onFile: (file: File) => void;
+  state: UploadState;
+}) {
+  function handleDrop(event: React.DragEvent<HTMLLabelElement>) {
+    event.preventDefault();
+    const file = event.dataTransfer.files?.[0] ?? null;
+    if (file) onFile(file);
+  }
+
+  function handleChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0] ?? null;
+    if (file) onFile(file);
+  }
+
+  return (
+    <label
+      onDragOver={(event) => event.preventDefault()}
+      onDrop={handleDrop}
+      className="flex min-h-36 cursor-pointer flex-col justify-between rounded-xl border border-dashed border-slate-300 bg-white p-3 text-sm transition hover:border-emerald-400 hover:bg-emerald-50/30"
+    >
+      <div className="space-y-1">
+        <span className="block font-medium text-slate-700">{title}</span>
+        <span className="block text-xs text-slate-500">{hint}</span>
+      </div>
+      <input type="file" accept="image/*" onChange={handleChange} className="hidden" />
+      <div className="space-y-2">
+        {state.fileName ? (
+          <p className="line-clamp-1 text-xs font-medium text-slate-700">{state.fileName}</p>
+        ) : (
+          <p className="text-xs text-slate-400">Drop file here or click to browse</p>
+        )}
+      </div>
+      {state.isUploading ? (
+        <div className="space-y-1">
+          <div className="h-2 w-full rounded-full bg-slate-100">
+            <div
+              className="h-2 rounded-full bg-emerald-500 transition-all"
+              style={{ width: `${state.progress}%` }}
+            />
+          </div>
+          <p className="text-[11px] text-slate-500">{state.progress}% uploading...</p>
+        </div>
+      ) : null}
+      {state.error ? <p className="text-xs font-medium text-red-600">{state.error}</p> : null}
+    </label>
+  );
+}
+
+function PreviewImage({
+  src,
+  alt,
+  className,
+}: {
+  src: string;
+  alt: string;
+  className?: string;
+}) {
+  if (!src) {
+    return (
+      <div className={`flex items-center justify-center bg-white/60 text-xs text-slate-500 ${className ?? ""}`}>
+        Add image
+      </div>
+    );
+  }
+
+  return <img src={src} alt={alt} className={`h-full w-full object-contain ${className ?? ""}`} />;
+}
+
+function LiveStorefrontPreview(props: {
+  template: StoreTemplate;
+  viewport?: "desktop" | "phone";
+  storeName: string;
+  promoText: string;
+  heroTitle: string;
+  heroSubtitle: string;
+  heroCtaText: string;
+  heroImageUrl: string;
+  secondaryBannerUrl: string;
+  primaryColor: string;
+  accentColor: string;
+  surfaceColor: string;
+}) {
+  const {
+    template,
+    viewport = "desktop",
+    storeName,
+    promoText,
+    heroTitle,
+    heroSubtitle,
+    heroCtaText,
+    heroImageUrl,
+    secondaryBannerUrl,
+    primaryColor,
+    accentColor,
+    surfaceColor,
+  } = props;
+  const isPhone = viewport === "phone";
+
+  if (template === "fashion_editorial") {
+    return (
+      <div className="space-y-3 rounded-xl border border-slate-200 bg-white p-3">
+        <div className="flex items-center justify-between">
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">{storeName || "Store"}</p>
+          <span className="rounded-full border border-slate-200 px-2 py-0.5 text-[10px] text-slate-600">Live preview</span>
+        </div>
+        <div className={`grid gap-3 ${isPhone ? "grid-cols-1" : "md:grid-cols-[1.3fr_1fr]"}`}>
+          <div className="overflow-hidden rounded-lg border border-slate-200 bg-slate-100">
+            <PreviewImage src={heroImageUrl} alt="Hero" className={isPhone ? "h-44" : "h-44 md:h-52"} />
+          </div>
+          <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">{promoText}</p>
+            <h4 className="mt-2 line-clamp-2 text-lg font-black text-slate-900">{heroTitle}</h4>
+            <p className="mt-2 line-clamp-3 text-xs text-slate-600">{heroSubtitle}</p>
+            <button
+              type="button"
+              className="mt-3 rounded-full px-3 py-1.5 text-xs font-semibold text-white"
+              style={{ backgroundColor: primaryColor }}
+            >
+              {heroCtaText}
+            </button>
+          </div>
+        </div>
+        <div className={`grid gap-2 ${isPhone ? "grid-cols-2" : "grid-cols-2 sm:grid-cols-4"}`}>
+          {PREVIEW_PRODUCTS.map((product) => (
+            <article key={product.name} className="rounded-lg border border-slate-200 p-2">
+              <p className="line-clamp-1 text-xs font-semibold text-slate-900">{product.name}</p>
+              <p className="mt-1 text-[11px] text-slate-600">{product.price}</p>
+            </article>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (template === "lifestyle_showcase") {
+    return (
+      <div className="space-y-3 rounded-xl border border-slate-200 p-3" style={{ backgroundColor: surfaceColor }}>
+        <div className={`grid gap-3 ${isPhone ? "grid-cols-1" : "lg:grid-cols-[1.4fr_1fr]"}`}>
+          <div className="rounded-lg bg-white/80 p-3">
+            <p className="text-xs font-semibold" style={{ color: primaryColor }}>{promoText}</p>
+            <h4 className="mt-2 line-clamp-2 text-xl font-black text-slate-900">{heroTitle}</h4>
+            <p className="mt-2 line-clamp-3 text-xs text-slate-700">{heroSubtitle}</p>
+            <button
+              type="button"
+              className="mt-3 rounded-full px-3 py-1.5 text-xs font-semibold text-white"
+              style={{ backgroundColor: primaryColor }}
+            >
+              {heroCtaText}
+            </button>
+          </div>
+          <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+            <PreviewImage src={heroImageUrl} alt="Hero" className={isPhone ? "h-44" : "h-44 lg:h-full"} />
+          </div>
+        </div>
+        <div className={`grid gap-2 ${isPhone ? "grid-cols-1" : "sm:grid-cols-3"}`}>
+          <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+            <PreviewImage src={secondaryBannerUrl} alt="Secondary banner" className="h-24" />
+          </div>
+          <div className="rounded-lg border border-slate-200 bg-white p-2 text-xs text-slate-600">Story card</div>
+          <div className="rounded-lg border border-slate-200 bg-white p-2 text-xs text-slate-600">Review highlights</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (template === "modern_grid") {
+    return (
+      <div className="rounded-xl border border-slate-200 bg-slate-100 p-3">
+        <div className={`grid gap-3 ${isPhone ? "grid-cols-1" : "lg:grid-cols-[160px_1fr]"}`}>
+          <aside className="space-y-2 rounded-lg bg-white p-2">
+            {["All", "Top rated", "Deals", "New arrivals"].map((item) => (
+              <p key={item} className="rounded-md bg-slate-50 px-2 py-1 text-[11px] text-slate-700">{item}</p>
+            ))}
+          </aside>
+          <div className="space-y-2">
+            <article className="rounded-lg bg-white p-3">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em]" style={{ color: primaryColor }}>{promoText}</p>
+              <h4 className="line-clamp-1 text-lg font-black text-slate-900">{heroTitle}</h4>
+            </article>
+            <div className={`grid gap-2 ${isPhone ? "grid-cols-2" : "grid-cols-2 sm:grid-cols-4"}`}>
+              {PREVIEW_PRODUCTS.map((product) => (
+                <article key={product.name} className="rounded-lg bg-white p-2">
+                  <p className="line-clamp-1 text-[11px] font-semibold text-slate-900">{product.name}</p>
+                  <p className="text-[10px] text-slate-600">{product.price}</p>
+                  <button type="button" className="mt-1 rounded-full px-2 py-0.5 text-[10px] font-semibold text-white" style={{ backgroundColor: primaryColor }}>
+                    Buy
+                  </button>
+                </article>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3 rounded-xl border border-slate-200 p-3" style={{ backgroundColor: surfaceColor }}>
+      <div className={`grid gap-3 ${isPhone ? "grid-cols-1" : "md:grid-cols-[1.2fr_1fr]"}`}>
+        <article className="rounded-lg bg-white/85 p-3">
+          <p className="inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold text-white" style={{ backgroundColor: primaryColor }}>
+            {promoText}
+          </p>
+          <h4 className="mt-2 line-clamp-2 text-xl font-black text-slate-900">{heroTitle}</h4>
+          <p className="mt-2 line-clamp-3 text-xs text-slate-700">{heroSubtitle}</p>
+          <button type="button" className="mt-3 rounded-full px-3 py-1.5 text-xs font-semibold text-slate-900" style={{ backgroundColor: accentColor }}>
+            {heroCtaText}
+          </button>
+        </article>
+        <div className="overflow-hidden rounded-lg border border-white/70 bg-white/70">
+          <PreviewImage src={heroImageUrl} alt="Hero" className={isPhone ? "h-40" : "h-40 md:h-48"} />
+        </div>
+      </div>
+      <div className={`grid gap-2 ${isPhone ? "grid-cols-2" : "grid-cols-2 sm:grid-cols-4"}`}>
+        {PREVIEW_PRODUCTS.map((product) => (
+          <article key={product.name} className="rounded-lg border border-white/80 bg-white p-2">
+            <p className="line-clamp-1 text-[11px] font-semibold text-slate-900">{product.name}</p>
+            <p className="text-[10px] text-slate-600">{product.price}</p>
+          </article>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function StoreSetupForm({ initialStore }: StoreSetupFormProps) {
+  const initialConfig = normalizeStorefrontConfig(initialStore?.storefront_config);
   const [store, setStore] = useState<StoreRecord | null>(initialStore);
+  const [previewViewport, setPreviewViewport] = useState<"desktop" | "phone">("desktop");
   const [isSaving, setIsSaving] = useState(false);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [heroImageFile, setHeroImageFile] = useState<File | null>(null);
+  const [secondaryBannerFile, setSecondaryBannerFile] = useState<File | null>(null);
+  const [uploadState, setUploadState] = useState<Record<UploadKind, UploadState>>({
+    logo: { ...INITIAL_UPLOAD_STATE },
+    hero: { ...INITIAL_UPLOAD_STATE },
+    banner: { ...INITIAL_UPLOAD_STATE },
+  });
   const [isDetectingLocation, setIsDetectingLocation] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -44,17 +317,120 @@ export function StoreSetupForm({ initialStore }: StoreSetupFormProps) {
     latitude: initialStore?.latitude?.toString() ?? "",
     longitude: initialStore?.longitude?.toString() ?? "",
     location_source: initialStore?.location_source ?? "manual",
-    store_template: initialStore?.store_template ?? "classic",
-    theme_color: initialStore?.theme_color ?? "#0ea5e9",
+    store_template: normalizeStoreTemplate(initialStore?.store_template),
+    store_theme_preset: normalizeThemePreset(initialStore?.store_theme_preset),
+    theme_color: initialStore?.theme_color ?? "#059669",
     logo_url: initialStore?.logo_url ?? "",
     is_active: initialStore?.is_active ?? true,
+    hero_title: initialConfig.hero_title,
+    hero_subtitle: initialConfig.hero_subtitle,
+    hero_cta_text: initialConfig.hero_cta_text,
+    hero_image_url: initialConfig.hero_image_url,
+    promo_text: initialConfig.promo_text,
+    secondary_banner_url: initialConfig.secondary_banner_url,
   });
 
   const shareablePath = store?.slug ? `/store/${store.slug}` : null;
   const hasCoordinates = Boolean(form.latitude && form.longitude);
+  const selectedTheme = useMemo(
+    () =>
+      STOREFRONT_THEME_PRESETS.find((preset) => preset.key === form.store_theme_preset) ??
+      STOREFRONT_THEME_PRESETS[0],
+    [form.store_theme_preset],
+  );
+  const previewLogoUrl = useObjectUrl(logoFile, form.logo_url);
+  const previewHeroUrl = useObjectUrl(heroImageFile, form.hero_image_url);
+  const previewSecondaryBannerUrl = useObjectUrl(secondaryBannerFile, form.secondary_banner_url);
+  const isAnyUploading = Object.values(uploadState).some((state) => state.isUploading);
 
   function updateFormField<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
+  }
+
+  function updateUpload(kind: UploadKind, patch: Partial<UploadState>) {
+    setUploadState((prev) => ({
+      ...prev,
+      [kind]: {
+        ...prev[kind],
+        ...patch,
+      },
+    }));
+  }
+
+  function applyThemePreset(key: (typeof form)["store_theme_preset"]) {
+    const nextTheme =
+      STOREFRONT_THEME_PRESETS.find((preset) => preset.key === key) ??
+      STOREFRONT_THEME_PRESETS[0];
+    setForm((prev) => ({
+      ...prev,
+      store_theme_preset: nextTheme.key,
+      theme_color: nextTheme.primary,
+    }));
+  }
+
+  async function uploadAsset(kind: UploadKind, file: File) {
+    if (kind === "logo") setLogoFile(file);
+    if (kind === "hero") setHeroImageFile(file);
+    if (kind === "banner") setSecondaryBannerFile(file);
+
+    updateUpload(kind, {
+      isUploading: true,
+      progress: 0,
+      fileName: file.name,
+      error: null,
+    });
+
+    await new Promise<void>((resolve) => {
+      const xhr = new XMLHttpRequest();
+      const body = new FormData();
+      body.append("kind", kind);
+      body.append("file", file);
+
+      xhr.upload.onprogress = (event) => {
+        if (!event.lengthComputable) return;
+        const next = Math.max(1, Math.round((event.loaded / event.total) * 100));
+        updateUpload(kind, { progress: next });
+      };
+
+      xhr.onreadystatechange = () => {
+        if (xhr.readyState !== XMLHttpRequest.DONE) return;
+
+        let payload: { url?: string; error?: string } = {};
+        if (xhr.responseText) {
+          try {
+            payload = JSON.parse(xhr.responseText) as { url?: string; error?: string };
+          } catch {
+            payload = {};
+          }
+        }
+
+        if (xhr.status >= 200 && xhr.status < 300 && payload.url) {
+          if (kind === "logo") updateFormField("logo_url", payload.url);
+          if (kind === "hero") updateFormField("hero_image_url", payload.url);
+          if (kind === "banner") updateFormField("secondary_banner_url", payload.url);
+          updateUpload(kind, { isUploading: false, progress: 100, error: null });
+          setMessage(`${kind} image uploaded successfully.`);
+        } else {
+          updateUpload(kind, {
+            isUploading: false,
+            error: payload.error ?? `Upload failed (${xhr.status}).`,
+          });
+        }
+
+        resolve();
+      };
+
+      xhr.onerror = () => {
+        updateUpload(kind, {
+          isUploading: false,
+          error: "Network error while uploading file.",
+        });
+        resolve();
+      };
+
+      xhr.open("POST", "/api/stores/upload");
+      xhr.send(body);
+    });
   }
 
   function useCurrentLocation() {
@@ -95,6 +471,12 @@ export function StoreSetupForm({ initialStore }: StoreSetupFormProps) {
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    if (isAnyUploading) {
+      setError("Please wait for uploads to complete before saving.");
+      return;
+    }
+
     setIsSaving(true);
     setError(null);
     setMessage(null);
@@ -120,16 +502,39 @@ export function StoreSetupForm({ initialStore }: StoreSetupFormProps) {
       return;
     }
 
+    const storefrontConfig = normalizeStorefrontConfig({
+      hero_title: form.hero_title || DEFAULT_STOREFRONT_CONFIG.hero_title,
+      hero_subtitle: form.hero_subtitle || DEFAULT_STOREFRONT_CONFIG.hero_subtitle,
+      hero_cta_text: form.hero_cta_text || DEFAULT_STOREFRONT_CONFIG.hero_cta_text,
+      hero_image_url: form.hero_image_url || "",
+      promo_text: form.promo_text || DEFAULT_STOREFRONT_CONFIG.promo_text,
+      secondary_banner_url: form.secondary_banner_url || "",
+    });
+
     try {
+      const body = new FormData();
+      body.append("name", form.name);
+      body.append("whatsapp_number", form.whatsapp_number);
+      body.append("address_line1", form.address_line1);
+      body.append("city", form.city);
+      body.append("state", form.state);
+      body.append("country", form.country);
+      body.append("latitude", parsedLatitude !== null ? String(parsedLatitude) : "");
+      body.append("longitude", parsedLongitude !== null ? String(parsedLongitude) : "");
+      body.append(
+        "location_source",
+        parsedLatitude !== null && parsedLongitude !== null ? form.location_source : "",
+      );
+      body.append("store_template", form.store_template);
+      body.append("store_theme_preset", form.store_theme_preset);
+      body.append("theme_color", form.theme_color);
+      body.append("logo_url", form.logo_url);
+      body.append("is_active", String(form.is_active));
+      body.append("storefront_config", JSON.stringify(storefrontConfig));
+
       const response = await fetch("/api/stores", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...form,
-          latitude: parsedLatitude,
-          longitude: parsedLongitude,
-          location_source: parsedLatitude !== null && parsedLongitude !== null ? form.location_source : null,
-        }),
+        body,
       });
 
       const payload = await response.json();
@@ -140,21 +545,30 @@ export function StoreSetupForm({ initialStore }: StoreSetupFormProps) {
         return;
       }
 
-      setStore(payload.store);
+      const nextStore = payload.store as StoreRecord;
+      const nextConfig = normalizeStorefrontConfig(nextStore.storefront_config);
+      setStore(nextStore);
       setForm({
-        name: payload.store.name,
-        whatsapp_number: payload.store.whatsapp_number,
-        address_line1: payload.store.address_line1 ?? "",
-        city: payload.store.city ?? "",
-        state: payload.store.state ?? "",
-        country: payload.store.country ?? "Nigeria",
-        latitude: payload.store.latitude?.toString() ?? "",
-        longitude: payload.store.longitude?.toString() ?? "",
-        location_source: payload.store.location_source ?? "manual",
-        store_template: payload.store.store_template ?? "classic",
-        theme_color: payload.store.theme_color ?? "#0ea5e9",
-        logo_url: payload.store.logo_url ?? "",
-        is_active: payload.store.is_active,
+        name: nextStore.name,
+        whatsapp_number: nextStore.whatsapp_number,
+        address_line1: nextStore.address_line1 ?? "",
+        city: nextStore.city ?? "",
+        state: nextStore.state ?? "",
+        country: nextStore.country ?? "Nigeria",
+        latitude: nextStore.latitude?.toString() ?? "",
+        longitude: nextStore.longitude?.toString() ?? "",
+        location_source: nextStore.location_source ?? "manual",
+        store_template: normalizeStoreTemplate(nextStore.store_template),
+        store_theme_preset: normalizeThemePreset(nextStore.store_theme_preset),
+        theme_color: nextStore.theme_color ?? selectedTheme.primary,
+        logo_url: nextStore.logo_url ?? "",
+        is_active: nextStore.is_active,
+        hero_title: nextConfig.hero_title,
+        hero_subtitle: nextConfig.hero_subtitle,
+        hero_cta_text: nextConfig.hero_cta_text,
+        hero_image_url: nextConfig.hero_image_url,
+        promo_text: nextConfig.promo_text,
+        secondary_banner_url: nextConfig.secondary_banner_url,
       });
 
       setMessage(
@@ -170,7 +584,7 @@ export function StoreSetupForm({ initialStore }: StoreSetupFormProps) {
   }
 
   return (
-    <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+    <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-sm font-medium text-emerald-700">Store Setup</p>
@@ -178,262 +592,442 @@ export function StoreSetupForm({ initialStore }: StoreSetupFormProps) {
             {store ? "Update your store" : "Create your store"}
           </h2>
           <p className="mt-1 text-sm text-slate-600">
-            This powers your public storefront page and shareable link.
+            Control storefront structure, content, color palette, and location.
           </p>
         </div>
       </div>
 
-        <form onSubmit={handleSubmit} className="mt-6 grid gap-4 md:grid-cols-2">
-          <label className="space-y-2 text-sm">
-            <span className="font-medium text-slate-700">Store name</span>
-            <input
-              required
-              value={form.name}
-              onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
-              className="w-full rounded-md border border-slate-200 px-3 py-2 outline-none ring-emerald-300 focus:ring-2"
-              placeholder="Ada Kitchen"
+      <form onSubmit={handleSubmit} className="mt-6 grid gap-4 md:grid-cols-2">
+        <div className="col-span-full space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sm font-semibold text-slate-800">Live Storefront Preview</p>
+            <p className="text-xs text-slate-500">Updates instantly before save</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setPreviewViewport("desktop")}
+              className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                previewViewport === "desktop"
+                  ? "bg-emerald-600 text-white"
+                  : "bg-white text-slate-700"
+              }`}
+            >
+              Desktop
+            </button>
+            <button
+              type="button"
+              onClick={() => setPreviewViewport("phone")}
+              className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                previewViewport === "phone"
+                  ? "bg-emerald-600 text-white"
+                  : "bg-white text-slate-700"
+              }`}
+            >
+              Phone
+            </button>
+          </div>
+
+          {previewViewport === "phone" ? (
+            <div className="mx-auto w-full max-w-[410px] rounded-[2rem] border-[10px] border-slate-900 bg-slate-900 p-2 shadow-lg">
+              <div className="mb-2 flex justify-center">
+                <span className="h-1.5 w-16 rounded-full bg-slate-700" />
+              </div>
+              <div className="max-h-[620px] overflow-auto rounded-[1.4rem] bg-white p-2">
+                <LiveStorefrontPreview
+                  template={form.store_template}
+                  viewport="phone"
+                  storeName={form.name}
+                  promoText={form.promo_text}
+                  heroTitle={form.hero_title}
+                  heroSubtitle={form.hero_subtitle}
+                  heroCtaText={form.hero_cta_text}
+                  heroImageUrl={previewHeroUrl}
+                  secondaryBannerUrl={previewSecondaryBannerUrl}
+                  primaryColor={form.theme_color}
+                  accentColor={selectedTheme.accent}
+                  surfaceColor={selectedTheme.surface}
+                />
+              </div>
+            </div>
+          ) : (
+            <LiveStorefrontPreview
+              template={form.store_template}
+              viewport="desktop"
+              storeName={form.name}
+              promoText={form.promo_text}
+              heroTitle={form.hero_title}
+              heroSubtitle={form.hero_subtitle}
+              heroCtaText={form.hero_cta_text}
+              heroImageUrl={previewHeroUrl}
+              secondaryBannerUrl={previewSecondaryBannerUrl}
+              primaryColor={form.theme_color}
+              accentColor={selectedTheme.accent}
+              surfaceColor={selectedTheme.surface}
             />
-          </label>
+          )}
+        </div>
+
+        <label className="space-y-2 text-sm">
+          <span className="font-medium text-slate-700">Store name</span>
+          <input
+            required
+            value={form.name}
+            onChange={(event) => updateFormField("name", event.target.value)}
+            className="w-full rounded-md border border-slate-200 px-3 py-2 outline-none ring-emerald-300 focus:ring-2"
+            placeholder="Sellee Home Essentials"
+          />
+        </label>
+
+        <label className="space-y-2 text-sm">
+          <span className="font-medium text-slate-700">WhatsApp number</span>
+          <input
+            required
+            value={form.whatsapp_number}
+            onChange={(event) => updateFormField("whatsapp_number", event.target.value)}
+            className="w-full rounded-md border border-slate-200 px-3 py-2 outline-none ring-emerald-300 focus:ring-2"
+            placeholder="2348012345678"
+          />
+        </label>
+
+        <div className="col-span-full space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
+          <p className="text-sm font-semibold text-slate-800">Storefront Template Gallery</p>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            {STOREFRONT_TEMPLATE_OPTIONS.map((option) => {
+              const selected = form.store_template === option.key;
+              return (
+                <button
+                  key={option.key}
+                  type="button"
+                  onClick={() => updateFormField("store_template", option.key)}
+                  className={`rounded-xl border p-3 text-left transition ${
+                    selected
+                      ? "border-emerald-500 bg-white shadow-sm"
+                      : "border-slate-200 bg-white hover:border-emerald-300"
+                  }`}
+                >
+                  <div
+                    className={`relative mb-3 h-28 overflow-hidden rounded-lg border border-slate-200 bg-gradient-to-br ${option.previewClass}`}
+                  >
+                    <div className="absolute inset-x-2 top-2 h-3 rounded-full bg-white/80" />
+                    <div className="absolute inset-x-2 top-7 grid grid-cols-3 gap-1">
+                      <div className="h-6 rounded bg-white/80" />
+                      <div className="h-6 rounded bg-emerald-200/80" />
+                      <div className="h-6 rounded bg-amber-200/80" />
+                    </div>
+                    <div className="absolute inset-x-2 bottom-2 h-10 rounded bg-white/75" />
+                  </div>
+                  <p className="text-sm font-semibold text-slate-900">{option.label}</p>
+                  <p className="mt-1 text-xs text-slate-600">{option.description}</p>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="col-span-full space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
+          <p className="text-sm font-semibold text-slate-800">Color Presets</p>
+          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
+            {STOREFRONT_THEME_PRESETS.map((preset) => {
+              const selected = form.store_theme_preset === preset.key;
+              return (
+                <button
+                  key={preset.key}
+                  type="button"
+                  onClick={() => applyThemePreset(preset.key)}
+                  className={`rounded-lg border p-2 text-left ${
+                    selected
+                      ? "border-emerald-500 bg-white"
+                      : "border-slate-200 bg-white hover:border-emerald-300"
+                  }`}
+                >
+                  <div className="mb-2 flex gap-1">
+                    <span
+                      className="h-5 w-5 rounded-full border border-slate-200"
+                      style={{ backgroundColor: preset.primary }}
+                    />
+                    <span
+                      className="h-5 w-5 rounded-full border border-slate-200"
+                      style={{ backgroundColor: preset.accent }}
+                    />
+                    <span
+                      className="h-5 w-5 rounded-full border border-slate-200"
+                      style={{ backgroundColor: preset.surface }}
+                    />
+                  </div>
+                  <p className="text-xs font-semibold text-slate-800">{preset.label}</p>
+                </button>
+              );
+            })}
+          </div>
 
           <label className="space-y-2 text-sm">
-            <span className="font-medium text-slate-700">WhatsApp number</span>
-            <input
-              required
-              value={form.whatsapp_number}
-              onChange={(event) =>
-                setForm((prev) => ({ ...prev, whatsapp_number: event.target.value }))
-              }
-              className="w-full rounded-md border border-slate-200 px-3 py-2 outline-none ring-emerald-300 focus:ring-2"
-              placeholder="2348012345678"
-            />
-          </label>
-
-          <label className="space-y-2 text-sm">
-            <span className="font-medium text-slate-700">Theme color</span>
+            <span className="font-medium text-slate-700">Primary color override</span>
             <div className="flex items-center gap-2">
               <input
                 type="color"
                 value={form.theme_color}
-                onChange={(event) =>
-                  setForm((prev) => ({ ...prev, theme_color: event.target.value }))
-                }
+                onChange={(event) => updateFormField("theme_color", event.target.value)}
                 className="h-10 w-12 rounded border border-slate-300 bg-white"
               />
               <input
                 value={form.theme_color}
-                onChange={(event) =>
-                  setForm((prev) => ({ ...prev, theme_color: event.target.value }))
-                }
+                onChange={(event) => updateFormField("theme_color", event.target.value)}
                 className="w-full rounded-md border border-slate-200 px-3 py-2 outline-none ring-emerald-300 focus:ring-2"
               />
             </div>
           </label>
+        </div>
 
-          <div className="col-span-full space-y-3 rounded-md border border-slate-200 bg-slate-50 p-4">
-            <p className="text-sm font-semibold text-slate-800">
-              Storefront Template Preview
-            </p>
-            <div className="grid gap-3 md:grid-cols-3">
-              {TEMPLATE_OPTIONS.map((option) => {
-                const selected = form.store_template === option.key;
-                const isBold = option.key === "bold";
-
-                return (
-                  <button
-                    key={option.key}
-                    type="button"
-                    onClick={() =>
-                      setForm((prev) => ({ ...prev, store_template: option.key }))
-                    }
-                    className={`rounded-xl border p-3 text-left transition ${
-                      selected
-                        ? "border-emerald-500 bg-white shadow-sm"
-                        : "border-slate-200 bg-white hover:border-emerald-300"
-                    }`}
-                  >
-                    <div
-                      className={`relative mb-3 h-24 overflow-hidden rounded-lg border border-slate-200 bg-gradient-to-br ${option.previewClass}`}
-                    >
-                      <div className="absolute left-2 top-2 flex gap-1">
-                        <span className={`h-2 w-6 rounded-full ${isBold ? "bg-emerald-300" : "bg-emerald-500/70"}`} />
-                        <span className={`h-2 w-10 rounded-full ${isBold ? "bg-slate-400" : "bg-slate-300"}`} />
-                      </div>
-                      <div className="absolute bottom-2 left-2 right-2 grid grid-cols-3 gap-1">
-                        <div className={`h-8 rounded ${isBold ? "bg-slate-700" : "bg-white/80"}`} />
-                        <div className={`h-8 rounded ${isBold ? "bg-emerald-700" : "bg-emerald-100"}`} />
-                        <div className={`h-8 rounded ${isBold ? "bg-slate-700" : "bg-amber-100"}`} />
-                      </div>
-                    </div>
-                    <p className="text-sm font-semibold text-slate-900">{option.label}</p>
-                    <p className="mt-1 text-xs text-slate-600">{option.description}</p>
-                  </button>
-                );
-              })}
-            </div>
-            <p className="text-xs text-slate-500">
-              Selected template: <span className="font-semibold text-slate-700">{form.store_template}</span>
-            </p>
-          </div>
-
-          <div className="col-span-full rounded-md border border-slate-200 bg-slate-50 p-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <p className="text-sm font-semibold text-slate-800">Store Location</p>
-                <p className="text-xs text-slate-600">
-                  Buyers can find your store by location and nearby search.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={useCurrentLocation}
-                disabled={isDetectingLocation}
-                className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-100 disabled:opacity-60"
-              >
-                {isDetectingLocation ? "Detecting..." : "Use current location"}
-              </button>
-            </div>
-
-            <div className="mt-4 grid gap-4 md:grid-cols-2">
-              <label className="space-y-2 text-sm md:col-span-2">
-                <span className="font-medium text-slate-700">Address line</span>
-                <input
-                  value={form.address_line1}
-                  onChange={(event) => updateFormField("address_line1", event.target.value)}
-                  className="w-full rounded-md border border-slate-200 px-3 py-2 outline-none ring-emerald-300 focus:ring-2"
-                  placeholder="12 Allen Avenue"
-                />
-              </label>
-
-              <label className="space-y-2 text-sm">
-                <span className="font-medium text-slate-700">City</span>
-                <input
-                  value={form.city}
-                  onChange={(event) => updateFormField("city", event.target.value)}
-                  className="w-full rounded-md border border-slate-200 px-3 py-2 outline-none ring-emerald-300 focus:ring-2"
-                  placeholder="Ikeja"
-                />
-              </label>
-
-              <label className="space-y-2 text-sm">
-                <span className="font-medium text-slate-700">State</span>
-                <input
-                  value={form.state}
-                  onChange={(event) => updateFormField("state", event.target.value)}
-                  className="w-full rounded-md border border-slate-200 px-3 py-2 outline-none ring-emerald-300 focus:ring-2"
-                  placeholder="Lagos"
-                />
-              </label>
-
-              <label className="space-y-2 text-sm">
-                <span className="font-medium text-slate-700">Country</span>
-                <input
-                  value={form.country}
-                  onChange={(event) => updateFormField("country", event.target.value)}
-                  className="w-full rounded-md border border-slate-200 px-3 py-2 outline-none ring-emerald-300 focus:ring-2"
-                  placeholder="Nigeria"
-                />
-              </label>
-
-              <label className="space-y-2 text-sm">
-                <span className="font-medium text-slate-700">Location source</span>
-                <select
-                  value={form.location_source}
-                  onChange={(event) => updateFormField("location_source", event.target.value as "manual" | "gps")}
-                  className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 outline-none ring-emerald-300 focus:ring-2"
-                >
-                  <option value="manual">Manual</option>
-                  <option value="gps">GPS</option>
-                </select>
-              </label>
-
-              <label className="space-y-2 text-sm">
-                <span className="font-medium text-slate-700">Latitude (optional)</span>
-                <input
-                  value={form.latitude}
-                  onChange={(event) => updateFormField("latitude", event.target.value)}
-                  className="w-full rounded-md border border-slate-200 px-3 py-2 outline-none ring-emerald-300 focus:ring-2"
-                  placeholder="6.601838"
-                />
-              </label>
-
-              <label className="space-y-2 text-sm">
-                <span className="font-medium text-slate-700">Longitude (optional)</span>
-                <input
-                  value={form.longitude}
-                  onChange={(event) => updateFormField("longitude", event.target.value)}
-                  className="w-full rounded-md border border-slate-200 px-3 py-2 outline-none ring-emerald-300 focus:ring-2"
-                  placeholder="3.351486"
-                />
-              </label>
-            </div>
-
-            <p className="mt-3 text-xs text-slate-600">
-              {hasCoordinates
-                ? "Coordinates captured. Nearby search will use precise distance."
-                : "Tip: Add coordinates for accurate nearby search results."}
-            </p>
-          </div>
-
-          <label className="space-y-2 text-sm">
-            <span className="font-medium text-slate-700">Logo URL (optional)</span>
+        <div className="col-span-full grid gap-4 rounded-xl border border-slate-200 bg-slate-50 p-4 md:grid-cols-2">
+          <p className="col-span-full text-sm font-semibold text-slate-800">
+            Template Content Inputs
+          </p>
+          <label className="space-y-2 text-sm md:col-span-2">
+            <span className="font-medium text-slate-700">Hero title</span>
             <input
-              value={form.logo_url}
-              onChange={(event) => setForm((prev) => ({ ...prev, logo_url: event.target.value }))}
+              value={form.hero_title}
+              onChange={(event) => updateFormField("hero_title", event.target.value)}
+              className="w-full rounded-md border border-slate-200 px-3 py-2 outline-none ring-emerald-300 focus:ring-2"
+            />
+          </label>
+          <label className="space-y-2 text-sm md:col-span-2">
+            <span className="font-medium text-slate-700">Hero subtitle</span>
+            <textarea
+              value={form.hero_subtitle}
+              onChange={(event) => updateFormField("hero_subtitle", event.target.value)}
+              className="min-h-20 w-full rounded-md border border-slate-200 px-3 py-2 outline-none ring-emerald-300 focus:ring-2"
+            />
+          </label>
+          <label className="space-y-2 text-sm">
+            <span className="font-medium text-slate-700">Hero CTA text</span>
+            <input
+              value={form.hero_cta_text}
+              onChange={(event) => updateFormField("hero_cta_text", event.target.value)}
+              className="w-full rounded-md border border-slate-200 px-3 py-2 outline-none ring-emerald-300 focus:ring-2"
+              placeholder="Shop now"
+            />
+          </label>
+          <label className="space-y-2 text-sm">
+            <span className="font-medium text-slate-700">Promo text</span>
+            <input
+              value={form.promo_text}
+              onChange={(event) => updateFormField("promo_text", event.target.value)}
+              className="w-full rounded-md border border-slate-200 px-3 py-2 outline-none ring-emerald-300 focus:ring-2"
+            />
+          </label>
+          <label className="space-y-2 text-sm md:col-span-2">
+            <span className="font-medium text-slate-700">Hero image URL (fallback)</span>
+            <input
+              value={form.hero_image_url}
+              onChange={(event) => updateFormField("hero_image_url", event.target.value)}
               className="w-full rounded-md border border-slate-200 px-3 py-2 outline-none ring-emerald-300 focus:ring-2"
               placeholder="https://..."
             />
           </label>
-
-          <label className="col-span-full flex items-center gap-2 text-sm text-slate-700">
-            <input
-              type="checkbox"
-              checked={form.is_active}
-              onChange={(event) =>
-                setForm((prev) => ({ ...prev, is_active: event.target.checked }))
-              }
+          <div className="md:col-span-2 grid gap-3 md:grid-cols-2">
+            <UploadDropzone
+              title="Upload hero image"
+              hint="Best ratio: 16:9"
+              onFile={(file) => void uploadAsset("hero", file)}
+              state={uploadState.hero}
             />
-            Store is active and visible publicly.
+            <UploadDropzone
+              title="Upload secondary banner"
+              hint="Best ratio: 5:2"
+              onFile={(file) => void uploadAsset("banner", file)}
+              state={uploadState.banner}
+            />
+          </div>
+          <label className="space-y-2 text-sm md:col-span-2">
+            <span className="font-medium text-slate-700">Secondary banner URL (fallback)</span>
+            <input
+              value={form.secondary_banner_url}
+              onChange={(event) => updateFormField("secondary_banner_url", event.target.value)}
+              className="w-full rounded-md border border-slate-200 px-3 py-2 outline-none ring-emerald-300 focus:ring-2"
+              placeholder="https://..."
+            />
           </label>
+        </div>
 
-          {error ? (
-            <p className="col-span-full rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-              {error}
-            </p>
-          ) : null}
-
-          {message ? (
-            <p className="col-span-full rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
-              {message}
-            </p>
-          ) : null}
-
-          <div className="col-span-full flex flex-wrap gap-3">
+        <div className="col-span-full rounded-xl border border-slate-200 bg-slate-50 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold text-slate-800">Store Location</p>
+              <p className="text-xs text-slate-600">
+                Buyers can find your store by location and nearby search.
+              </p>
+            </div>
             <button
-              type="submit"
-              disabled={isSaving}
-              className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
+              type="button"
+              onClick={useCurrentLocation}
+              disabled={isDetectingLocation}
+              className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-100 disabled:opacity-60"
             >
-              {isSaving ? "Saving..." : store ? "Update store" : "Create store"}
+              {isDetectingLocation ? "Detecting..." : "Use current location"}
             </button>
-
-            {shareablePath ? (
-              <a
-                href={shareablePath}
-                target="_blank"
-                rel="noreferrer"
-                className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50"
-              >
-                Open public store
-              </a>
-            ) : null}
           </div>
 
-          {store?.slug ? (
-            <p className="col-span-full text-sm text-slate-600">
-              Shareable link: <span className="font-medium">{shareablePath}</span>
-            </p>
+          <div className="mt-4 grid gap-4 md:grid-cols-2">
+            <label className="space-y-2 text-sm md:col-span-2">
+              <span className="font-medium text-slate-700">Address line</span>
+              <input
+                value={form.address_line1}
+                onChange={(event) => updateFormField("address_line1", event.target.value)}
+                className="w-full rounded-md border border-slate-200 px-3 py-2 outline-none ring-emerald-300 focus:ring-2"
+                placeholder="12 Allen Avenue"
+              />
+            </label>
+
+            <label className="space-y-2 text-sm">
+              <span className="font-medium text-slate-700">City</span>
+              <input
+                value={form.city}
+                onChange={(event) => updateFormField("city", event.target.value)}
+                className="w-full rounded-md border border-slate-200 px-3 py-2 outline-none ring-emerald-300 focus:ring-2"
+                placeholder="Ikeja"
+              />
+            </label>
+
+            <label className="space-y-2 text-sm">
+              <span className="font-medium text-slate-700">State</span>
+              <input
+                value={form.state}
+                onChange={(event) => updateFormField("state", event.target.value)}
+                className="w-full rounded-md border border-slate-200 px-3 py-2 outline-none ring-emerald-300 focus:ring-2"
+                placeholder="Lagos"
+              />
+            </label>
+
+            <label className="space-y-2 text-sm">
+              <span className="font-medium text-slate-700">Country</span>
+              <input
+                value={form.country}
+                onChange={(event) => updateFormField("country", event.target.value)}
+                className="w-full rounded-md border border-slate-200 px-3 py-2 outline-none ring-emerald-300 focus:ring-2"
+                placeholder="Nigeria"
+              />
+            </label>
+
+            <label className="space-y-2 text-sm">
+              <span className="font-medium text-slate-700">Location source</span>
+              <select
+                value={form.location_source}
+                onChange={(event) =>
+                  updateFormField("location_source", event.target.value as "manual" | "gps")
+                }
+                className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 outline-none ring-emerald-300 focus:ring-2"
+              >
+                <option value="manual">Manual</option>
+                <option value="gps">GPS</option>
+              </select>
+            </label>
+
+            <label className="space-y-2 text-sm">
+              <span className="font-medium text-slate-700">Latitude (optional)</span>
+              <input
+                value={form.latitude}
+                onChange={(event) => updateFormField("latitude", event.target.value)}
+                className="w-full rounded-md border border-slate-200 px-3 py-2 outline-none ring-emerald-300 focus:ring-2"
+                placeholder="6.601838"
+              />
+            </label>
+
+            <label className="space-y-2 text-sm">
+              <span className="font-medium text-slate-700">Longitude (optional)</span>
+              <input
+                value={form.longitude}
+                onChange={(event) => updateFormField("longitude", event.target.value)}
+                className="w-full rounded-md border border-slate-200 px-3 py-2 outline-none ring-emerald-300 focus:ring-2"
+                placeholder="3.351486"
+              />
+            </label>
+          </div>
+
+          <p className="mt-3 text-xs text-slate-600">
+            {hasCoordinates
+              ? "Coordinates captured. Nearby search will use precise distance."
+              : "Tip: Add coordinates for accurate nearby search results."}
+          </p>
+        </div>
+
+        <label className="space-y-2 text-sm">
+          <span className="font-medium text-slate-700">Logo URL (fallback)</span>
+          <input
+            value={form.logo_url}
+            onChange={(event) => updateFormField("logo_url", event.target.value)}
+            className="w-full rounded-md border border-slate-200 px-3 py-2 outline-none ring-emerald-300 focus:ring-2"
+            placeholder="https://..."
+          />
+        </label>
+        <div className="space-y-2 text-sm rounded-xl border border-slate-200 bg-slate-50 p-3">
+          <UploadDropzone
+            title="Upload logo"
+            hint="Square image recommended"
+            onFile={(file) => void uploadAsset("logo", file)}
+            state={uploadState.logo}
+          />
+          {previewLogoUrl ? (
+            <div className="h-16 w-16 overflow-hidden rounded-full border border-slate-200 bg-slate-100">
+              <img src={previewLogoUrl} alt="Logo preview" className="h-full w-full object-cover" />
+            </div>
           ) : null}
-        </form>
+        </div>
+
+        <label className="col-span-full flex items-center gap-2 text-sm text-slate-700">
+          <input
+            type="checkbox"
+            checked={form.is_active}
+            onChange={(event) => updateFormField("is_active", event.target.checked)}
+          />
+          Store is active and visible publicly.
+        </label>
+
+        {error ? (
+          <p className="col-span-full rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            {error}
+          </p>
+        ) : null}
+
+        {message ? (
+          <p className="col-span-full rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+            {message}
+          </p>
+        ) : null}
+
+        <div className="col-span-full flex flex-wrap gap-3">
+          <button
+            type="submit"
+            disabled={isSaving || isAnyUploading}
+            className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
+          >
+            {isSaving
+              ? "Saving..."
+              : isAnyUploading
+                ? "Uploading files..."
+                : store
+                  ? "Update store"
+                  : "Create store"}
+          </button>
+
+          {shareablePath ? (
+            <a
+              href={shareablePath}
+              target="_blank"
+              rel="noreferrer"
+              className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50"
+            >
+              Open public store
+            </a>
+          ) : null}
+        </div>
+
+        {store?.slug ? (
+          <p className="col-span-full text-sm text-slate-600">
+            Shareable link: <span className="font-medium">{shareablePath}</span>
+          </p>
+        ) : null}
+      </form>
     </section>
   );
 }

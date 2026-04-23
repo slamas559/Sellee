@@ -102,6 +102,64 @@ npm run dev
 - Webhook supports vendor bot commands: `LIST ORDERS`, `SALES TODAY`, `LOW STOCK`, `CONFIRM <ORDER_REF>`, `REJECT <ORDER_REF>`.
 - Vendors can now generate a link code in dashboard and connect their WhatsApp by sending `LINK <CODE>` to the business number.
 - `GET /api/health` now checks both Supabase DB connectivity and WhatsApp config sanity.
-- `POST /api/whatsapp/webhook?debug=1` debug response is development-only.
+- `POST /api/whatsapp/webhook?debug=1` debug response is available in development, or in production when `WHATSAPP_WEBHOOK_DEBUG=true`.
 - Vendors can choose storefront template styles: `classic`, `bold`, `minimal`.
+
+## WhatsApp Ops (Live)
+
+Use this checklist whenever WhatsApp delivery or bot commands stop working.
+
+1. Validate WABA -> phone number mapping with your live token:
+
+```powershell
+$TOKEN="YOUR_SYSTEM_USER_TOKEN"
+$WABA_ID="YOUR_WABA_ID"
+
+Invoke-RestMethod -Method Get `
+  -Uri "https://graph.facebook.com/v20.0/$WABA_ID/phone_numbers?fields=id,display_phone_number,verified_name,status" `
+  -Headers @{ Authorization = "Bearer $TOKEN" } | ConvertTo-Json -Depth 10
+```
+
+2. Set `WHATSAPP_PHONE_NUMBER_ID` to `data[0].id` from the response above.
+3. Verify direct send before debugging webhook logic:
+
+```powershell
+$TOKEN="YOUR_SYSTEM_USER_TOKEN"
+$PHONE_NUMBER_ID="YOUR_PHONE_NUMBER_ID"
+$TO="234XXXXXXXXXX"
+
+$body = @{
+  messaging_product = "whatsapp"
+  to = $TO
+  type = "text"
+  text = @{ body = "Sellee live send test" }
+} | ConvertTo-Json -Depth 10
+
+Invoke-RestMethod -Method Post `
+  -Uri "https://graph.facebook.com/v20.0/$PHONE_NUMBER_ID/messages" `
+  -Headers @{ Authorization = "Bearer $TOKEN" } `
+  -ContentType "application/json" `
+  -Body $body | ConvertTo-Json -Depth 10
+```
+
+4. Sync exact same working values to Vercel env:
+   - `WHATSAPP_TOKEN`
+   - `WHATSAPP_PHONE_NUMBER_ID`
+   - `WHATSAPP_API_VERSION=v20.0`
+   - optional debugging: `WHATSAPP_WEBHOOK_DEBUG=true`
+5. Redeploy and test from WhatsApp chat using commands:
+   - `LIST ORDERS`
+   - `SALES TODAY`
+   - `LOW STOCK`
+   - `CONFIRM <ORDER_REF>`
+   - `REJECT <ORDER_REF>`
+6. Check Vercel logs for:
+   - `whatsapp.webhook.message.ok`
+   - `whatsapp.send.success`
+   - `whatsapp.send.error`
+
+Important:
+- Use two different WhatsApp accounts for testing.
+- The business number cannot chat with itself.
+- Keep tokens out of git, screenshots, and chat logs.
 

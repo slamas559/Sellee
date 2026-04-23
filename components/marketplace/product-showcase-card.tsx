@@ -47,8 +47,8 @@ export function ProductShowcaseCard({
   const activeImage = images[index] ?? null;
   const isCompact = variant === "home";
   const headlineClass = isCompact ? "text-lg sm:text-xl" : "text-2xl";
-  const isBoldTemplate = template === "bold";
-  const isMinimalTemplate = template === "minimal";
+  const isBoldTemplate = template === "bold" || template === "modern_grid";
+  const isMinimalTemplate = template === "minimal" || template === "fashion_editorial";
 
   const cardClass = isBoldTemplate
     ? "border-slate-800 bg-slate-900 text-white shadow-[0_22px_55px_-30px_rgba(0,0,0,0.7)] hover:shadow-[0_30px_75px_-30px_rgba(5,150,105,0.5)]"

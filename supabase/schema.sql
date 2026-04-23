@@ -26,7 +26,27 @@ create table if not exists public.stores (
   latitude numeric(9,6),
   longitude numeric(9,6),
   location_source text check (location_source in ('manual', 'gps')),
-  store_template text not null default 'classic' check (store_template in ('classic', 'bold', 'minimal')),
+  store_template text not null default 'grocery_promo' check (
+    store_template in (
+      'grocery_promo',
+      'fashion_editorial',
+      'lifestyle_showcase',
+      'modern_grid',
+      'classic',
+      'bold',
+      'minimal'
+    )
+  ),
+  store_theme_preset text not null default 'emerald_fresh' check (
+    store_theme_preset in (
+      'emerald_fresh',
+      'sunlit_market',
+      'midnight_luxe',
+      'ocean_breeze',
+      'rose_boutique'
+    )
+  ),
+  storefront_config jsonb not null default '{}'::jsonb,
   rating_avg numeric(3,2) not null default 0 check (rating_avg >= 0 and rating_avg <= 5),
   rating_count integer not null default 0 check (rating_count >= 0),
   theme_color text default '#0ea5e9',

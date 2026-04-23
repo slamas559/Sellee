@@ -5,6 +5,7 @@ import { ProductMediaGallery } from "@/components/store/product-media-gallery";
 import { ProductReviewsSection } from "@/components/reviews/product-reviews-section";
 import { StarRating } from "@/components/store/star-rating";
 import { formatNaira } from "@/lib/format";
+import { normalizeStoreTemplate } from "@/lib/storefront";
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
 import type { ProductRecord, StoreRecord } from "@/types";
 
@@ -18,7 +19,7 @@ export default async function StoreProductPage({ params }: ProductPageProps) {
 
   const { data: store } = await supabase
     .from("stores")
-    .select("id, vendor_id, name, slug, logo_url, whatsapp_number, store_template, rating_avg, rating_count, theme_color, is_active, created_at")
+    .select("id, vendor_id, name, slug, logo_url, whatsapp_number, store_template, store_theme_preset, storefront_config, rating_avg, rating_count, theme_color, is_active, created_at")
     .eq("slug", slug)
     .eq("is_active", true)
     .maybeSingle<StoreRecord>();
@@ -39,17 +40,17 @@ export default async function StoreProductPage({ params }: ProductPageProps) {
     notFound();
   }
 
-  const template = store.store_template ?? "classic";
+  const template = normalizeStoreTemplate(store.store_template);
   const pageClass =
-    template === "bold"
+    template === "modern_grid"
       ? "bg-slate-950"
-      : template === "minimal"
+      : template === "fashion_editorial"
         ? "bg-white"
         : "bg-slate-50";
-  const textTitleClass = template === "bold" ? "text-white" : "text-slate-900";
-  const textMutedClass = template === "bold" ? "text-slate-300" : "text-slate-600";
+  const textTitleClass = template === "modern_grid" ? "text-white" : "text-slate-900";
+  const textMutedClass = template === "modern_grid" ? "text-slate-300" : "text-slate-600";
   const articleClass =
-    template === "bold"
+    template === "modern_grid"
       ? "overflow-hidden rounded-xl border border-slate-700 bg-slate-900 shadow-sm"
       : "overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm";
 
@@ -69,7 +70,7 @@ export default async function StoreProductPage({ params }: ProductPageProps) {
 
           <div className="space-y-3 p-5">
             <h1 className={`text-2xl font-semibold ${textTitleClass}`}>{product.name}</h1>
-            <p className={template === "bold" ? "text-lg font-semibold text-emerald-300" : "text-lg font-semibold text-slate-800"}>{formatNaira(Number(product.price))}</p>
+            <p className={template === "modern_grid" ? "text-lg font-semibold text-emerald-300" : "text-lg font-semibold text-slate-800"}>{formatNaira(Number(product.price))}</p>
             <StarRating
               value={product.rating_avg}
               count={product.rating_count}
@@ -89,7 +90,7 @@ export default async function StoreProductPage({ params }: ProductPageProps) {
               </div>
             </div>
             <p className={`text-sm ${textMutedClass}`}>{product.description ?? "No description"}</p>
-            <p className={template === "bold" ? "text-xs text-slate-400" : "text-xs text-slate-500"}>Available stock: {product.stock_count}</p>
+            <p className={template === "modern_grid" ? "text-xs text-slate-400" : "text-xs text-slate-500"}>Available stock: {product.stock_count}</p>
           </div>
         </article>
 

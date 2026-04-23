@@ -4,6 +4,7 @@ import { z } from "zod";
 import { slugify } from "@/lib/format";
 import { logDevError } from "@/lib/logger";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { DEFAULT_STOREFRONT_CONFIG } from "@/lib/storefront";
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
 import { normalizeWhatsAppNumber } from "@/lib/whatsapp";
 
@@ -87,8 +88,10 @@ async function createOrUpdateVendorStore(params: {
     name: storeName,
     slug,
     whatsapp_number: params.phone,
-    store_template: "classic",
-    theme_color: "#0ea5e9",
+    store_template: "grocery_promo",
+    store_theme_preset: "emerald_fresh",
+    storefront_config: DEFAULT_STOREFRONT_CONFIG,
+    theme_color: "#059669",
     is_active: true,
   });
 

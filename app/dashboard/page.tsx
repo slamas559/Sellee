@@ -8,6 +8,7 @@ import {
   getVendorWhatsAppLinkStatus,
 } from "@/lib/dashboard-data";
 import { formatNaira } from "@/lib/format";
+import { normalizeStoreTemplate } from "@/lib/storefront";
 
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
@@ -25,6 +26,9 @@ export default async function DashboardPage() {
   const pendingOrders = orders.filter(
     (item) => item.order.status === "pending_whatsapp",
   ).length;
+  const templateLabel = store
+    ? normalizeStoreTemplate(store.store_template).replace(/_/g, " ")
+    : null;
 
   return (
     <>
@@ -35,7 +39,7 @@ export default async function DashboardPage() {
             {store?.is_active ? "Active" : "Draft"}
           </h2>
           <p className="mt-1 text-sm text-slate-600">
-            {store ? `Template: ${store.store_template}` : "No store configured yet."}
+            {store ? `Template: ${templateLabel}` : "No store configured yet."}
           </p>
         </article>
 
