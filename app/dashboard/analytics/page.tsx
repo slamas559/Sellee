@@ -1,7 +1,12 @@
+import type { Metadata } from "next";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { getVendorOrders, getVendorProducts } from "@/lib/dashboard-data";
 import { formatNaira } from "@/lib/format";
+
+export const metadata: Metadata = {
+  title: "Analytics",
+};
 
 function calcGrowth(current: number, previous: number): string {
   if (previous <= 0) return "N/A";

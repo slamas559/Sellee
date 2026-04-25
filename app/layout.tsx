@@ -14,8 +14,11 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Sellee",
-  description: "WhatsApp-powered student store platform",
+  title: {
+    default: "Sellee",
+    template: "Sellee | %s",
+  },
+  description: "WhatsApp-powered store platform",
 };
 
 export default function RootLayout({
@@ -34,4 +37,3 @@ export default function RootLayout({
     </html>
   );
 }
-

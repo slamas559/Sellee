@@ -12,6 +12,7 @@ type RegisterResponse = {
 export function RegisterForm() {
   const router = useRouter();
   const [form, setForm] = useState({
+    full_name: "",
     email: "",
     phone: "",
     password: "",
@@ -43,10 +44,10 @@ export function RegisterForm() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          full_name: form.full_name,
           email: form.email,
           phone: form.phone,
           password: form.password,
-          role: "vendor",
         }),
       });
 
@@ -86,7 +87,7 @@ export function RegisterForm() {
         return;
       }
 
-      router.push("/dashboard");
+      router.push("/");
       router.refresh();
     } catch {
       setError("Network error while creating account. Please try again.");
@@ -96,6 +97,24 @@ export function RegisterForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-2">
+        <label className="text-sm font-medium" htmlFor="full_name">
+          Full name
+        </label>
+        <input
+          id="full_name"
+          type="text"
+          required
+          minLength={2}
+          value={form.full_name}
+          onChange={(event) =>
+            setForm((prev) => ({ ...prev, full_name: event.target.value }))
+          }
+          className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm outline-none ring-sky-300 transition focus:ring-2"
+          placeholder="Abdul Salam"
+        />
+      </div>
+
       <div className="space-y-2">
         <label className="text-sm font-medium" htmlFor="email">
           Email
@@ -109,7 +128,7 @@ export function RegisterForm() {
             setForm((prev) => ({ ...prev, email: event.target.value }))
           }
           className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm outline-none ring-sky-300 transition focus:ring-2"
-          placeholder="vendor@example.com"
+          placeholder="you@example.com"
         />
       </div>
 
@@ -186,7 +205,7 @@ export function RegisterForm() {
         disabled={isLoading}
         className="w-full rounded-md bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-700 disabled:opacity-60"
       >
-        {isLoading ? "Creating account..." : "Create vendor account"}
+        {isLoading ? "Creating account..." : "Create account"}
       </button>
     </form>
   );

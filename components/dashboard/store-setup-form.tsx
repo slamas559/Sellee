@@ -1,15 +1,17 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import {
   DEFAULT_STOREFRONT_CONFIG,
+  DEFAULT_STOREFRONT_SECTIONS_ORDER,
   STOREFRONT_TEMPLATE_OPTIONS,
   STOREFRONT_THEME_PRESETS,
   normalizeStoreTemplate,
   normalizeStorefrontConfig,
   normalizeThemePreset,
 } from "@/lib/storefront";
-import type { StoreRecord, StoreTemplate } from "@/types";
+import type { StoreRecord, StoreTemplate, StorefrontSectionId } from "@/types";
 
 type StoreSetupFormProps = {
   initialStore: StoreRecord | null;
@@ -38,24 +40,27 @@ const PREVIEW_PRODUCTS = [
   { name: "Smart Organizer", price: "NGN 12,300" },
 ];
 
+const SECTION_LABELS: Record<StorefrontSectionId, string> = {
+  featured_products: "Featured products",
+  promo_strip: "Promo strip",
+  reviews: "Reviews",
+};
+
 function useObjectUrl(file: File | null, fallback: string): string {
-  const [url, setUrl] = useState(fallback);
+  const objectUrl = useMemo(() => {
+    if (!file) return null;
+    return URL.createObjectURL(file);
+  }, [file]);
 
   useEffect(() => {
-    if (!file) {
-      setUrl(fallback);
-      return;
-    }
-
-    const objectUrl = URL.createObjectURL(file);
-    setUrl(objectUrl);
-
     return () => {
-      URL.revokeObjectURL(objectUrl);
+      if (objectUrl) {
+        URL.revokeObjectURL(objectUrl);
+      }
     };
-  }, [file, fallback]);
+  }, [objectUrl]);
 
-  return url;
+  return objectUrl ?? fallback;
 }
 
 function UploadDropzone({
@@ -131,7 +136,18 @@ function PreviewImage({
     );
   }
 
-  return <img src={src} alt={alt} className={`h-full w-full object-contain ${className ?? ""}`} />;
+  return (
+    <div className={`relative overflow-hidden ${className ?? ""}`}>
+      <Image
+        src={src}
+        alt={alt}
+        fill
+        unoptimized
+        sizes="(max-width: 768px) 100vw, 50vw"
+        className="object-contain"
+      />
+    </div>
+  );
 }
 
 function LiveStorefrontPreview(props: {
@@ -144,6 +160,7 @@ function LiveStorefrontPreview(props: {
   heroCtaText: string;
   heroImageUrl: string;
   secondaryBannerUrl: string;
+  bannerUrls: string[];
   primaryColor: string;
   accentColor: string;
   surfaceColor: string;
@@ -158,11 +175,13 @@ function LiveStorefrontPreview(props: {
     heroCtaText,
     heroImageUrl,
     secondaryBannerUrl,
+    bannerUrls,
     primaryColor,
     accentColor,
     surfaceColor,
   } = props;
   const isPhone = viewport === "phone";
+  const activeBannerUrl = bannerUrls[0] ?? secondaryBannerUrl;
 
   if (template === "fashion_editorial") {
     return (
@@ -222,7 +241,7 @@ function LiveStorefrontPreview(props: {
         </div>
         <div className={`grid gap-2 ${isPhone ? "grid-cols-1" : "sm:grid-cols-3"}`}>
           <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
-            <PreviewImage src={secondaryBannerUrl} alt="Secondary banner" className="h-24" />
+            <PreviewImage src={activeBannerUrl} alt="Secondary banner" className="h-24" />
           </div>
           <div className="rounded-lg border border-slate-200 bg-white p-2 text-xs text-slate-600">Story card</div>
           <div className="rounded-lg border border-slate-200 bg-white p-2 text-xs text-slate-600">Review highlights</div>
@@ -294,6 +313,7 @@ function LiveStorefrontPreview(props: {
 export function StoreSetupForm({ initialStore }: StoreSetupFormProps) {
   const initialConfig = normalizeStorefrontConfig(initialStore?.storefront_config);
   const [store, setStore] = useState<StoreRecord | null>(initialStore);
+  const [draggedSection, setDraggedSection] = useState<StorefrontSectionId | null>(null);
   const [previewViewport, setPreviewViewport] = useState<"desktop" | "phone">("desktop");
   const [isSaving, setIsSaving] = useState(false);
   const [logoFile, setLogoFile] = useState<File | null>(null);
@@ -305,6 +325,8 @@ export function StoreSetupForm({ initialStore }: StoreSetupFormProps) {
     banner: { ...INITIAL_UPLOAD_STATE },
   });
   const [isDetectingLocation, setIsDetectingLocation] = useState(false);
+  const [showVendorSuccessBanner, setShowVendorSuccessBanner] = useState(false);
+  const [bannerUrlInput, setBannerUrlInput] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({
@@ -328,6 +350,8 @@ export function StoreSetupForm({ initialStore }: StoreSetupFormProps) {
     hero_image_url: initialConfig.hero_image_url,
     promo_text: initialConfig.promo_text,
     secondary_banner_url: initialConfig.secondary_banner_url,
+    banner_urls: initialConfig.banner_urls,
+    sections_order: initialConfig.sections_order ?? DEFAULT_STOREFRONT_SECTIONS_ORDER,
   });
 
   const shareablePath = store?.slug ? `/store/${store.slug}` : null;
@@ -343,6 +367,30 @@ export function StoreSetupForm({ initialStore }: StoreSetupFormProps) {
   const previewSecondaryBannerUrl = useObjectUrl(secondaryBannerFile, form.secondary_banner_url);
   const isAnyUploading = Object.values(uploadState).some((state) => state.isUploading);
 
+  function pushBannerUrl(url: string) {
+    const normalized = url.trim();
+    if (!normalized) return;
+    setForm((prev) => {
+      const next = Array.from(new Set([normalized, ...prev.banner_urls])).slice(0, 8);
+      return {
+        ...prev,
+        banner_urls: next,
+        secondary_banner_url: next[0] ?? prev.secondary_banner_url,
+      };
+    });
+  }
+
+  function removeBannerUrl(url: string) {
+    setForm((prev) => {
+      const next = prev.banner_urls.filter((item) => item !== url);
+      return {
+        ...prev,
+        banner_urls: next,
+        secondary_banner_url: next[0] ?? "",
+      };
+    });
+  }
+
   function updateFormField<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
@@ -355,6 +403,23 @@ export function StoreSetupForm({ initialStore }: StoreSetupFormProps) {
         ...patch,
       },
     }));
+  }
+
+  function moveSectionByDrag(target: StorefrontSectionId) {
+    if (!draggedSection || draggedSection === target) {
+      return;
+    }
+    setForm((prev) => {
+      const next = [...prev.sections_order];
+      const from = next.indexOf(draggedSection);
+      const to = next.indexOf(target);
+      if (from === -1 || to === -1) {
+        return prev;
+      }
+      next.splice(from, 1);
+      next.splice(to, 0, draggedSection);
+      return { ...prev, sections_order: next };
+    });
   }
 
   function applyThemePreset(key: (typeof form)["store_theme_preset"]) {
@@ -407,7 +472,7 @@ export function StoreSetupForm({ initialStore }: StoreSetupFormProps) {
         if (xhr.status >= 200 && xhr.status < 300 && payload.url) {
           if (kind === "logo") updateFormField("logo_url", payload.url);
           if (kind === "hero") updateFormField("hero_image_url", payload.url);
-          if (kind === "banner") updateFormField("secondary_banner_url", payload.url);
+          if (kind === "banner") pushBannerUrl(payload.url);
           updateUpload(kind, { isUploading: false, progress: 100, error: null });
           setMessage(`${kind} image uploaded successfully.`);
         } else {
@@ -480,6 +545,7 @@ export function StoreSetupForm({ initialStore }: StoreSetupFormProps) {
     setIsSaving(true);
     setError(null);
     setMessage(null);
+    setShowVendorSuccessBanner(false);
 
     const parsedLatitude = form.latitude.trim() ? Number.parseFloat(form.latitude) : null;
     const parsedLongitude = form.longitude.trim() ? Number.parseFloat(form.longitude) : null;
@@ -509,6 +575,8 @@ export function StoreSetupForm({ initialStore }: StoreSetupFormProps) {
       hero_image_url: form.hero_image_url || "",
       promo_text: form.promo_text || DEFAULT_STOREFRONT_CONFIG.promo_text,
       secondary_banner_url: form.secondary_banner_url || "",
+      banner_urls: form.banner_urls,
+      sections_order: form.sections_order,
     });
 
     try {
@@ -569,6 +637,8 @@ export function StoreSetupForm({ initialStore }: StoreSetupFormProps) {
         hero_image_url: nextConfig.hero_image_url,
         promo_text: nextConfig.promo_text,
         secondary_banner_url: nextConfig.secondary_banner_url,
+        banner_urls: nextConfig.banner_urls,
+        sections_order: nextConfig.sections_order ?? DEFAULT_STOREFRONT_SECTIONS_ORDER,
       });
 
       setMessage(
@@ -576,6 +646,7 @@ export function StoreSetupForm({ initialStore }: StoreSetupFormProps) {
           ? "Store created successfully."
           : "Store updated successfully.",
       );
+      setShowVendorSuccessBanner(Boolean(payload.became_vendor));
     } catch {
       setError("Network error while saving store setup.");
     } finally {
@@ -644,6 +715,7 @@ export function StoreSetupForm({ initialStore }: StoreSetupFormProps) {
                   heroCtaText={form.hero_cta_text}
                   heroImageUrl={previewHeroUrl}
                   secondaryBannerUrl={previewSecondaryBannerUrl}
+                  bannerUrls={form.banner_urls}
                   primaryColor={form.theme_color}
                   accentColor={selectedTheme.accent}
                   surfaceColor={selectedTheme.surface}
@@ -661,6 +733,7 @@ export function StoreSetupForm({ initialStore }: StoreSetupFormProps) {
               heroCtaText={form.hero_cta_text}
               heroImageUrl={previewHeroUrl}
               secondaryBannerUrl={previewSecondaryBannerUrl}
+              bannerUrls={form.banner_urls}
               primaryColor={form.theme_color}
               accentColor={selectedTheme.accent}
               surfaceColor={selectedTheme.surface}
@@ -833,21 +906,91 @@ export function StoreSetupForm({ initialStore }: StoreSetupFormProps) {
               state={uploadState.hero}
             />
             <UploadDropzone
-              title="Upload secondary banner"
-              hint="Best ratio: 5:2"
+              title="Upload banner image"
+              hint="Each upload is added to your banner slider (max 8)"
               onFile={(file) => void uploadAsset("banner", file)}
               state={uploadState.banner}
             />
           </div>
-          <label className="space-y-2 text-sm md:col-span-2">
-            <span className="font-medium text-slate-700">Secondary banner URL (fallback)</span>
-            <input
-              value={form.secondary_banner_url}
-              onChange={(event) => updateFormField("secondary_banner_url", event.target.value)}
-              className="w-full rounded-md border border-slate-200 px-3 py-2 outline-none ring-emerald-300 focus:ring-2"
-              placeholder="https://..."
-            />
-          </label>
+          <div className="space-y-2 text-sm md:col-span-2">
+            <span className="font-medium text-slate-700">Banner URLs</span>
+            <div className="flex flex-wrap gap-2">
+              <input
+                value={bannerUrlInput}
+                onChange={(event) => setBannerUrlInput(event.target.value)}
+                className="min-w-[220px] flex-1 rounded-md border border-slate-200 px-3 py-2 outline-none ring-emerald-300 focus:ring-2"
+                placeholder="https://..."
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  try {
+                    if (!bannerUrlInput.trim()) return;
+                    const normalized = new URL(bannerUrlInput.trim()).toString();
+                    pushBannerUrl(normalized);
+                    setBannerUrlInput("");
+                  } catch {
+                    setError("Please enter a valid banner URL.");
+                  }
+                }}
+                className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50"
+              >
+                Add banner
+              </button>
+            </div>
+            <p className="text-xs text-slate-500">
+              First banner is used as fallback/primary banner. Max 8 banners.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {form.banner_urls.map((url) => (
+                <div
+                  key={url}
+                  className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs text-slate-700"
+                >
+                  <span className="max-w-[180px] truncate">
+                    {url}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => removeBannerUrl(url)}
+                    className="font-semibold text-red-600 hover:text-red-700"
+                    aria-label="Remove banner"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="space-y-2 rounded-lg border border-slate-200 bg-white p-3 md:col-span-2">
+            <p className="text-sm font-semibold text-slate-800">Section order (drag and drop)</p>
+            <p className="text-xs text-slate-500">
+              Drag sections to control how they appear on your storefront page.
+            </p>
+            <div className="space-y-2 pt-1">
+              {form.sections_order.map((section) => (
+                <div
+                  key={section}
+                  draggable
+                  onDragStart={() => setDraggedSection(section)}
+                  onDragOver={(event) => event.preventDefault()}
+                  onDrop={() => {
+                    moveSectionByDrag(section);
+                    setDraggedSection(null);
+                  }}
+                  onDragEnd={() => setDraggedSection(null)}
+                  className={`flex cursor-grab items-center justify-between rounded-md border px-3 py-2 text-sm transition active:cursor-grabbing ${
+                    draggedSection === section
+                      ? "border-emerald-400 bg-emerald-50 text-emerald-800"
+                      : "border-slate-200 bg-slate-50 text-slate-700"
+                  }`}
+                >
+                  <span>{SECTION_LABELS[section]}</span>
+                  <span className="text-xs text-slate-400">Drag</span>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
 
         <div className="col-span-full rounded-xl border border-slate-200 bg-slate-50 p-4">
@@ -968,8 +1111,15 @@ export function StoreSetupForm({ initialStore }: StoreSetupFormProps) {
             state={uploadState.logo}
           />
           {previewLogoUrl ? (
-            <div className="h-16 w-16 overflow-hidden rounded-full border border-slate-200 bg-slate-100">
-              <img src={previewLogoUrl} alt="Logo preview" className="h-full w-full object-cover" />
+            <div className="relative h-16 w-16 overflow-hidden rounded-full border border-slate-200 bg-slate-100">
+              <Image
+                src={previewLogoUrl}
+                alt="Logo preview"
+                fill
+                unoptimized
+                sizes="64px"
+                className="object-cover"
+              />
             </div>
           ) : null}
         </div>
@@ -992,6 +1142,12 @@ export function StoreSetupForm({ initialStore }: StoreSetupFormProps) {
         {message ? (
           <p className="col-span-full rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
             {message}
+          </p>
+        ) : null}
+
+        {showVendorSuccessBanner ? (
+          <p className="col-span-full rounded-md border border-emerald-300 bg-emerald-100 px-3 py-2 text-sm font-semibold text-emerald-800">
+            You are now a vendor.
           </p>
         ) : null}
 

@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
 import { z } from "zod";
+import { authOptions } from "@/lib/auth";
 import { logDevError } from "@/lib/logger";
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
 
@@ -11,8 +13,24 @@ const createOrderSchema = z.object({
   customer_whatsapp: z.string().min(5).max(30).optional(),
 });
 
+function deriveCustomerName(email: string): string {
+  const local = (email.split("@")[0] ?? "customer").replace(/[._-]+/g, " ").trim();
+  if (!local) return "Customer";
+  return local
+    .split(" ")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
 export async function POST(request: Request) {
   try {
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Please login to place an order." }, { status: 401 });
+    }
+
     const body = await request.json();
     const parsed = createOrderSchema.safeParse(body);
 
@@ -21,6 +39,16 @@ export async function POST(request: Request) {
     }
 
     const supabase = createAdminSupabaseClient();
+    const { data: user, error: userError } = await supabase
+      .from("users")
+      .select("id, email, phone")
+      .eq("id", session.user.id)
+      .maybeSingle();
+
+    if (userError || !user) {
+      logDevError("orders.user-lookup", userError, { userId: session.user.id });
+      return NextResponse.json({ error: "Could not verify your account." }, { status: 500 });
+    }
 
     const { data: store, error: storeError } = await supabase
       .from("stores")
@@ -48,6 +76,18 @@ export async function POST(request: Request) {
     }
 
     const quantity = parsed.data.quantity;
+    const customerName = parsed.data.customer_name?.trim() || deriveCustomerName(String(user.email));
+    const customerWhatsapp = parsed.data.customer_whatsapp?.trim() || String(user.phone ?? "");
+
+    if (!customerWhatsapp) {
+      return NextResponse.json(
+        {
+          error:
+            "Your account is missing a WhatsApp number. Add it to continue ordering.",
+        },
+        { status: 400 },
+      );
+    }
 
     if (quantity > Number(product.stock_count)) {
       return NextResponse.json(
@@ -62,8 +102,8 @@ export async function POST(request: Request) {
       .from("orders")
       .insert({
         store_id: parsed.data.store_id,
-        customer_name: parsed.data.customer_name ?? null,
-        customer_whatsapp: parsed.data.customer_whatsapp ?? "unknown",
+        customer_name: customerName,
+        customer_whatsapp: customerWhatsapp,
         status: "pending_whatsapp",
         total_amount: totalAmount,
         payment_method: null,

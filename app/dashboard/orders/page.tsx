@@ -1,7 +1,12 @@
+import type { Metadata } from "next";
 import { getServerSession } from "next-auth";
 import { formatNaira } from "@/lib/format";
 import { authOptions } from "@/lib/auth";
 import { getVendorOrders, getVendorWhatsAppLinkStatus } from "@/lib/dashboard-data";
+
+export const metadata: Metadata = {
+  title: "Orders",
+};
 
 function statusClass(status: string): string {
   if (status === "confirmed") {

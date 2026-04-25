@@ -1,5 +1,10 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { RegisterForm } from "@/components/auth/register-form";
+
+export const metadata: Metadata = {
+  title: "Register",
+};
 
 export default function RegisterPage() {
   return (
@@ -7,7 +12,7 @@ export default function RegisterPage() {
       <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
         <h1 className="text-2xl font-semibold text-slate-900">Create account</h1>
         <p className="mt-1 text-sm text-slate-600">
-          Set up your vendor profile to start building your store.
+          Join Sellee as a customer. You can become a vendor anytime from your account.
         </p>
 
         <div className="mt-6">

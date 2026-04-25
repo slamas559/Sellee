@@ -46,7 +46,7 @@ export const authOptions: NextAuthOptions = {
 
         const { data: user, error } = await supabase
           .from("users")
-          .select("id, email, password_hash, role")
+          .select("id, email, full_name, password_hash, role")
           .eq("email", parsed.data.email)
           .single();
 
@@ -71,6 +71,7 @@ export const authOptions: NextAuthOptions = {
         return {
           id: user.id,
           email: user.email,
+          name: user.full_name ?? undefined,
           role: user.role,
         };
       },
@@ -79,7 +80,24 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.role = user.role ?? "vendor";
+        token.role = user.role ?? "customer";
+        token.name = user.name ?? token.name;
+      }
+
+      if (token.sub) {
+        const supabase = createAdminSupabaseClient();
+        const { data: profile } = await supabase
+          .from("users")
+          .select("role, full_name")
+          .eq("id", token.sub)
+          .maybeSingle();
+
+        if (profile?.role === "vendor" || profile?.role === "customer") {
+          token.role = profile.role;
+        }
+        if (profile?.full_name) {
+          token.name = profile.full_name;
+        }
       }
 
       return token;
@@ -87,7 +105,8 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.sub ?? "";
-        session.user.role = (token.role as "vendor" | "customer") ?? "vendor";
+        session.user.role = (token.role as "vendor" | "customer") ?? "customer";
+        session.user.name = token.name ?? session.user.name;
       }
 
       return session;
@@ -98,17 +117,27 @@ export const authOptions: NextAuthOptions = {
       }
 
       const supabase = createAdminSupabaseClient();
-      const { error } = await supabase.from("users").upsert(
-        {
-          email: user.email,
-          role: "vendor",
-          password_hash: "oauth-google",
-        },
-        {
-          onConflict: "email",
-          ignoreDuplicates: false,
-        },
-      );
+      const { data: existingUser, error: existingError } = await supabase
+        .from("users")
+        .select("id")
+        .eq("email", user.email)
+        .maybeSingle();
+
+      if (existingError) {
+        logDevError("auth.google.lookup-user", existingError, { email: user.email });
+        return false;
+      }
+
+      if (existingUser) {
+        return true;
+      }
+
+      const { error } = await supabase.from("users").insert({
+        full_name: user.name ?? null,
+        email: user.email,
+        role: "customer",
+        password_hash: "oauth-google",
+      });
 
       if (error) {
         logDevError("auth.google.upsert-user", error, { email: user.email });

@@ -1,4 +1,10 @@
-import type { StoreThemePreset, StorefrontConfig, StoreTemplate } from "@/types";
+import type { StoreThemePreset, StorefrontConfig, StoreTemplate, StorefrontSectionId } from "@/types";
+
+export const DEFAULT_STOREFRONT_SECTIONS_ORDER: StorefrontSectionId[] = [
+  "featured_products",
+  "promo_strip",
+  "reviews",
+];
 
 export const STOREFRONT_TEMPLATE_OPTIONS: Array<{
   key: StoreTemplate;
@@ -83,6 +89,8 @@ export const DEFAULT_STOREFRONT_CONFIG: StorefrontConfig = {
   hero_image_url: "",
   promo_text: "Fresh picks this week",
   secondary_banner_url: "",
+  banner_urls: [],
+  sections_order: DEFAULT_STOREFRONT_SECTIONS_ORDER,
 };
 
 export function normalizeStoreTemplate(value: string | null | undefined): StoreTemplate {
@@ -122,15 +130,49 @@ export function normalizeStorefrontConfig(
   value: unknown,
 ): StorefrontConfig {
   const raw = (value as Partial<StorefrontConfig> | null) ?? {};
+  const rawBannerUrls = Array.isArray(raw.banner_urls)
+    ? raw.banner_urls
+        .map((item) => String(item ?? "").trim())
+        .filter(Boolean)
+    : [];
+  const legacyBanner = String(
+    raw.secondary_banner_url ?? DEFAULT_STOREFRONT_CONFIG.secondary_banner_url,
+  ).trim();
+  const normalizedBanners = Array.from(
+    new Set(
+      rawBannerUrls.length > 0
+        ? rawBannerUrls
+        : legacyBanner
+          ? [legacyBanner]
+          : [],
+    ),
+  ).slice(0, 8);
+  const rawOrder = Array.isArray(raw.sections_order) ? raw.sections_order : [];
+  const normalizedOrder = [
+    ...new Set(
+      rawOrder.filter((item): item is StorefrontSectionId =>
+        DEFAULT_STOREFRONT_SECTIONS_ORDER.includes(item as StorefrontSectionId),
+      ),
+    ),
+  ];
+
+  for (const key of DEFAULT_STOREFRONT_SECTIONS_ORDER) {
+    if (!normalizedOrder.includes(key)) {
+      normalizedOrder.push(key);
+    }
+  }
+
   return {
     hero_title: String(raw.hero_title ?? DEFAULT_STOREFRONT_CONFIG.hero_title),
     hero_subtitle: String(raw.hero_subtitle ?? DEFAULT_STOREFRONT_CONFIG.hero_subtitle),
     hero_cta_text: String(raw.hero_cta_text ?? DEFAULT_STOREFRONT_CONFIG.hero_cta_text),
     hero_image_url: String(raw.hero_image_url ?? DEFAULT_STOREFRONT_CONFIG.hero_image_url),
     promo_text: String(raw.promo_text ?? DEFAULT_STOREFRONT_CONFIG.promo_text),
-    secondary_banner_url: String(
-      raw.secondary_banner_url ?? DEFAULT_STOREFRONT_CONFIG.secondary_banner_url,
-    ),
+    secondary_banner_url:
+      normalizedBanners[0] ??
+      String(raw.secondary_banner_url ?? DEFAULT_STOREFRONT_CONFIG.secondary_banner_url),
+    banner_urls: normalizedBanners,
+    sections_order: normalizedOrder,
   };
 }
 

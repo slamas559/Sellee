@@ -1,7 +1,12 @@
+import type { Metadata } from "next";
 import { getServerSession } from "next-auth";
 import { StoreSetupForm } from "@/components/dashboard/store-setup-form";
 import { authOptions } from "@/lib/auth";
 import { getVendorStore } from "@/lib/dashboard-data";
+
+export const metadata: Metadata = {
+  title: "Storefront",
+};
 
 export default async function DashboardStorePage() {
   const session = await getServerSession(authOptions);

@@ -28,6 +28,10 @@ const storeSchema = z.object({
       hero_image_url: z.string().url().optional().or(z.literal("")),
       promo_text: z.string().max(120).optional(),
       secondary_banner_url: z.string().url().optional().or(z.literal("")),
+      banner_urls: z.array(z.string().url()).max(8).optional(),
+      sections_order: z
+        .array(z.enum(["featured_products", "promo_strip", "reviews"]))
+        .optional(),
     })
     .optional(),
   theme_color: z.string().regex(/^#([A-Fa-f0-9]{6})$/),
@@ -228,7 +232,7 @@ export async function POST(request: Request) {
     const storeThemePreset = normalizeThemePreset(parsed.data.store_theme_preset);
     const existingConfig = normalizeStorefrontConfig(existingStore?.storefront_config);
     const parsedData: ParsedStoreInput = parsed.data;
-    let storefrontConfig = normalizeStorefrontConfig(
+    const storefrontConfig = normalizeStorefrontConfig(
       parsedData.storefront_config ??
         (existingStore ? existingConfig : DEFAULT_STOREFRONT_CONFIG),
     );
@@ -249,11 +253,15 @@ export async function POST(request: Request) {
       );
     }
     if (files.secondaryBannerFile) {
-      storefrontConfig.secondary_banner_url = await uploadStoreAsset(
+      const uploadedBannerUrl = await uploadStoreAsset(
         session.user.id,
         files.secondaryBannerFile,
         "banner",
       );
+      storefrontConfig.banner_urls = Array.from(
+        new Set([uploadedBannerUrl, ...(storefrontConfig.banner_urls ?? [])]),
+      ).slice(0, 8);
+      storefrontConfig.secondary_banner_url = storefrontConfig.banner_urls[0] ?? uploadedBannerUrl;
     }
 
     if (existingStore) {
@@ -286,7 +294,22 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "Could not update store." }, { status: 500 });
       }
 
-      return NextResponse.json({ store: data, action: "updated" });
+      const { data: promotedRows, error: roleError } = await supabase
+        .from("users")
+        .update({ role: "vendor" })
+        .eq("id", session.user.id)
+        .neq("role", "vendor")
+        .select("id");
+
+      if (roleError) {
+        logDevError("stores.promote-vendor.update", roleError, { userId: session.user.id });
+      }
+
+      return NextResponse.json({
+        store: data,
+        action: "updated",
+        became_vendor: Boolean(promotedRows?.length),
+      });
     }
 
     const { data, error } = await supabase
@@ -318,7 +341,22 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Could not create store." }, { status: 500 });
     }
 
-    return NextResponse.json({ store: data, action: "created" });
+    const { data: promotedRows, error: roleError } = await supabase
+      .from("users")
+      .update({ role: "vendor" })
+      .eq("id", session.user.id)
+      .neq("role", "vendor")
+      .select("id");
+
+    if (roleError) {
+      logDevError("stores.promote-vendor.create", roleError, { userId: session.user.id });
+    }
+
+    return NextResponse.json({
+      store: data,
+      action: "created",
+      became_vendor: Boolean(promotedRows?.length),
+    });
   } catch (error) {
     logDevError("stores.unhandled", error, { userId: session.user.id });
     return NextResponse.json({ error: "Unexpected store setup error." }, { status: 500 });

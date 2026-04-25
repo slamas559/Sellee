@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
 import { z } from "zod";
+import { authOptions } from "@/lib/auth";
 import { logDevError } from "@/lib/logger";
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
 
 const createVendorReviewSchema = z.object({
   store_id: z.string().uuid(),
-  reviewer_name: z.string().min(2).max(60),
   rating: z.number().int().min(1).max(5),
   comment: z.string().max(600).optional().or(z.literal("")),
 });
@@ -43,6 +44,21 @@ async function refreshVendorRating(storeId: string) {
   if (updateError) {
     throw new Error(updateError.message);
   }
+}
+
+function deriveDisplayName(fullName: string | null, email: string): string {
+  if (fullName?.trim()) {
+    return fullName.trim();
+  }
+
+  const local = (email.split("@")[0] ?? "customer").replace(/[._-]+/g, " ").trim();
+  if (!local) return "Customer";
+
+  return local
+    .split(" ")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
 }
 
 export async function GET(request: Request) {
@@ -89,6 +105,14 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: "Please log in to submit a vendor review." },
+        { status: 401 },
+      );
+    }
+
     const body = await request.json();
     const parsed = createVendorReviewSchema.safeParse(body);
 
@@ -97,6 +121,16 @@ export async function POST(request: Request) {
     }
 
     const supabase = createAdminSupabaseClient();
+    const { data: user, error: userError } = await supabase
+      .from("users")
+      .select("full_name, email")
+      .eq("id", session.user.id)
+      .maybeSingle();
+
+    if (userError || !user?.email) {
+      return NextResponse.json({ error: "User account not found." }, { status: 404 });
+    }
+
     const { data: store, error: storeError } = await supabase
       .from("stores")
       .select("id")
@@ -109,7 +143,7 @@ export async function POST(request: Request) {
 
     const { error: insertError } = await supabase.from("vendor_reviews").insert({
       store_id: parsed.data.store_id,
-      reviewer_name: parsed.data.reviewer_name.trim(),
+      reviewer_name: deriveDisplayName(user.full_name, user.email),
       rating: parsed.data.rating,
       comment: parsed.data.comment?.trim() || null,
     });

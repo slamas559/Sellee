@@ -9,10 +9,10 @@ import { createAdminSupabaseClient } from "@/lib/supabase-admin";
 import { normalizeWhatsAppNumber } from "@/lib/whatsapp";
 
 const registerSchema = z.object({
+  full_name: z.string().min(2).max(80),
   email: z.string().email(),
   password: z.string().min(8),
   phone: z.string().min(10).max(20),
-  role: z.enum(["vendor", "customer"]).default("vendor"),
 });
 
 function toTitleCase(input: string): string {
@@ -138,7 +138,7 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           error:
-            "Please check your details. Email must be valid and password at least 8 characters.",
+            "Please check your details. Name is required, email must be valid, and password at least 8 characters.",
         },
         { status: 400 },
       );
@@ -196,9 +196,10 @@ export async function POST(request: Request) {
     const { data, error } = await supabase
       .from("users")
       .insert({
+        full_name: parsed.data.full_name.trim(),
         email: parsed.data.email,
         phone: normalizedPhone,
-        role: parsed.data.role,
+        role: "customer",
         password_hash: passwordHash,
       })
       .select("id, email, role, phone")

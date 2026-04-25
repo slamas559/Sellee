@@ -19,7 +19,7 @@ export function ProductCard({ product, store, template = "classic" }: ProductCar
     <ProductShowcaseCard
       product={product}
       store={store}
-      variant="store"
+      variant="home"
       template={template}
     />
   );

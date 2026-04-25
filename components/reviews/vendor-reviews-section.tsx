@@ -1,6 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useCallback, useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
+import { RatingPicker } from "@/components/reviews/rating-picker";
 import { StarRating } from "@/components/store/star-rating";
 
 type VendorReviewsSectionProps = {
@@ -31,6 +34,7 @@ export function VendorReviewsSection({
   initialRatingAvg,
   initialRatingCount,
 }: VendorReviewsSectionProps) {
+  const { data: session, status } = useSession();
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -40,12 +44,12 @@ export function VendorReviewsSection({
     rating_count: initialRatingCount ?? 0,
   });
   const [form, setForm] = useState({
-    reviewer_name: "",
     rating: 5,
     comment: "",
   });
+  const canSubmitReview = status === "authenticated";
 
-  async function loadReviews() {
+  const loadReviews = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -66,14 +70,22 @@ export function VendorReviewsSection({
     } finally {
       setLoading(false);
     }
-  }
+  }, [storeId]);
 
   useEffect(() => {
-    void loadReviews();
-  }, [storeId]);
+    const timeoutId = setTimeout(() => {
+      void loadReviews();
+    }, 0);
+    return () => clearTimeout(timeoutId);
+  }, [loadReviews]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!canSubmitReview) {
+      setError("Please log in to submit a vendor review.");
+      return;
+    }
+
     setIsSubmitting(true);
     setError(null);
     try {
@@ -82,7 +94,6 @@ export function VendorReviewsSection({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           store_id: storeId,
-          reviewer_name: form.reviewer_name,
           rating: form.rating,
           comment: form.comment,
         }),
@@ -92,7 +103,7 @@ export function VendorReviewsSection({
         setError(payload.error ?? "Could not submit vendor review.");
         return;
       }
-      setForm({ reviewer_name: "", rating: 5, comment: "" });
+      setForm({ rating: 5, comment: "" });
       await loadReviews();
     } catch {
       setError("Network error while submitting vendor review.");
@@ -113,38 +124,32 @@ export function VendorReviewsSection({
         />
       </div>
 
-      <form onSubmit={handleSubmit} className="mt-4 grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 sm:grid-cols-2">
-        <label className="space-y-1 text-sm">
-          <span className="font-medium text-slate-700">Your name</span>
-          <input
-            required
-            value={form.reviewer_name}
-            onChange={(event) =>
-              setForm((prev) => ({ ...prev, reviewer_name: event.target.value }))
-            }
-            className="w-full rounded-md border border-slate-200 px-3 py-2 outline-none ring-emerald-300 focus:ring-2"
-            placeholder="Abdul"
-          />
-        </label>
+      <form onSubmit={handleSubmit} className="mt-4 space-y-3 rounded-xl border border-slate-200 bg-gradient-to-br from-white via-emerald-50/30 to-amber-50/20 p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-emerald-100 bg-white/90 p-3">
+          <p className="text-sm font-medium text-slate-700">
+            {canSubmitReview
+              ? `Posting as ${session?.user?.name || "your account"}`
+              : "Log in to rate this vendor"}
+          </p>
+          {canSubmitReview ? (
+            <RatingPicker
+              value={form.rating}
+              onChange={(nextRating) =>
+                setForm((prev) => ({ ...prev, rating: nextRating }))
+              }
+              disabled={isSubmitting}
+            />
+          ) : (
+            <Link
+              href="/login"
+              className="rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-700"
+            >
+              Login to rate
+            </Link>
+          )}
+        </div>
 
         <label className="space-y-1 text-sm">
-          <span className="font-medium text-slate-700">Rating</span>
-          <select
-            value={form.rating}
-            onChange={(event) =>
-              setForm((prev) => ({ ...prev, rating: Number(event.target.value) }))
-            }
-            className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 outline-none ring-emerald-300 focus:ring-2"
-          >
-            <option value={5}>5 - Excellent</option>
-            <option value={4}>4 - Very good</option>
-            <option value={3}>3 - Good</option>
-            <option value={2}>2 - Fair</option>
-            <option value={1}>1 - Poor</option>
-          </select>
-        </label>
-
-        <label className="space-y-1 text-sm sm:col-span-2">
           <span className="font-medium text-slate-700">Comment</span>
           <textarea
             value={form.comment}
@@ -158,8 +163,8 @@ export function VendorReviewsSection({
 
         <button
           type="submit"
-          disabled={isSubmitting}
-          className="sm:col-span-2 rounded-full bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-60"
+          disabled={isSubmitting || !canSubmitReview}
+          className="rounded-full bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {isSubmitting ? "Submitting..." : "Submit vendor review"}
         </button>

@@ -46,7 +46,7 @@ export function ProductShowcaseCard({
   const hasManyImages = images.length > 1;
   const activeImage = images[index] ?? null;
   const isCompact = variant === "home";
-  const headlineClass = isCompact ? "text-lg sm:text-xl" : "text-2xl";
+  const headlineClass = isCompact ? "text-base sm:text-lg" : "text-base sm:text-lg lg:text-xl";
   const isBoldTemplate = template === "bold" || template === "modern_grid";
   const isMinimalTemplate = template === "minimal" || template === "fashion_editorial";
 
@@ -74,17 +74,17 @@ export function ProductShowcaseCard({
 
   return (
     <article
-      className={`group overflow-hidden rounded-[1.75rem] border p-3 transition hover:-translate-y-1 ${cardClass}`}
+      className={`group overflow-hidden rounded-2xl border p-2 sm:rounded-[1.75rem] sm:p-3 transition hover:-translate-y-1 ${cardClass}`}
     >
       <div className="relative overflow-hidden rounded-[1.5rem] bg-slate-100">
-        <div className="relative h-52 w-full sm:h-56">
+        <div className="relative h-36 w-full sm:h-52">
           {activeImage ? (
             <Image
               src={activeImage}
               alt={product.name}
               fill
               className="object-cover"
-              sizes="(max-width: 1024px) 100vw, 33vw"
+              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
             />
           ) : (
             <div className="flex h-full items-center justify-center text-sm text-slate-500">
@@ -93,13 +93,13 @@ export function ProductShowcaseCard({
           )}
         </div>
 
-        <span className="absolute left-3 top-3 rounded-full bg-white/85 px-3 py-1 text-xs font-semibold text-slate-700 backdrop-blur">
+        <span className="absolute left-2 top-2 rounded-full bg-white/85 px-2 py-1 text-[10px] font-semibold text-slate-700 backdrop-blur sm:left-3 sm:top-3 sm:px-3 sm:text-xs">
           {product.rating_avg && product.rating_avg >= 4.5
             ? "Best Seller"
             : product.category || "Featured"}
         </span>
 
-        <div className="absolute right-3 top-3 flex h-11 w-11 items-center justify-center overflow-hidden rounded-full border border-white/80 bg-white shadow-md">
+        <div className="absolute right-2 top-2 flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-white/80 bg-white shadow-md sm:right-3 sm:top-3 sm:h-11 sm:w-11">
           {store.logo_url ? (
             <Image
               src={store.logo_url}
@@ -118,7 +118,7 @@ export function ProductShowcaseCard({
             <button
               type="button"
               onClick={prevSlide}
-              className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full bg-white/80 px-2.5 py-1 text-sm font-bold text-slate-900 backdrop-blur hover:bg-white"
+              className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-white/80 px-2 py-0.5 text-xs font-bold text-slate-900 backdrop-blur hover:bg-white sm:left-3 sm:px-2.5 sm:py-1 sm:text-sm"
               aria-label="Previous image"
             >
               {"<"}
@@ -126,7 +126,7 @@ export function ProductShowcaseCard({
             <button
               type="button"
               onClick={nextSlide}
-              className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-white/80 px-2.5 py-1 text-sm font-bold text-slate-900 backdrop-blur hover:bg-white"
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-white/80 px-2 py-0.5 text-xs font-bold text-slate-900 backdrop-blur hover:bg-white sm:right-3 sm:px-2.5 sm:py-1 sm:text-sm"
               aria-label="Next image"
             >
               {">"}
@@ -148,7 +148,7 @@ export function ProductShowcaseCard({
         ) : null}
       </div>
 
-      <div className="space-y-2 px-1 pb-1 pt-3">
+      <div className="space-y-2 px-0.5 pb-1 pt-2 sm:px-1 sm:pt-3">
         <p className={`line-clamp-1 text-xs font-semibold uppercase tracking-[0.16em] ${metaClass}`}>
           {store.name}
         </p>
@@ -157,7 +157,7 @@ export function ProductShowcaseCard({
         >
           {product.name}
         </h3>
-        <p className={`line-clamp-2 text-sm leading-5 ${metaClass}`}>
+        <p className={`line-clamp-2 text-xs leading-4 sm:text-sm sm:leading-5 ${metaClass}`}>
           {product.description || "Quality product from a verified local vendor."}
         </p>
 
@@ -170,13 +170,13 @@ export function ProductShowcaseCard({
           />
         </div>
 
-        <div className="flex items-center justify-between gap-2 pt-2">
-          <span className={`inline-flex rounded-full px-3 py-1.5 text-xl font-bold ${priceChipClass}`}>
+        <div className="flex items-center justify-between gap-1.5 pt-1.5 sm:gap-2 sm:pt-2">
+          <span className={`inline-flex rounded-full px-2.5 py-1 text-base font-bold sm:px-3 sm:py-1.5 sm:text-lg ${priceChipClass}`}>
             {formatNaira(Number(product.price))}
           </span>
           <Link
             href={`/store/${store.slug}/${product.id}`}
-            className={`inline-flex items-center rounded-full px-4 py-2 text-sm font-semibold text-white transition ${ctaClass}`}
+            className={`inline-flex items-center rounded-full px-3 py-1.5 text-xs font-semibold text-white transition sm:px-4 sm:py-2 sm:text-sm ${ctaClass}`}
           >
             View
           </Link>

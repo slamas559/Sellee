@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 export const metadata = {
-  title: "Terms of Service | Sellee",
+  title: "Terms of Service",
   description: "Sellee terms of service",
 };
 

@@ -1,8 +1,13 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { ProductShowcaseCard } from "@/components/marketplace/product-showcase-card";
 import { LocationFilterButton } from "@/components/marketplace/location-filter-button";
 import { haversineDistanceKm } from "@/lib/geo";
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
+
+export const metadata: Metadata = {
+  title: "Marketplace",
+};
 
 type MarketplacePageProps = {
   searchParams: Promise<{
@@ -335,9 +340,9 @@ export default async function MarketplacePage({ searchParams }: MarketplacePageP
               No products match your current filters.
             </div>
           ) : (
-            <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="grid grid-cols-2 justify-items-center gap-3 [@media(max-width:320px)]:grid-cols-1 xl:grid-cols-3">
               {products.map((product) => (
-                <div key={product.id} className="space-y-2">
+                <div key={product.id} className="w-full max-w-[320px] space-y-2">
                   <ProductShowcaseCard product={product} store={product.store} variant="marketplace" />
                   <div className="px-1">
                     <StoreLocation store={product.store} />

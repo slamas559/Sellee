@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 export const metadata = {
-  title: "Privacy Policy | Sellee",
+  title: "Privacy Policy",
   description: "Sellee privacy policy",
 };
 

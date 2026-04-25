@@ -1,7 +1,12 @@
+import type { Metadata } from "next";
 import { getServerSession } from "next-auth";
 import { WhatsAppLinkingCard } from "@/components/dashboard/whatsapp-linking-card";
 import { authOptions } from "@/lib/auth";
 import { getVendorWhatsAppLinkStatus } from "@/lib/dashboard-data";
+
+export const metadata: Metadata = {
+  title: "Integrations",
+};
 
 export default async function DashboardIntegrationsPage() {
   const session = await getServerSession(authOptions);

@@ -1,7 +1,12 @@
+import type { Metadata } from "next";
 import { getServerSession } from "next-auth";
 import { ProductsManager } from "@/components/dashboard/products-manager";
 import { authOptions } from "@/lib/auth";
 import { getVendorProducts } from "@/lib/dashboard-data";
+
+export const metadata: Metadata = {
+  title: "Products",
+};
 
 export default async function DashboardProductsPage() {
   const session = await getServerSession(authOptions);

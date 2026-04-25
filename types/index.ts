@@ -15,6 +15,11 @@ export type StoreThemePreset =
   | "ocean_breeze"
   | "rose_boutique";
 
+export type StorefrontSectionId =
+  | "featured_products"
+  | "promo_strip"
+  | "reviews";
+
 export type StorefrontConfig = {
   hero_title: string;
   hero_subtitle: string;
@@ -22,6 +27,8 @@ export type StorefrontConfig = {
   hero_image_url: string;
   promo_text: string;
   secondary_banner_url: string;
+  banner_urls: string[];
+  sections_order: StorefrontSectionId[];
 };
 
 export type StoreRecord = {

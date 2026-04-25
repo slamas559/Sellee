@@ -5,11 +5,13 @@ import { usePathname } from "next/navigation";
 import { SignOutButton } from "@/components/auth/sign-out-button";
 
 type DashboardSidebarProps = {
+  name?: string | null;
   email?: string | null;
 };
 
 const navItems = [
   { href: "/dashboard", label: "Overview" },
+  { href: "/dashboard/account", label: "Account" },
   { href: "/dashboard/store", label: "Storefront" },
   { href: "/dashboard/products", label: "Products" },
   { href: "/dashboard/orders", label: "Orders" },
@@ -17,7 +19,7 @@ const navItems = [
   { href: "/dashboard/integrations", label: "Integrations" },
 ];
 
-export function DashboardSidebar({ email }: DashboardSidebarProps) {
+export function DashboardSidebar({ name, email }: DashboardSidebarProps) {
   const pathname = usePathname();
 
   return (
@@ -27,7 +29,8 @@ export function DashboardSidebar({ email }: DashboardSidebarProps) {
           Sellee
         </p>
         <h2 className="mt-1 text-lg font-semibold text-slate-900">Vendor Console</h2>
-        <p className="mt-1 break-all text-xs text-slate-500">{email ?? "Vendor"}</p>
+        <p className="mt-1 text-sm font-medium text-slate-700">{name ?? "Vendor"}</p>
+        <p className="mt-1 break-all text-xs text-slate-500">{email ?? ""}</p>
       </div>
 
       <nav className="mt-5 space-y-2">

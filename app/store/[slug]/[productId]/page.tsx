@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { OrderButton } from "@/components/store/order-button";
@@ -12,6 +13,14 @@ import type { ProductRecord, StoreRecord } from "@/types";
 type ProductPageProps = {
   params: Promise<{ slug: string; productId: string }>;
 };
+
+export async function generateMetadata({ params }: ProductPageProps): Promise<Metadata> {
+  const { slug } = await params;
+  const label = slug.replace(/[-_]+/g, " ").trim() || "Product";
+  return {
+    title: `Product - ${label}`,
+  };
+}
 
 export default async function StoreProductPage({ params }: ProductPageProps) {
   const { slug, productId } = await params;

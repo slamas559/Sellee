@@ -1,7 +1,14 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+import { getServerSession } from "next-auth";
 import { NearbyVendors } from "@/components/landing/nearby-vendors";
 import { ProductShowcaseCard } from "@/components/marketplace/product-showcase-card";
+import { authOptions } from "@/lib/auth";
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
+
+export const metadata: Metadata = {
+  title: "Home",
+};
 
 type HomeProps = {
   searchParams: Promise<{
@@ -107,21 +114,34 @@ async function getMarketplaceData(q?: string, category?: string) {
 }
 
 export default async function Home({ searchParams }: HomeProps) {
+  const session = await getServerSession(authOptions);
   const params = await searchParams;
   const q = params.q?.trim() || undefined;
   const category = params.category?.trim() || undefined;
 
   const { stores, products, categories, storesById } = await getMarketplaceData(q, category);
+  const isLoggedIn = Boolean(session?.user?.id);
+  const isVendor = session?.user?.role === "vendor";
+  const topRightPrimaryHref = !isLoggedIn ? "/login" : isVendor ? "/dashboard" : "/dashboard/store";
+  const topRightPrimaryLabel = !isLoggedIn ? "Login / Create account" : isVendor ? "Dashboard" : "Become a Vendor";
+  const secondaryTopHref = isLoggedIn && !isVendor ? "/dashboard" : null;
+  const secondaryTopLabel = isLoggedIn && !isVendor ? "Account" : null;
+  const heroPrimaryHref = !isLoggedIn ? "/login" : isVendor ? "/dashboard" : "/dashboard/store";
+  const heroPrimaryLabel = !isLoggedIn ? "Login to start" : isVendor ? "Open Dashboard" : "Become a Vendor";
 
   return (
-    <main className="mx-auto flex w-full max-w-[1200px] flex-1 flex-col gap-7 px-4 py-5 sm:px-6 sm:py-7 lg:gap-10 lg:py-8">
+    <main className="mx-auto flex w-full max-w-[1200px] flex-1 flex-col gap-6 px-3 py-4 sm:px-5 sm:py-6 lg:gap-9 lg:py-7">
       <header className="rounded-3xl border border-emerald-100 bg-white shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-4 py-3 text-xs text-slate-600 sm:px-6">
           <p>Sellee Marketplace</p>
           <div className="flex items-center gap-3">
-            <Link href="/register" className="hover:text-emerald-700">Become a Vendor</Link>
-            <span className="text-slate-300">|</span>
-            <Link href="/login" className="hover:text-emerald-700">Account</Link>
+            <Link href={topRightPrimaryHref} className="hover:text-emerald-700">{topRightPrimaryLabel}</Link>
+            {secondaryTopHref && secondaryTopLabel ? (
+              <>
+                <span className="text-slate-300">|</span>
+                <Link href={secondaryTopHref} className="hover:text-emerald-700">{secondaryTopLabel}</Link>
+              </>
+            ) : null}
           </div>
         </div>
 
@@ -169,10 +189,10 @@ export default async function Home({ searchParams }: HomeProps) {
             </p>
             <div className="flex flex-wrap gap-3">
               <Link
-                href="/register"
+                href={heroPrimaryHref}
                 className="rounded-full bg-emerald-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700"
               >
-                Start Selling
+                {heroPrimaryLabel}
               </Link>
               <Link
                 href="/marketplace"
@@ -202,7 +222,7 @@ export default async function Home({ searchParams }: HomeProps) {
         </div>
       </section>
 
-      <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+      <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-xl font-bold text-slate-900">Browse Categories</h2>
           {category ? (
@@ -246,7 +266,7 @@ export default async function Home({ searchParams }: HomeProps) {
         }))}
       />
 
-      <section id="market" className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+      <section id="market" className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">Marketplace</p>
@@ -260,17 +280,18 @@ export default async function Home({ searchParams }: HomeProps) {
             No products match this filter yet.
           </div>
         ) : (
-          <div className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="mt-5 grid grid-cols-2 justify-items-center gap-3 [@media(max-width:320px)]:grid-cols-1 lg:grid-cols-3 xl:grid-cols-4">
             {products.map((product) => {
               const store = storesById.get(product.store_id);
               if (!store) return null;
               return (
-                <ProductShowcaseCard
-                  key={product.id}
-                  product={product}
-                  store={store}
-                  variant="home"
-                />
+                <div key={product.id} className="w-full max-w-[320px]">
+                  <ProductShowcaseCard
+                    product={product}
+                    store={store}
+                    variant="home"
+                  />
+                </div>
               );
             })}
           </div>

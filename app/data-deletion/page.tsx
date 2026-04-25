@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 export const metadata = {
-  title: "Data Deletion Instructions | Sellee",
+  title: "Data Deletion Instructions",
   description: "How to request account and data deletion on Sellee",
 };
 
