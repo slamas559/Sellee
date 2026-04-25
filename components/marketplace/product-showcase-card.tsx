@@ -81,7 +81,7 @@ export function ProductShowcaseCard({
 
   return (
     <article
-      className={`group overflow-hidden rounded-2xl border p-2 sm:rounded-[1.75rem] sm:p-3 transition hover:-translate-y-1 ${cardClass}`}
+      className={`group overflow-hidden rounded-2xl border p-1 sm:rounded-[1.75rem] sm:p-3 transition hover:-translate-y-1 ${cardClass}`}
     >
       <div className="relative overflow-hidden rounded-[1.5rem] bg-slate-100">
         <div className={`relative w-full ${imageHeightClass}`}>
@@ -178,12 +178,12 @@ export function ProductShowcaseCard({
         </div>
 
         <div className="flex items-center justify-between gap-1.5 pt-1.5 sm:gap-2 sm:pt-2">
-          <span className={`inline-flex rounded-full px-2.5 py-1 text-base font-bold sm:px-3 sm:py-1.5 sm:text-lg ${priceChipClass}`}>
+          <span className={`inline-flex rounded-full text-sm px-2 py-1 text-base font-bold sm:px-2 sm:py-1.5 sm:text-lg ${priceChipClass}`}>
             {formatNaira(Number(product.price))}
           </span>
           <Link
             href={`/store/${store.slug}/${product.id}`}
-            className={`inline-flex items-center rounded-full px-3 py-1.5 text-xs font-semibold text-white transition sm:px-4 sm:py-2 sm:text-sm ${ctaClass}`}
+            className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold text-white transition sm:px-4 sm:py-2 sm:text-sm ${ctaClass}`}
           >
             View
           </Link>
