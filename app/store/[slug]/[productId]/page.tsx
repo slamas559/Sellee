@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ProductShowcaseCard } from "@/components/marketplace/product-showcase-card";
 import { OrderButton } from "@/components/store/order-button";
 import { ProductMediaGallery } from "@/components/store/product-media-gallery";
 import { ProductReviewsSection } from "@/components/reviews/product-reviews-section";
@@ -12,6 +13,16 @@ import type { ProductRecord, StoreRecord } from "@/types";
 
 type ProductPageProps = {
   params: Promise<{ slug: string; productId: string }>;
+};
+
+type ProductWithStore = ProductRecord & {
+  store: {
+    name: string;
+    slug: string;
+    logo_url: string | null;
+    rating_avg: number | null;
+    rating_count: number;
+  };
 };
 
 export async function generateMetadata({ params }: ProductPageProps): Promise<Metadata> {
@@ -49,6 +60,68 @@ export default async function StoreProductPage({ params }: ProductPageProps) {
     notFound();
   }
 
+  const vendorProductsPromise = supabase
+    .from("products")
+    .select("id, store_id, name, description, category, price, image_url, image_urls, rating_avg, rating_count, stock_count, is_available, created_at")
+    .eq("store_id", store.id)
+    .eq("is_available", true)
+    .neq("id", product.id)
+    .order("created_at", { ascending: false })
+    .limit(8);
+
+  const relatedProductsPromise = product.category
+    ? supabase
+        .from("products")
+        .select("id, store_id, name, description, category, price, image_url, image_urls, rating_avg, rating_count, stock_count, is_available, created_at")
+        .eq("category", product.category)
+        .eq("is_available", true)
+        .neq("id", product.id)
+        .neq("store_id", store.id)
+        .order("created_at", { ascending: false })
+        .limit(16)
+    : Promise.resolve({ data: [] as ProductRecord[] });
+
+  const [{ data: vendorProductsData }, { data: relatedProductsData }] = await Promise.all([
+    vendorProductsPromise,
+    relatedProductsPromise,
+  ]);
+
+  const vendorProducts = (vendorProductsData ?? []) as ProductRecord[];
+  const relatedProductsRaw = (relatedProductsData ?? []) as ProductRecord[];
+
+  const relatedStoreIds = [...new Set(relatedProductsRaw.map((item) => item.store_id))];
+
+  const { data: relatedStoresData } = relatedStoreIds.length
+    ? await supabase
+        .from("stores")
+        .select("id, name, slug, logo_url, rating_avg, rating_count")
+        .in("id", relatedStoreIds)
+        .eq("is_active", true)
+    : { data: [] as Array<Pick<StoreRecord, "id" | "name" | "slug" | "logo_url" | "rating_avg" | "rating_count">> };
+
+  const relatedStoresById = new Map(
+    ((relatedStoresData ?? []) as Array<Pick<StoreRecord, "id" | "name" | "slug" | "logo_url" | "rating_avg" | "rating_count">>)
+      .map((item) => [item.id, item]),
+  );
+
+  const relatedProducts: ProductWithStore[] = relatedProductsRaw
+    .map((item) => {
+      const relatedStore = relatedStoresById.get(item.store_id);
+      if (!relatedStore) return null;
+      return {
+        ...item,
+        store: {
+          name: relatedStore.name,
+          slug: relatedStore.slug,
+          logo_url: relatedStore.logo_url,
+          rating_avg: relatedStore.rating_avg,
+          rating_count: relatedStore.rating_count,
+        },
+      };
+    })
+    .filter((item): item is ProductWithStore => item !== null)
+    .slice(0, 8);
+
   const template = normalizeStoreTemplate(store.store_template);
   const pageClass =
     template === "modern_grid"
@@ -56,20 +129,22 @@ export default async function StoreProductPage({ params }: ProductPageProps) {
       : template === "fashion_editorial"
         ? "bg-white"
         : "bg-slate-50";
-  const textTitleClass = template === "modern_grid" ? "text-white" : "text-slate-900";
-  const textMutedClass = template === "modern_grid" ? "text-slate-300" : "text-slate-600";
+  const isDark = template === "modern_grid";
+  const textTitleClass = isDark ? "text-white" : "text-slate-900";
+  const textMutedClass = isDark ? "text-slate-300" : "text-slate-600";
   const articleClass =
     template === "modern_grid"
-      ? "overflow-hidden rounded-xl border border-slate-700 bg-slate-900 shadow-sm"
-      : "overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm";
+      ? "overflow-hidden rounded-2xl border border-slate-700 bg-slate-900 shadow-sm"
+      : "overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm";
+  const storeLocation = [store.city, store.state, store.country].filter(Boolean).join(", ");
 
   return (
-    <main className={`mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6 px-4 py-8 sm:px-6 ${pageClass}`}>
+    <main className={`mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-2 py-6 sm:px-4 sm:py-8 ${pageClass}`}>
       <Link href={`/store/${store.slug}`} className="text-sm font-medium text-emerald-700 hover:underline">
         Back to store
       </Link>
 
-      <section className="grid gap-6 lg:grid-cols-[1.3fr_1fr]">
+      <section className="grid gap-6 lg:grid-cols-[1.35fr_0.9fr]">
         <article className={articleClass}>
           <ProductMediaGallery
             name={product.name}
@@ -77,18 +152,29 @@ export default async function StoreProductPage({ params }: ProductPageProps) {
             imageUrls={product.image_urls}
           />
 
-          <div className="space-y-3 p-5">
-            <h1 className={`text-2xl font-semibold ${textTitleClass}`}>{product.name}</h1>
-            <p className={template === "modern_grid" ? "text-lg font-semibold text-emerald-300" : "text-lg font-semibold text-slate-800"}>{formatNaira(Number(product.price))}</p>
+          <div className="space-y-4 p-5 sm:p-6">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="space-y-2">
+                <p className={`text-xs font-semibold uppercase tracking-[0.16em] ${isDark ? "text-emerald-300" : "text-emerald-700"}`}>
+                  {product.category || "Featured Product"}
+                </p>
+                <h1 className={`text-2xl font-black tracking-tight sm:text-3xl ${textTitleClass}`}>{product.name}</h1>
+              </div>
+              <p className={isDark ? "rounded-full bg-slate-800 px-4 py-2 text-lg font-semibold text-emerald-300" : "rounded-full bg-slate-100 px-4 py-2 text-lg font-semibold text-slate-800"}>
+                {formatNaira(Number(product.price))}
+              </p>
+            </div>
+
             <StarRating
               value={product.rating_avg}
               count={product.rating_count}
               size="md"
               accent="yellow"
             />
-            <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
-              <p className="text-sm font-medium text-slate-700">Vendor</p>
+            <div className={`rounded-xl border px-4 py-3 ${isDark ? "border-slate-700 bg-slate-800/70" : "border-slate-200 bg-slate-50"}`}>
+              <p className={`text-xs font-semibold uppercase tracking-[0.14em] ${isDark ? "text-slate-300" : "text-slate-500"}`}>Vendor</p>
               <p className={`text-sm ${textMutedClass}`}>{store.name}</p>
+              {storeLocation ? <p className={`mt-1 text-xs ${textMutedClass}`}>{storeLocation}</p> : null}
               <div className="mt-1">
                 <StarRating
                   value={store.rating_avg}
@@ -98,19 +184,30 @@ export default async function StoreProductPage({ params }: ProductPageProps) {
                 />
               </div>
             </div>
-            <p className={`text-sm ${textMutedClass}`}>{product.description ?? "No description"}</p>
-            <p className={template === "modern_grid" ? "text-xs text-slate-400" : "text-xs text-slate-500"}>Available stock: {product.stock_count}</p>
+            <p className={`text-sm leading-6 ${textMutedClass}`}>
+              {product.description ?? "No description added for this product yet."}
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className={isDark ? "rounded-full border border-slate-700 bg-slate-800 px-3 py-1 text-xs text-slate-300" : "rounded-full border border-slate-200 bg-white px-3 py-1 text-xs text-slate-600"}>
+                Stock: {product.stock_count}
+              </span>
+              <span className={isDark ? "rounded-full border border-slate-700 bg-slate-800 px-3 py-1 text-xs text-slate-300" : "rounded-full border border-slate-200 bg-white px-3 py-1 text-xs text-slate-600"}>
+                Ready for WhatsApp order
+              </span>
+            </div>
           </div>
         </article>
 
-        <OrderButton
-          storeId={store.id}
-          productId={product.id}
-          productName={product.name}
-          productPrice={Number(product.price)}
-          storeName={store.name}
-          whatsappNumber={store.whatsapp_number}
-        />
+        <div className="lg:sticky lg:top-6 lg:self-start">
+          <OrderButton
+            storeId={store.id}
+            productId={product.id}
+            productName={product.name}
+            productPrice={Number(product.price)}
+            storeName={store.name}
+            whatsappNumber={store.whatsapp_number}
+          />
+        </div>
       </section>
 
       <ProductReviewsSection
@@ -118,6 +215,65 @@ export default async function StoreProductPage({ params }: ProductPageProps) {
         initialRatingAvg={product.rating_avg}
         initialRatingCount={product.rating_count}
       />
+
+      <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-base font-bold text-slate-900 sm:text-xl">More From {store.name}</h2>
+          <Link href={`/store/${store.slug}`} className="text-xs font-semibold text-emerald-700 hover:underline sm:text-sm">
+            View store
+          </Link>
+        </div>
+        {vendorProducts.length === 0 ? (
+          <p className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+            No other products from this vendor yet.
+          </p>
+        ) : (
+          <div className="grid grid-cols-2 justify-items-center gap-2 [@media(max-width:320px)]:grid-cols-1 sm:gap-3 lg:grid-cols-3 xl:grid-cols-4">
+            {vendorProducts.map((item) => (
+              <div key={item.id} className="w-full max-w-[320px]">
+                <ProductShowcaseCard
+                  product={item}
+                  store={{
+                    name: store.name,
+                    slug: store.slug,
+                    logo_url: store.logo_url,
+                    rating_avg: store.rating_avg,
+                    rating_count: store.rating_count,
+                  }}
+                  variant="store"
+                  template={template}
+                />
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-base font-bold text-slate-900 sm:text-xl">Related Products</h2>
+          <Link href="/marketplace" className="text-xs font-semibold text-emerald-700 hover:underline sm:text-sm">
+            Explore marketplace
+          </Link>
+        </div>
+        {relatedProducts.length === 0 ? (
+          <p className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+            Related products will appear here as more vendors list this category.
+          </p>
+        ) : (
+          <div className="grid grid-cols-2 justify-items-center gap-2 [@media(max-width:320px)]:grid-cols-1 sm:gap-3 lg:grid-cols-3 xl:grid-cols-4">
+            {relatedProducts.map((item) => (
+              <div key={item.id} className="w-full max-w-[320px]">
+                <ProductShowcaseCard
+                  product={item}
+                  store={item.store}
+                  variant="marketplace"
+                />
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
     </main>
   );
 }

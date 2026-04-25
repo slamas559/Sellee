@@ -197,7 +197,7 @@ export function ProductShowcaseCard({
           />
         </div>
 
-        <div className="flex items-center justify-between gap-2 pt-1.5 sm:pt-2">
+        <div className="flex items-center justify-between gap-2 pt-1.5 [@media(max-width:360px)]:flex-wrap sm:pt-2">
           <span
             className={`inline-flex whitespace-nowrap rounded-full px-2.5 py-1 text-sm font-bold tabular-nums sm:px-3 sm:py-1.5 sm:text-base ${priceChipClass}`}
           >

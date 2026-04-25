@@ -19,11 +19,15 @@ const navItems = [
   { href: "/dashboard/integrations", label: "Integrations" },
 ];
 
+function isActivePath(pathname: string, href: string) {
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
 export function DashboardSidebar({ name, email }: DashboardSidebarProps) {
   const pathname = usePathname();
 
   return (
-    <aside className="w-full rounded-2xl border border-emerald-100 bg-white p-5 shadow-sm lg:sticky lg:top-6 lg:w-72 lg:self-start">
+    <aside className="hidden w-72 rounded-2xl border border-emerald-100 bg-white p-5 shadow-sm lg:sticky lg:top-6 lg:block lg:self-start">
       <div>
         <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
           Sellee
@@ -39,7 +43,7 @@ export function DashboardSidebar({ name, email }: DashboardSidebarProps) {
             key={item.href}
             href={item.href}
             className={`block rounded-lg px-3 py-2 text-sm font-medium transition ${
-              pathname === item.href
+              isActivePath(pathname, item.href)
                 ? "bg-emerald-600 text-white"
                 : "text-slate-700 hover:bg-emerald-50 hover:text-emerald-700"
             }`}

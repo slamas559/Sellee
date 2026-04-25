@@ -52,13 +52,20 @@ export function OrderButton({
   const pathname = usePathname();
   const { status } = useSession();
   const [quantity, setQuantity] = useState(1);
-  const [customerName, setCustomerName] = useState("");
-  const [customerWhatsapp, setCustomerWhatsapp] = useState("");
+  const [profile, setProfile] = useState<MeResponse["user"] | null>(null);
   const [isPrefilling, setIsPrefilling] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const total = useMemo(() => productPrice * quantity, [productPrice, quantity]);
+
+  function decreaseQuantity() {
+    setQuantity((prev) => Math.max(1, prev - 1));
+  }
+
+  function increaseQuantity() {
+    setQuantity((prev) => prev + 1);
+  }
 
   useEffect(() => {
     async function loadMe() {
@@ -68,8 +75,7 @@ export function OrderButton({
         const response = await fetch("/api/me", { cache: "no-store" });
         const payload = (await response.json()) as MeResponse;
         if (!response.ok || !payload.user) return;
-        setCustomerName((prev) => prev || payload.user?.display_name || "");
-        setCustomerWhatsapp((prev) => prev || payload.user?.phone || "");
+        setProfile(payload.user);
       } finally {
         setIsPrefilling(false);
       }
@@ -98,8 +104,6 @@ export function OrderButton({
           store_id: storeId,
           product_id: productId,
           quantity,
-          customer_name: customerName || undefined,
-          customer_whatsapp: customerWhatsapp || undefined,
         }),
       });
 
@@ -117,7 +121,7 @@ export function OrderButton({
         total,
         storeName,
         orderReference: shortOrderRef(payload.order.id),
-        customerName,
+        customerName: profile?.display_name ?? "",
       });
 
       const waLink = buildWaMeLink(whatsappNumber, message);
@@ -130,11 +134,11 @@ export function OrderButton({
   }
 
   return (
-    <div className="space-y-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+    <div className="space-y-4 rounded-2xl border border-emerald-100 bg-white p-4 shadow-sm sm:p-5">
       <div>
-        <p className="text-sm font-medium text-sky-700">Order on WhatsApp</p>
+        <p className="text-sm font-medium text-emerald-700">Order on WhatsApp</p>
         <p className="mt-1 text-sm text-slate-600">
-          Choose quantity and continue to WhatsApp with a pre-filled message.
+          Choose quantity and continue with your account details prefilled.
         </p>
       </div>
 
@@ -152,39 +156,52 @@ export function OrderButton({
           </Link>
         </div>
       ) : (
-        <>
-          <label className="block space-y-2 text-sm">
-            <span className="font-medium text-slate-700">Your name</span>
-            <input
-              value={customerName}
-              onChange={(event) => setCustomerName(event.target.value)}
-              className="w-full rounded-md border border-slate-300 px-3 py-2 outline-none ring-sky-300 focus:ring-2"
-              placeholder={isPrefilling ? "Loading profile..." : "Ada Obi"}
-            />
-          </label>
-
-          <label className="block space-y-2 text-sm">
-            <span className="font-medium text-slate-700">Your WhatsApp</span>
-            <input
-              value={customerWhatsapp}
-              onChange={(event) => setCustomerWhatsapp(event.target.value)}
-              className="w-full rounded-md border border-slate-300 px-3 py-2 outline-none ring-sky-300 focus:ring-2"
-              placeholder={isPrefilling ? "Loading profile..." : "2348012345678"}
-            />
-          </label>
-        </>
+        <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Account</p>
+          <div className="space-y-1 text-sm">
+            <p className="font-medium text-slate-800">
+              {isPrefilling ? "Loading profile..." : (profile?.display_name ?? "Customer")}
+            </p>
+            <p className="break-all text-xs text-slate-600 sm:text-sm">{profile?.email ?? "No email found"}</p>
+            <p className="break-all text-xs text-slate-600 sm:text-sm">
+              WhatsApp: {profile?.phone?.trim() ? profile.phone : "Not set"}
+            </p>
+          </div>
+          {!isPrefilling && !profile?.phone?.trim() ? (
+            <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+              Add your phone number in account profile before ordering.
+              <Link href="/dashboard/account" className="ml-1 font-semibold underline">
+                Open account
+              </Link>
+            </div>
+          ) : null}
+        </div>
       )}
 
-      <label className="block space-y-2 text-sm">
+      <div className="space-y-2 text-sm">
         <span className="font-medium text-slate-700">Quantity</span>
-        <input
-          type="number"
-          min={1}
-          value={quantity}
-          onChange={(event) => setQuantity(Math.max(1, Number(event.target.value) || 1))}
-          className="w-32 rounded-md border border-slate-300 px-3 py-2 outline-none ring-sky-300 focus:ring-2"
-        />
-      </label>
+        <div className="inline-flex items-center overflow-hidden rounded-full border border-slate-300 bg-white shadow-sm">
+          <button
+            type="button"
+            onClick={decreaseQuantity}
+            className="inline-flex h-10 w-10 items-center justify-center text-lg font-semibold text-slate-700 transition hover:bg-slate-100"
+            aria-label="Decrease quantity"
+          >
+            -
+          </button>
+          <span className="inline-flex h-10 min-w-[3rem] items-center justify-center border-x border-slate-200 px-3 text-sm font-semibold text-slate-900">
+            {quantity}
+          </span>
+          <button
+            type="button"
+            onClick={increaseQuantity}
+            className="inline-flex h-10 w-10 items-center justify-center text-lg font-semibold text-slate-700 transition hover:bg-slate-100"
+            aria-label="Increase quantity"
+          >
+            +
+          </button>
+        </div>
+      </div>
 
       <p className="text-sm text-slate-700">
         Total: <span className="font-semibold">{formatNaira(total)}</span>
@@ -199,8 +216,8 @@ export function OrderButton({
       <button
         type="button"
         onClick={() => void handleOrder()}
-        disabled={isSubmitting || status === "loading"}
-        className="inline-flex rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
+        disabled={isSubmitting || status === "loading" || (status === "authenticated" && !profile?.phone?.trim())}
+        className="inline-flex w-full items-center justify-center rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60 sm:w-auto"
       >
         {isSubmitting
           ? "Preparing order..."
