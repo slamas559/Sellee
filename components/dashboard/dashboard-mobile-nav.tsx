@@ -29,6 +29,9 @@ const navItems: NavItem[] = [
 const bottomTabs = ["/dashboard", "/dashboard/products", "/dashboard/orders", "/dashboard/analytics", "/dashboard/account"];
 
 function isActivePath(pathname: string, href: string) {
+  if (href === "/dashboard") {
+    return pathname === href;
+  }
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 

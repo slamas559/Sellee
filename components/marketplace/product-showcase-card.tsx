@@ -66,7 +66,7 @@ export function ProductShowcaseCard({
   const titleClass = isBoldTemplate ? "text-white" : "text-slate-900";
   const metaClass = isBoldTemplate ? "text-slate-300" : "text-slate-500";
   const descriptionClass = isCompact
-    ? `line-clamp-1 text-xs leading-4 ${metaClass}`
+    ? `line-clamp-2 text-xs leading-4 ${metaClass}`
     : `line-clamp-2 text-xs leading-4 sm:text-sm sm:leading-5 ${metaClass}`;
   const priceChipClass = isBoldTemplate
     ? "bg-slate-800 text-emerald-200"
@@ -101,9 +101,9 @@ export function ProductShowcaseCard({
       tabIndex={0}
       onClick={handleCardClick}
       onKeyDown={handleCardKeyDown}
-      className={`group cursor-pointer overflow-hidden rounded-2xl border p-1 sm:rounded-[1.75rem] sm:p-3 transition hover:-translate-y-1 ${cardClass}`}
+      className={`group cursor-pointer overflow-hidden rounded-xl border p-1 sm:rounded-[1.75rem] sm:p-3 transition hover:-translate-y-1 ${cardClass}`}
     >
-      <div className="relative overflow-hidden rounded-[1.5rem] bg-slate-100">
+      <div className="relative overflow-hidden rounded-xl sm:rounded-[1.25rem] bg-slate-100">
         <div className={`relative w-full ${imageHeightClass}`}>
           {activeImage ? (
             <Image
@@ -199,7 +199,7 @@ export function ProductShowcaseCard({
 
         <div className="flex items-center justify-between gap-2 pt-1.5 [@media(max-width:360px)]:flex-wrap sm:pt-2">
           <span
-            className={`inline-flex whitespace-nowrap rounded-full px-2.5 py-1 text-sm font-bold tabular-nums sm:px-3 sm:py-1.5 sm:text-base ${priceChipClass}`}
+            className={`inline-flex whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-bold tabular-nums sm:px-3 sm:py-1.5 sm:text-base ${priceChipClass}`}
           >
             {formatNaira(Number(product.price))}
           </span>
@@ -207,7 +207,7 @@ export function ProductShowcaseCard({
             href={productHref}
             aria-label={`Open ${product.name}`}
             title="Open product"
-            className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white transition sm:h-9 sm:w-9 ${ctaClass}`}
+            className={`inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-white transition sm:h-9 sm:w-9 ${ctaClass}`}
           >
             <svg
               viewBox="0 0 24 24"

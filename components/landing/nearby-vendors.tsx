@@ -163,29 +163,43 @@ export function NearbyVendors({ initialVendors }: NearbyVendorsProps) {
             <Link
               key={vendor.id}
               href={`/store/${vendor.slug}`}
-              className="group min-w-[250px] snap-start rounded-2xl border border-slate-200 bg-white p-4 transition hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-md sm:min-w-0"
+              className="group relative min-w-[250px] snap-start overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 transition hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-md sm:min-w-0"
             >
-              <p className="line-clamp-1 text-base font-semibold text-slate-900 group-hover:text-emerald-700">
-                {vendor.name}
-              </p>
-              <p className="mt-2 text-sm text-slate-600">
-                {[vendor.city, vendor.state, vendor.country]
-                  .filter(Boolean)
-                  .join(", ") || "Location not set"}
-              </p>
-              <p className="mt-2 text-xs text-amber-500">
-                {"★".repeat(Math.max(1, Math.round(vendor.rating_avg ?? 0)))}{" "}
-                <span className="text-slate-500">
-                  {(vendor.rating_avg ?? 0).toFixed(1)} ({vendor.rating_count})
-                </span>
-              </p>
-              <p className="mt-3 text-xs font-medium text-emerald-700">
-                {typeof vendor.distance_km === "number"
-                  ? `${vendor.distance_km.toFixed(1)} km away`
-                  : hasDistance
-                    ? "Distance unavailable"
-                    : "Open store"}
-              </p>
+              {vendor.logo_url ? (
+                <div
+                  aria-hidden="true"
+                  className="absolute inset-0 bg-cover bg-center bg-no-repeat transition group-hover:opacity-35"
+                  style={{ backgroundImage: `url(${vendor.logo_url})` }}
+                />
+              ) : null}
+              <div
+                aria-hidden="true"
+                className="absolute inset-0 bg-gradient-to-b from-white/65 via-white/80 to-white/92"
+              />
+
+              <div className="relative z-10">
+                <p className="line-clamp-1 text-base font-semibold text-slate-900 group-hover:text-emerald-700">
+                  {vendor.name}
+                </p>
+                <p className="mt-2 text-sm text-slate-600">
+                  {[vendor.city, vendor.state, vendor.country]
+                    .filter(Boolean)
+                    .join(", ") || "Location not set"}
+                </p>
+                <p className="mt-2 text-xs text-amber-500">
+                  {"★".repeat(Math.max(1, Math.round(vendor.rating_avg ?? 0)))}{" "}
+                  <span className="text-slate-500">
+                    {(vendor.rating_avg ?? 0).toFixed(1)} ({vendor.rating_count})
+                  </span>
+                </p>
+                <p className="mt-3 text-xs font-medium text-emerald-700">
+                  {typeof vendor.distance_km === "number"
+                    ? `${vendor.distance_km.toFixed(1)} km away`
+                    : hasDistance
+                      ? "Distance unavailable"
+                      : "Open store"}
+                </p>
+              </div>
             </Link>
           ))}
         </div>
