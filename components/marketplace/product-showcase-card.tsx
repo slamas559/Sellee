@@ -47,6 +47,10 @@ export function ProductShowcaseCard({
   const activeImage = images[index] ?? null;
   const isCompact = variant === "home";
   const headlineClass = isCompact ? "text-base sm:text-lg" : "text-base sm:text-lg lg:text-xl";
+  const imageHeightClass = isCompact ? "h-40 sm:h-52" : "h-36 sm:h-52";
+  const contentWrapClass = isCompact
+    ? "space-y-1.5 px-0.5 pb-1 pt-1.5 sm:space-y-2 sm:px-1 sm:pt-3"
+    : "space-y-2 px-0.5 pb-1 pt-2 sm:px-1 sm:pt-3";
   const isBoldTemplate = template === "bold" || template === "modern_grid";
   const isMinimalTemplate = template === "minimal" || template === "fashion_editorial";
 
@@ -57,6 +61,9 @@ export function ProductShowcaseCard({
       : "border-slate-200 bg-white shadow-[0_18px_45px_-30px_rgba(15,23,42,0.45)] hover:shadow-[0_28px_70px_-32px_rgba(16,185,129,0.55)]";
   const titleClass = isBoldTemplate ? "text-white" : "text-slate-900";
   const metaClass = isBoldTemplate ? "text-slate-300" : "text-slate-500";
+  const descriptionClass = isCompact
+    ? `line-clamp-1 text-xs leading-4 ${metaClass}`
+    : `line-clamp-2 text-xs leading-4 sm:text-sm sm:leading-5 ${metaClass}`;
   const priceChipClass = isBoldTemplate
     ? "bg-slate-800 text-emerald-200"
     : "bg-slate-100 text-slate-900";
@@ -77,7 +84,7 @@ export function ProductShowcaseCard({
       className={`group overflow-hidden rounded-2xl border p-2 sm:rounded-[1.75rem] sm:p-3 transition hover:-translate-y-1 ${cardClass}`}
     >
       <div className="relative overflow-hidden rounded-[1.5rem] bg-slate-100">
-        <div className="relative h-36 w-full sm:h-52">
+        <div className={`relative w-full ${imageHeightClass}`}>
           {activeImage ? (
             <Image
               src={activeImage}
@@ -148,7 +155,7 @@ export function ProductShowcaseCard({
         ) : null}
       </div>
 
-      <div className="space-y-2 px-0.5 pb-1 pt-2 sm:px-1 sm:pt-3">
+      <div className={contentWrapClass}>
         <p className={`line-clamp-1 text-xs font-semibold uppercase tracking-[0.16em] ${metaClass}`}>
           {store.name}
         </p>
@@ -157,7 +164,7 @@ export function ProductShowcaseCard({
         >
           {product.name}
         </h3>
-        <p className={`line-clamp-2 text-xs leading-4 sm:text-sm sm:leading-5 ${metaClass}`}>
+        <p className={descriptionClass}>
           {product.description || "Quality product from a verified local vendor."}
         </p>
 

@@ -130,27 +130,27 @@ export default async function Home({ searchParams }: HomeProps) {
   const heroPrimaryLabel = !isLoggedIn ? "Login to start" : isVendor ? "Open Dashboard" : "Become a Vendor";
 
   return (
-    <main className="mx-auto flex w-full max-w-[1200px] flex-1 flex-col gap-6 px-3 py-4 sm:px-5 sm:py-6 lg:gap-9 lg:py-7">
+    <main className="mx-auto flex w-full max-w-[1200px] flex-1 flex-col gap-5 px-2 py-4 sm:px-3 sm:py-6 lg:gap-9 lg:py-7">
       <header className="rounded-3xl border border-emerald-100 bg-white shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-4 py-3 text-xs text-slate-600 sm:px-6">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-3 py-3 text-xs text-slate-600 sm:px-6">
           <p>Sellee Marketplace</p>
-          <div className="flex items-center gap-3">
-            <Link href={topRightPrimaryHref} className="hover:text-emerald-700">{topRightPrimaryLabel}</Link>
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            <Link href={topRightPrimaryHref} className="whitespace-nowrap hover:text-emerald-700">{topRightPrimaryLabel}</Link>
             {secondaryTopHref && secondaryTopLabel ? (
               <>
                 <span className="text-slate-300">|</span>
-                <Link href={secondaryTopHref} className="hover:text-emerald-700">{secondaryTopLabel}</Link>
+                <Link href={secondaryTopHref} className="whitespace-nowrap hover:text-emerald-700">{secondaryTopLabel}</Link>
               </>
             ) : null}
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-4 px-4 py-4 sm:px-6">
+        <div className="flex flex-wrap items-center gap-3 px-3 py-4 sm:gap-4 sm:px-6">
           <Link href="/" className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-4 py-2">
             <span className="text-xl font-black tracking-tight text-emerald-700">Sellee</span>
           </Link>
 
-          <form action="/" className="flex min-w-[260px] flex-1 items-center gap-2 rounded-full border border-slate-200 bg-white p-2">
+          <form action="/" className="flex min-w-0 flex-1 basis-[620px] items-center gap-2 rounded-full border border-slate-200 bg-white p-2">
             <input
               name="q"
               defaultValue={q ?? ""}
@@ -160,31 +160,27 @@ export default async function Home({ searchParams }: HomeProps) {
             {category ? <input type="hidden" name="category" value={category} /> : null}
             <button
               type="submit"
-              className="rounded-full bg-emerald-600 px-5 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700"
+              className="shrink-0 rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 sm:px-5"
             >
               Search
             </button>
           </form>
-
-          <div className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-900">
-            White + Green + Yellow theme
-          </div>
         </div>
       </header>
 
-      <section className="relative overflow-hidden rounded-3xl border border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-amber-100 p-6 sm:p-8">
+      <section className="relative overflow-hidden rounded-3xl border border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-amber-100 p-4 sm:p-8">
         <div className="absolute -right-16 -top-20 h-56 w-56 rounded-full bg-emerald-300/50 blur-3xl" />
         <div className="absolute -bottom-20 -left-10 h-44 w-44 rounded-full bg-amber-300/55 blur-3xl" />
 
-        <div className="relative grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
-          <div className="space-y-5">
+        <div className="relative grid gap-6 lg:grid-cols-[1.1fr_0.9fr] lg:items-center lg:gap-8">
+          <div className="space-y-4 sm:space-y-5">
             <p className="inline-flex rounded-full bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">
               Shop Nearby, Faster
             </p>
-            <h1 className="max-w-xl text-4xl font-black tracking-tight text-slate-900 sm:text-5xl">
+            <h1 className="max-w-xl text-3xl font-black tracking-tight text-slate-900 sm:text-5xl">
               Discover trusted local vendors and products in one place.
             </h1>
-            <p className="max-w-xl text-base leading-7 text-slate-600">
+            <p className="max-w-xl text-sm leading-6 text-slate-600 sm:text-base sm:leading-7">
               Browse categories, compare stores, and order directly through WhatsApp-powered workflows.
             </p>
             <div className="flex flex-wrap gap-3">
@@ -223,8 +219,8 @@ export default async function Home({ searchParams }: HomeProps) {
       </section>
 
       <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
-        <div className="flex items-center justify-between gap-3">
-          <h2 className="text-xl font-bold text-slate-900">Browse Categories</h2>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-lg font-bold text-slate-900 sm:text-xl">Browse Categories</h2>
           {category ? (
             <Link href={q ? `/?q=${encodeURIComponent(q)}` : "/"} className="text-sm font-medium text-emerald-700 hover:underline">
               Clear category
@@ -266,7 +262,7 @@ export default async function Home({ searchParams }: HomeProps) {
         }))}
       />
 
-      <section id="market" className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+      <section id="market" className="rounded-3xl border border-slate-200 bg-white p-3 shadow-sm sm:p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">Marketplace</p>
@@ -280,7 +276,7 @@ export default async function Home({ searchParams }: HomeProps) {
             No products match this filter yet.
           </div>
         ) : (
-          <div className="mt-5 grid grid-cols-2 justify-items-center gap-3 [@media(max-width:320px)]:grid-cols-1 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="mt-4 grid grid-cols-2 justify-items-center gap-2 [@media(max-width:320px)]:grid-cols-1 sm:mt-5 sm:gap-3 lg:grid-cols-3 xl:grid-cols-4">
             {products.map((product) => {
               const store = storesById.get(product.store_id);
               if (!store) return null;
@@ -300,4 +296,3 @@ export default async function Home({ searchParams }: HomeProps) {
     </main>
   );
 }
-
