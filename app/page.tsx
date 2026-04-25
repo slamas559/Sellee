@@ -45,6 +45,15 @@ type ProductLite = {
   created_at: string;
 };
 
+function StoreLocation({
+  store,
+}: {
+  store: Pick<StoreLite, "city" | "state" | "country">;
+}) {
+  const location = [store.city, store.state, store.country].filter(Boolean).join(", ");
+  return <p className="line-clamp-1 text-xs text-slate-500">{location || "Location not set"}</p>;
+}
+
 const FALLBACK_CATEGORIES = [
   "Groceries",
   "Food",
@@ -281,12 +290,15 @@ export default async function Home({ searchParams }: HomeProps) {
               const store = storesById.get(product.store_id);
               if (!store) return null;
               return (
-                <div key={product.id} className="w-full max-w-[320px]">
+                <div key={product.id} className="w-full max-w-[320px] space-y-2">
                   <ProductShowcaseCard
                     product={product}
                     store={store}
                     variant="home"
                   />
+                  <div className="px-1">
+                    <StoreLocation store={store} />
+                  </div>
                 </div>
               );
             })}

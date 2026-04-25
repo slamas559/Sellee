@@ -2,6 +2,8 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import type { KeyboardEvent, MouseEvent } from "react";
 import { useMemo, useState } from "react";
 import { StarRating } from "@/components/store/star-rating";
 import { formatNaira } from "@/lib/format";
@@ -36,6 +38,8 @@ export function ProductShowcaseCard({
   variant = "marketplace",
   template = "classic",
 }: ProductShowcaseCardProps) {
+  const router = useRouter();
+  const productHref = `/store/${store.slug}/${product.id}`;
   const images = useMemo(() => {
     const normalized = (product.image_urls ?? []).filter(Boolean);
     if (normalized.length > 0) return normalized;
@@ -45,7 +49,7 @@ export function ProductShowcaseCard({
   const [index, setIndex] = useState(0);
   const hasManyImages = images.length > 1;
   const activeImage = images[index] ?? null;
-  const isCompact = variant === "home";
+  const isCompact = variant === "home" || variant === "marketplace";
   const headlineClass = isCompact ? "text-base sm:text-lg" : "text-base sm:text-lg lg:text-xl";
   const imageHeightClass = isCompact ? "h-40 sm:h-52" : "h-36 sm:h-52";
   const contentWrapClass = isCompact
@@ -79,9 +83,25 @@ export function ProductShowcaseCard({
     setIndex((prev) => (prev - 1 + images.length) % images.length);
   }
 
+  function handleCardClick(event: MouseEvent<HTMLElement>) {
+    const target = event.target as HTMLElement;
+    if (target.closest("button, a")) return;
+    router.push(productHref);
+  }
+
+  function handleCardKeyDown(event: KeyboardEvent<HTMLElement>) {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    router.push(productHref);
+  }
+
   return (
     <article
-      className={`group overflow-hidden rounded-2xl border p-1 sm:rounded-[1.75rem] sm:p-3 transition hover:-translate-y-1 ${cardClass}`}
+      role="link"
+      tabIndex={0}
+      onClick={handleCardClick}
+      onKeyDown={handleCardKeyDown}
+      className={`group cursor-pointer overflow-hidden rounded-2xl border p-1 sm:rounded-[1.75rem] sm:p-3 transition hover:-translate-y-1 ${cardClass}`}
     >
       <div className="relative overflow-hidden rounded-[1.5rem] bg-slate-100">
         <div className={`relative w-full ${imageHeightClass}`}>
@@ -177,15 +197,32 @@ export function ProductShowcaseCard({
           />
         </div>
 
-        <div className="flex items-center justify-between gap-1.5 pt-1.5 sm:gap-2 sm:pt-2">
-          <span className={`inline-flex rounded-full text-sm px-2 py-1 text-base font-bold sm:px-2 sm:py-1.5 sm:text-lg ${priceChipClass}`}>
+        <div className="flex items-center justify-between gap-2 pt-1.5 sm:pt-2">
+          <span
+            className={`inline-flex whitespace-nowrap rounded-full px-2.5 py-1 text-sm font-bold tabular-nums sm:px-3 sm:py-1.5 sm:text-base ${priceChipClass}`}
+          >
             {formatNaira(Number(product.price))}
           </span>
           <Link
-            href={`/store/${store.slug}/${product.id}`}
-            className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold text-white transition sm:px-4 sm:py-2 sm:text-sm ${ctaClass}`}
+            href={productHref}
+            aria-label={`Open ${product.name}`}
+            title="Open product"
+            className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white transition sm:h-9 sm:w-9 ${ctaClass}`}
           >
-            View
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="h-4 w-4"
+              aria-hidden="true"
+            >
+              <circle cx="9" cy="20" r="1.5" />
+              <circle cx="17" cy="20" r="1.5" />
+              <path d="M3 4h2l2.2 10.5a1 1 0 0 0 1 .8h8.9a1 1 0 0 0 1-.8L20 7H7" />
+            </svg>
           </Link>
         </div>
       </div>
