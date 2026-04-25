@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { z } from "zod";
 import { authOptions } from "@/lib/auth";
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
+import { normalizeWhatsAppNumber } from "@/lib/whatsapp";
 
 function deriveDisplayName(fullName: string | null, email: string): string {
   if (fullName?.trim()) {
@@ -50,6 +51,7 @@ export async function GET() {
 
 const updateMeSchema = z.object({
   full_name: z.string().min(2).max(80),
+  phone: z.string().min(10).max(20).optional().or(z.literal("")),
 });
 
 export async function PATCH(request: Request) {
@@ -73,10 +75,26 @@ export async function PATCH(request: Request) {
 
   const supabase = createAdminSupabaseClient();
   const fullName = parsed.data.full_name.trim();
+  const rawPhone = parsed.data.phone;
+  let normalizedPhone: string | null | undefined;
+
+  if (typeof rawPhone === "string") {
+    if (!rawPhone.trim()) {
+      normalizedPhone = null;
+    } else {
+      normalizedPhone = normalizeWhatsAppNumber(rawPhone);
+      if (!normalizedPhone || normalizedPhone.length < 10 || normalizedPhone.length > 20) {
+        return NextResponse.json({ error: "Phone number must be 10-20 digits." }, { status: 400 });
+      }
+    }
+  }
 
   const { data: user, error } = await supabase
     .from("users")
-    .update({ full_name: fullName })
+    .update({
+      full_name: fullName,
+      ...(normalizedPhone !== undefined ? { phone: normalizedPhone } : {}),
+    })
     .eq("id", session.user.id)
     .select("id, full_name, email, phone, role")
     .single();

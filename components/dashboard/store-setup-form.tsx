@@ -509,19 +509,64 @@ export function StoreSetupForm({ initialStore }: StoreSetupFormProps) {
     setMessage(null);
 
     navigator.geolocation.getCurrentPosition(
-      (position) => {
+      async (position) => {
         const lat = position.coords.latitude.toFixed(6);
         const lng = position.coords.longitude.toFixed(6);
 
-        setForm((prev) => ({
-          ...prev,
-          latitude: lat,
-          longitude: lng,
-          location_source: "gps",
-        }));
+        try {
+          const response = await fetch(`/api/location/reverse?lat=${lat}&lng=${lng}`, {
+            cache: "no-store",
+          });
 
-        setMessage("Location detected. You can still edit address details manually.");
-        setIsDetectingLocation(false);
+          if (response.ok) {
+            const payload = (await response.json()) as {
+              location?: {
+                street?: string | null;
+                city?: string | null;
+                state?: string | null;
+                country?: string | null;
+                display_name?: string | null;
+              };
+            };
+
+            setForm((prev) => ({
+              ...prev,
+              latitude: lat,
+              longitude: lng,
+              location_source: "gps",
+              address_line1: payload.location?.street?.trim() || prev.address_line1,
+              city: payload.location?.city?.trim() || prev.city,
+              state: payload.location?.state?.trim() || prev.state,
+              country: payload.location?.country?.trim() || prev.country,
+            }));
+
+            const locationLabel =
+              [payload.location?.city, payload.location?.state, payload.location?.country]
+                .map((value) => value?.trim())
+                .filter(Boolean)
+                .join(", ") || payload.location?.display_name?.trim() || "your current area";
+
+            setMessage(`Location detected: ${locationLabel}. You can still edit address details manually.`);
+          } else {
+            setForm((prev) => ({
+              ...prev,
+              latitude: lat,
+              longitude: lng,
+              location_source: "gps",
+            }));
+            setMessage("Coordinates detected. You can still edit address details manually.");
+          }
+        } catch {
+          setForm((prev) => ({
+            ...prev,
+            latitude: lat,
+            longitude: lng,
+            location_source: "gps",
+          }));
+          setMessage("Coordinates detected. You can still edit address details manually.");
+        } finally {
+          setIsDetectingLocation(false);
+        }
       },
       () => {
         setError("Could not detect your location. Please enter it manually.");
@@ -655,48 +700,485 @@ export function StoreSetupForm({ initialStore }: StoreSetupFormProps) {
   }
 
   return (
-    <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
-      <div className="flex items-start justify-between gap-3">
+    <section className="overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-b from-white to-slate-50/50 p-3 shadow-sm sm:p-6">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-sm font-medium text-emerald-700">Store Setup</p>
-          <h2 className="mt-1 text-xl font-semibold text-slate-900">
-            {store ? "Update your store" : "Create your store"}
-          </h2>
-          <p className="mt-1 text-sm text-slate-600">
-            Control storefront structure, content, color palette, and location.
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">
+            Storefront Setup
           </p>
+          <h2 className="mt-1 text-xl font-semibold text-slate-900 sm:text-2xl">
+            {store ? "Refine your storefront" : "Set up your storefront"}
+          </h2>
+          <p className="mt-1 text-sm text-slate-600 sm:text-base">
+            A guided setup for branding, design, media, and location.
+          </p>
+        </div>
+        <div className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700">
+          Mobile-ready preview
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="mt-6 grid gap-4 md:grid-cols-2">
-        <div className="col-span-full space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-sm font-semibold text-slate-800">Live Storefront Preview</p>
-            <p className="text-xs text-slate-500">Updates instantly before save</p>
+      <form onSubmit={handleSubmit} className="mt-5 space-y-5 pb-24 sm:mt-6 sm:pb-0">
+        {showVendorSuccessBanner ? (
+          <p className="rounded-xl border border-emerald-300 bg-emerald-100 px-3 py-2 text-sm font-semibold text-emerald-800">
+            You are now a vendor.
+          </p>
+        ) : null}
+
+        {error ? (
+          <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            {error}
+          </p>
+        ) : null}
+
+        {message ? (
+          <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+            {message}
+          </p>
+        ) : null}
+
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+                Step 1
+              </p>
+              <p className="text-sm font-semibold text-slate-900 sm:text-base">
+                Store basics
+              </p>
+            </div>
+            <label className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-slate-700">
+              <input
+                type="checkbox"
+                checked={form.is_active}
+                onChange={(event) => updateFormField("is_active", event.target.checked)}
+              />
+              Visible publicly
+            </label>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="grid gap-4 md:grid-cols-2">
+            <label className="space-y-2 text-sm">
+              <span className="font-medium text-slate-700">Store name</span>
+              <input
+                required
+                value={form.name}
+                onChange={(event) => updateFormField("name", event.target.value)}
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none ring-emerald-300 focus:ring-2"
+                placeholder="Sellee Home Essentials"
+              />
+            </label>
+            <label className="space-y-2 text-sm">
+              <span className="font-medium text-slate-700">WhatsApp number</span>
+              <input
+                required
+                value={form.whatsapp_number}
+                onChange={(event) => updateFormField("whatsapp_number", event.target.value)}
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none ring-emerald-300 focus:ring-2"
+                placeholder="2348012345678"
+              />
+            </label>
+            <label className="space-y-2 text-sm">
+              <span className="font-medium text-slate-700">Logo URL (fallback)</span>
+              <input
+                value={form.logo_url}
+                onChange={(event) => updateFormField("logo_url", event.target.value)}
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none ring-emerald-300 focus:ring-2"
+                placeholder="https://..."
+              />
+            </label>
+            <div className="space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm">
+              <UploadDropzone
+                title="Upload logo"
+                hint="Square image recommended"
+                onFile={(file) => void uploadAsset("logo", file)}
+                state={uploadState.logo}
+              />
+              {previewLogoUrl ? (
+                <div className="relative h-16 w-16 overflow-hidden rounded-full border border-slate-200 bg-slate-100">
+                  <Image
+                    src={previewLogoUrl}
+                    alt="Logo preview"
+                    fill
+                    unoptimized
+                    sizes="64px"
+                    className="object-cover"
+                  />
+                </div>
+              ) : null}
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+                Step 2
+              </p>
+              <p className="text-sm font-semibold text-slate-900 sm:text-base">
+                Pick your template and colors
+              </p>
+            </div>
+            <p className="text-xs text-slate-500">Choose a style customers can trust at a glance.</p>
+          </div>
+          <div className="-mx-1 flex snap-x snap-mandatory gap-3 overflow-x-auto px-1 pb-2">
+            {STOREFRONT_TEMPLATE_OPTIONS.map((option) => {
+              const selected = form.store_template === option.key;
+              return (
+                <button
+                  key={option.key}
+                  type="button"
+                  onClick={() => updateFormField("store_template", option.key)}
+                  className={`rounded-xl border p-3 text-left transition ${
+                    selected
+                      ? "border-emerald-500 bg-emerald-50/40 shadow-sm"
+                      : "border-slate-200 bg-white hover:border-emerald-300"
+                  } min-w-[40vw] max-w-[68vw] flex-shrink-0 snap-start sm:min-w-[300px] sm:max-w-[300px]`}
+                >
+                  <div
+                    className={`relative mb-3 h-32 overflow-hidden rounded-lg border border-slate-200 bg-gradient-to-br ${option.previewClass}`}
+                  >
+                    <div className="absolute inset-x-2 top-2 h-3 rounded-full bg-white/80" />
+                    <div className="absolute inset-x-2 top-7 grid grid-cols-3 gap-1">
+                      <div className="h-6 rounded bg-white/80" />
+                      <div className="h-6 rounded bg-emerald-200/80" />
+                      <div className="h-6 rounded bg-amber-200/80" />
+                    </div>
+                    <div className="absolute inset-x-2 bottom-2 h-10 rounded bg-white/75" />
+                  </div>
+                  <p className="text-sm font-semibold text-slate-900">{option.label}</p>
+                  <p className="mt-1 text-xs text-slate-600">{option.description}</p>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3 sm:p-4">
+            <p className="text-sm font-semibold text-slate-800">Color presets</p>
+            <div className="mt-3 -mx-1 flex snap-x snap-mandatory gap-2 overflow-x-auto px-1 pb-2 touch-pan-x">
+              {STOREFRONT_THEME_PRESETS.map((preset) => {
+                const selected = form.store_theme_preset === preset.key;
+                return (
+                  <button
+                    key={preset.key}
+                    type="button"
+                    onClick={() => applyThemePreset(preset.key)}
+                    className={`rounded-lg border p-2 text-left ${
+                      selected
+                        ? "border-emerald-500 bg-white"
+                        : "border-slate-200 bg-white hover:border-emerald-300"
+                    } min-w-[44vw] max-w-[44vw] flex-shrink-0 snap-start sm:min-w-[180px] sm:max-w-[180px]`}
+                  >
+                    <div className="mb-2 flex gap-1">
+                      <span
+                        className="h-5 w-5 rounded-full border border-slate-200"
+                        style={{ backgroundColor: preset.primary }}
+                      />
+                      <span
+                        className="h-5 w-5 rounded-full border border-slate-200"
+                        style={{ backgroundColor: preset.accent }}
+                      />
+                      <span
+                        className="h-5 w-5 rounded-full border border-slate-200"
+                        style={{ backgroundColor: preset.surface }}
+                      />
+                    </div>
+                    <p className="text-xs font-semibold text-slate-800">{preset.label}</p>
+                  </button>
+                );
+              })}
+            </div>
+
+            <label className="mt-3 block space-y-2 text-sm">
+              <span className="font-medium text-slate-700">Primary color override</span>
+              <div className="flex items-center gap-2">
+                <input
+                  type="color"
+                  value={form.theme_color}
+                  onChange={(event) => updateFormField("theme_color", event.target.value)}
+                  className="h-10 w-12 rounded border border-slate-300 bg-white"
+                />
+                <input
+                  value={form.theme_color}
+                  onChange={(event) => updateFormField("theme_color", event.target.value)}
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none ring-emerald-300 focus:ring-2"
+                />
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
+          <div className="mb-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Step 3</p>
+            <p className="text-sm font-semibold text-slate-900 sm:text-base">Content and media</p>
+            <p className="mt-1 text-xs text-slate-500">
+              Add text and visuals customers will see first.
+            </p>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            <label className="space-y-2 text-sm md:col-span-2">
+              <span className="font-medium text-slate-700">Hero title</span>
+              <input
+                value={form.hero_title}
+                onChange={(event) => updateFormField("hero_title", event.target.value)}
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none ring-emerald-300 focus:ring-2"
+              />
+            </label>
+            <label className="space-y-2 text-sm md:col-span-2">
+              <span className="font-medium text-slate-700">Hero subtitle</span>
+              <textarea
+                value={form.hero_subtitle}
+                onChange={(event) => updateFormField("hero_subtitle", event.target.value)}
+                className="min-h-24 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none ring-emerald-300 focus:ring-2"
+              />
+            </label>
+            <label className="space-y-2 text-sm">
+              <span className="font-medium text-slate-700">Hero CTA text</span>
+              <input
+                value={form.hero_cta_text}
+                onChange={(event) => updateFormField("hero_cta_text", event.target.value)}
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none ring-emerald-300 focus:ring-2"
+                placeholder="Shop now"
+              />
+            </label>
+            <label className="space-y-2 text-sm">
+              <span className="font-medium text-slate-700">Promo text</span>
+              <input
+                value={form.promo_text}
+                onChange={(event) => updateFormField("promo_text", event.target.value)}
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none ring-emerald-300 focus:ring-2"
+              />
+            </label>
+            <label className="space-y-2 text-sm md:col-span-2">
+              <span className="font-medium text-slate-700">Hero image URL (fallback)</span>
+              <input
+                value={form.hero_image_url}
+                onChange={(event) => updateFormField("hero_image_url", event.target.value)}
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none ring-emerald-300 focus:ring-2"
+                placeholder="https://..."
+              />
+            </label>
+            <div className="grid gap-3 md:col-span-2 md:grid-cols-2">
+              <UploadDropzone
+                title="Upload hero image"
+                hint="Best ratio: 16:9"
+                onFile={(file) => void uploadAsset("hero", file)}
+                state={uploadState.hero}
+              />
+              <UploadDropzone
+                title="Upload banner image"
+                hint="Each upload is added to your banner slider (max 8)"
+                onFile={(file) => void uploadAsset("banner", file)}
+                state={uploadState.banner}
+              />
+            </div>
+            <div className="space-y-2 text-sm md:col-span-2">
+              <span className="font-medium text-slate-700">Banner URLs</span>
+              <div className="flex flex-wrap gap-2">
+                <input
+                  value={bannerUrlInput}
+                  onChange={(event) => setBannerUrlInput(event.target.value)}
+                  className="min-w-[220px] flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none ring-emerald-300 focus:ring-2"
+                  placeholder="https://..."
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    try {
+                      if (!bannerUrlInput.trim()) return;
+                      const normalized = new URL(bannerUrlInput.trim()).toString();
+                      pushBannerUrl(normalized);
+                      setBannerUrlInput("");
+                    } catch {
+                      setError("Please enter a valid banner URL.");
+                    }
+                  }}
+                  className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50"
+                >
+                  Add banner
+                </button>
+              </div>
+              <p className="text-xs text-slate-500">
+                First banner is used as fallback/primary banner. Max 8 banners.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {form.banner_urls.map((url) => (
+                  <div
+                    key={url}
+                    className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs text-slate-700"
+                  >
+                    <span className="max-w-[180px] truncate">{url}</span>
+                    <button
+                      type="button"
+                      onClick={() => removeBannerUrl(url)}
+                      className="font-semibold text-red-600 hover:text-red-700"
+                      aria-label="Remove banner"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3">
+            <p className="text-sm font-semibold text-slate-800">Section order (drag and drop)</p>
+            <p className="text-xs text-slate-500">
+              Drag sections to control how they appear on your storefront page.
+            </p>
+            <div className="space-y-2 pt-2">
+              {form.sections_order.map((section) => (
+                <div
+                  key={section}
+                  draggable
+                  onDragStart={() => setDraggedSection(section)}
+                  onDragOver={(event) => event.preventDefault()}
+                  onDrop={() => {
+                    moveSectionByDrag(section);
+                    setDraggedSection(null);
+                  }}
+                  onDragEnd={() => setDraggedSection(null)}
+                  className={`flex cursor-grab items-center justify-between rounded-md border px-3 py-2 text-sm transition active:cursor-grabbing ${
+                    draggedSection === section
+                      ? "border-emerald-400 bg-emerald-50 text-emerald-800"
+                      : "border-slate-200 bg-white text-slate-700"
+                  }`}
+                >
+                  <span>{SECTION_LABELS[section]}</span>
+                  <span className="text-xs text-slate-400">Drag</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Step 4</p>
+              <p className="text-sm font-semibold text-slate-900 sm:text-base">Location and discovery</p>
+              <p className="mt-1 text-xs text-slate-500">
+                Buyers can find your store in nearby and location search.
+              </p>
+            </div>
             <button
               type="button"
-              onClick={() => setPreviewViewport("desktop")}
-              className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
-                previewViewport === "desktop"
-                  ? "bg-emerald-600 text-white"
-                  : "bg-white text-slate-700"
-              }`}
+              onClick={useCurrentLocation}
+              disabled={isDetectingLocation}
+              className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-100 disabled:opacity-60"
             >
-              Desktop
+              {isDetectingLocation ? "Detecting..." : "Use current location"}
             </button>
-            <button
-              type="button"
-              onClick={() => setPreviewViewport("phone")}
-              className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
-                previewViewport === "phone"
-                  ? "bg-emerald-600 text-white"
-                  : "bg-white text-slate-700"
-              }`}
-            >
-              Phone
-            </button>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <label className="space-y-2 text-sm md:col-span-2">
+              <span className="font-medium text-slate-700">Address line</span>
+              <input
+                value={form.address_line1}
+                onChange={(event) => updateFormField("address_line1", event.target.value)}
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none ring-emerald-300 focus:ring-2"
+                placeholder="12 Allen Avenue"
+              />
+            </label>
+            <label className="space-y-2 text-sm">
+              <span className="font-medium text-slate-700">City</span>
+              <input
+                value={form.city}
+                onChange={(event) => updateFormField("city", event.target.value)}
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none ring-emerald-300 focus:ring-2"
+                placeholder="Ikeja"
+              />
+            </label>
+            <label className="space-y-2 text-sm">
+              <span className="font-medium text-slate-700">State</span>
+              <input
+                value={form.state}
+                onChange={(event) => updateFormField("state", event.target.value)}
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none ring-emerald-300 focus:ring-2"
+                placeholder="Lagos"
+              />
+            </label>
+            <label className="space-y-2 text-sm">
+              <span className="font-medium text-slate-700">Country</span>
+              <input
+                value={form.country}
+                onChange={(event) => updateFormField("country", event.target.value)}
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none ring-emerald-300 focus:ring-2"
+                placeholder="Nigeria"
+              />
+            </label>
+            <label className="space-y-2 text-sm">
+              <span className="font-medium text-slate-700">Location source</span>
+              <select
+                value={form.location_source}
+                onChange={(event) =>
+                  updateFormField("location_source", event.target.value as "manual" | "gps")
+                }
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none ring-emerald-300 focus:ring-2"
+              >
+                <option value="manual">Manual</option>
+                <option value="gps">GPS</option>
+              </select>
+            </label>
+            <label className="space-y-2 text-sm">
+              <span className="font-medium text-slate-700">Latitude (optional)</span>
+              <input
+                value={form.latitude}
+                onChange={(event) => updateFormField("latitude", event.target.value)}
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none ring-emerald-300 focus:ring-2"
+                placeholder="6.601838"
+              />
+            </label>
+            <label className="space-y-2 text-sm">
+              <span className="font-medium text-slate-700">Longitude (optional)</span>
+              <input
+                value={form.longitude}
+                onChange={(event) => updateFormField("longitude", event.target.value)}
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none ring-emerald-300 focus:ring-2"
+                placeholder="3.351486"
+              />
+            </label>
+          </div>
+          <p className="mt-3 text-xs text-slate-600">
+            {hasCoordinates
+              ? "Coordinates captured. Nearby search will use precise distance."
+              : "Tip: Add coordinates for accurate nearby search results."}
+          </p>
+        </div>
+
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Step 5</p>
+              <p className="text-sm font-semibold text-slate-900 sm:text-base">Live preview</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setPreviewViewport("desktop")}
+                className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                  previewViewport === "desktop"
+                    ? "bg-emerald-600 text-white"
+                    : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                }`}
+              >
+                Desktop
+              </button>
+              <button
+                type="button"
+                onClick={() => setPreviewViewport("phone")}
+                className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                  previewViewport === "phone"
+                    ? "bg-emerald-600 text-white"
+                    : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                }`}
+              >
+                Phone
+              </button>
+            </div>
           </div>
 
           {previewViewport === "phone" ? (
@@ -741,421 +1223,11 @@ export function StoreSetupForm({ initialStore }: StoreSetupFormProps) {
           )}
         </div>
 
-        <label className="space-y-2 text-sm">
-          <span className="font-medium text-slate-700">Store name</span>
-          <input
-            required
-            value={form.name}
-            onChange={(event) => updateFormField("name", event.target.value)}
-            className="w-full rounded-md border border-slate-200 px-3 py-2 outline-none ring-emerald-300 focus:ring-2"
-            placeholder="Sellee Home Essentials"
-          />
-        </label>
-
-        <label className="space-y-2 text-sm">
-          <span className="font-medium text-slate-700">WhatsApp number</span>
-          <input
-            required
-            value={form.whatsapp_number}
-            onChange={(event) => updateFormField("whatsapp_number", event.target.value)}
-            className="w-full rounded-md border border-slate-200 px-3 py-2 outline-none ring-emerald-300 focus:ring-2"
-            placeholder="2348012345678"
-          />
-        </label>
-
-        <div className="col-span-full space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
-          <p className="text-sm font-semibold text-slate-800">Storefront Template Gallery</p>
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            {STOREFRONT_TEMPLATE_OPTIONS.map((option) => {
-              const selected = form.store_template === option.key;
-              return (
-                <button
-                  key={option.key}
-                  type="button"
-                  onClick={() => updateFormField("store_template", option.key)}
-                  className={`rounded-xl border p-3 text-left transition ${
-                    selected
-                      ? "border-emerald-500 bg-white shadow-sm"
-                      : "border-slate-200 bg-white hover:border-emerald-300"
-                  }`}
-                >
-                  <div
-                    className={`relative mb-3 h-28 overflow-hidden rounded-lg border border-slate-200 bg-gradient-to-br ${option.previewClass}`}
-                  >
-                    <div className="absolute inset-x-2 top-2 h-3 rounded-full bg-white/80" />
-                    <div className="absolute inset-x-2 top-7 grid grid-cols-3 gap-1">
-                      <div className="h-6 rounded bg-white/80" />
-                      <div className="h-6 rounded bg-emerald-200/80" />
-                      <div className="h-6 rounded bg-amber-200/80" />
-                    </div>
-                    <div className="absolute inset-x-2 bottom-2 h-10 rounded bg-white/75" />
-                  </div>
-                  <p className="text-sm font-semibold text-slate-900">{option.label}</p>
-                  <p className="mt-1 text-xs text-slate-600">{option.description}</p>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="col-span-full space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
-          <p className="text-sm font-semibold text-slate-800">Color Presets</p>
-          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
-            {STOREFRONT_THEME_PRESETS.map((preset) => {
-              const selected = form.store_theme_preset === preset.key;
-              return (
-                <button
-                  key={preset.key}
-                  type="button"
-                  onClick={() => applyThemePreset(preset.key)}
-                  className={`rounded-lg border p-2 text-left ${
-                    selected
-                      ? "border-emerald-500 bg-white"
-                      : "border-slate-200 bg-white hover:border-emerald-300"
-                  }`}
-                >
-                  <div className="mb-2 flex gap-1">
-                    <span
-                      className="h-5 w-5 rounded-full border border-slate-200"
-                      style={{ backgroundColor: preset.primary }}
-                    />
-                    <span
-                      className="h-5 w-5 rounded-full border border-slate-200"
-                      style={{ backgroundColor: preset.accent }}
-                    />
-                    <span
-                      className="h-5 w-5 rounded-full border border-slate-200"
-                      style={{ backgroundColor: preset.surface }}
-                    />
-                  </div>
-                  <p className="text-xs font-semibold text-slate-800">{preset.label}</p>
-                </button>
-              );
-            })}
-          </div>
-
-          <label className="space-y-2 text-sm">
-            <span className="font-medium text-slate-700">Primary color override</span>
-            <div className="flex items-center gap-2">
-              <input
-                type="color"
-                value={form.theme_color}
-                onChange={(event) => updateFormField("theme_color", event.target.value)}
-                className="h-10 w-12 rounded border border-slate-300 bg-white"
-              />
-              <input
-                value={form.theme_color}
-                onChange={(event) => updateFormField("theme_color", event.target.value)}
-                className="w-full rounded-md border border-slate-200 px-3 py-2 outline-none ring-emerald-300 focus:ring-2"
-              />
-            </div>
-          </label>
-        </div>
-
-        <div className="col-span-full grid gap-4 rounded-xl border border-slate-200 bg-slate-50 p-4 md:grid-cols-2">
-          <p className="col-span-full text-sm font-semibold text-slate-800">
-            Template Content Inputs
-          </p>
-          <label className="space-y-2 text-sm md:col-span-2">
-            <span className="font-medium text-slate-700">Hero title</span>
-            <input
-              value={form.hero_title}
-              onChange={(event) => updateFormField("hero_title", event.target.value)}
-              className="w-full rounded-md border border-slate-200 px-3 py-2 outline-none ring-emerald-300 focus:ring-2"
-            />
-          </label>
-          <label className="space-y-2 text-sm md:col-span-2">
-            <span className="font-medium text-slate-700">Hero subtitle</span>
-            <textarea
-              value={form.hero_subtitle}
-              onChange={(event) => updateFormField("hero_subtitle", event.target.value)}
-              className="min-h-20 w-full rounded-md border border-slate-200 px-3 py-2 outline-none ring-emerald-300 focus:ring-2"
-            />
-          </label>
-          <label className="space-y-2 text-sm">
-            <span className="font-medium text-slate-700">Hero CTA text</span>
-            <input
-              value={form.hero_cta_text}
-              onChange={(event) => updateFormField("hero_cta_text", event.target.value)}
-              className="w-full rounded-md border border-slate-200 px-3 py-2 outline-none ring-emerald-300 focus:ring-2"
-              placeholder="Shop now"
-            />
-          </label>
-          <label className="space-y-2 text-sm">
-            <span className="font-medium text-slate-700">Promo text</span>
-            <input
-              value={form.promo_text}
-              onChange={(event) => updateFormField("promo_text", event.target.value)}
-              className="w-full rounded-md border border-slate-200 px-3 py-2 outline-none ring-emerald-300 focus:ring-2"
-            />
-          </label>
-          <label className="space-y-2 text-sm md:col-span-2">
-            <span className="font-medium text-slate-700">Hero image URL (fallback)</span>
-            <input
-              value={form.hero_image_url}
-              onChange={(event) => updateFormField("hero_image_url", event.target.value)}
-              className="w-full rounded-md border border-slate-200 px-3 py-2 outline-none ring-emerald-300 focus:ring-2"
-              placeholder="https://..."
-            />
-          </label>
-          <div className="md:col-span-2 grid gap-3 md:grid-cols-2">
-            <UploadDropzone
-              title="Upload hero image"
-              hint="Best ratio: 16:9"
-              onFile={(file) => void uploadAsset("hero", file)}
-              state={uploadState.hero}
-            />
-            <UploadDropzone
-              title="Upload banner image"
-              hint="Each upload is added to your banner slider (max 8)"
-              onFile={(file) => void uploadAsset("banner", file)}
-              state={uploadState.banner}
-            />
-          </div>
-          <div className="space-y-2 text-sm md:col-span-2">
-            <span className="font-medium text-slate-700">Banner URLs</span>
-            <div className="flex flex-wrap gap-2">
-              <input
-                value={bannerUrlInput}
-                onChange={(event) => setBannerUrlInput(event.target.value)}
-                className="min-w-[220px] flex-1 rounded-md border border-slate-200 px-3 py-2 outline-none ring-emerald-300 focus:ring-2"
-                placeholder="https://..."
-              />
-              <button
-                type="button"
-                onClick={() => {
-                  try {
-                    if (!bannerUrlInput.trim()) return;
-                    const normalized = new URL(bannerUrlInput.trim()).toString();
-                    pushBannerUrl(normalized);
-                    setBannerUrlInput("");
-                  } catch {
-                    setError("Please enter a valid banner URL.");
-                  }
-                }}
-                className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50"
-              >
-                Add banner
-              </button>
-            </div>
-            <p className="text-xs text-slate-500">
-              First banner is used as fallback/primary banner. Max 8 banners.
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {form.banner_urls.map((url) => (
-                <div
-                  key={url}
-                  className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs text-slate-700"
-                >
-                  <span className="max-w-[180px] truncate">
-                    {url}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => removeBannerUrl(url)}
-                    className="font-semibold text-red-600 hover:text-red-700"
-                    aria-label="Remove banner"
-                  >
-                    ×
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-          <div className="space-y-2 rounded-lg border border-slate-200 bg-white p-3 md:col-span-2">
-            <p className="text-sm font-semibold text-slate-800">Section order (drag and drop)</p>
-            <p className="text-xs text-slate-500">
-              Drag sections to control how they appear on your storefront page.
-            </p>
-            <div className="space-y-2 pt-1">
-              {form.sections_order.map((section) => (
-                <div
-                  key={section}
-                  draggable
-                  onDragStart={() => setDraggedSection(section)}
-                  onDragOver={(event) => event.preventDefault()}
-                  onDrop={() => {
-                    moveSectionByDrag(section);
-                    setDraggedSection(null);
-                  }}
-                  onDragEnd={() => setDraggedSection(null)}
-                  className={`flex cursor-grab items-center justify-between rounded-md border px-3 py-2 text-sm transition active:cursor-grabbing ${
-                    draggedSection === section
-                      ? "border-emerald-400 bg-emerald-50 text-emerald-800"
-                      : "border-slate-200 bg-slate-50 text-slate-700"
-                  }`}
-                >
-                  <span>{SECTION_LABELS[section]}</span>
-                  <span className="text-xs text-slate-400">Drag</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        <div className="col-span-full rounded-xl border border-slate-200 bg-slate-50 p-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="text-sm font-semibold text-slate-800">Store Location</p>
-              <p className="text-xs text-slate-600">
-                Buyers can find your store by location and nearby search.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={useCurrentLocation}
-              disabled={isDetectingLocation}
-              className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-100 disabled:opacity-60"
-            >
-              {isDetectingLocation ? "Detecting..." : "Use current location"}
-            </button>
-          </div>
-
-          <div className="mt-4 grid gap-4 md:grid-cols-2">
-            <label className="space-y-2 text-sm md:col-span-2">
-              <span className="font-medium text-slate-700">Address line</span>
-              <input
-                value={form.address_line1}
-                onChange={(event) => updateFormField("address_line1", event.target.value)}
-                className="w-full rounded-md border border-slate-200 px-3 py-2 outline-none ring-emerald-300 focus:ring-2"
-                placeholder="12 Allen Avenue"
-              />
-            </label>
-
-            <label className="space-y-2 text-sm">
-              <span className="font-medium text-slate-700">City</span>
-              <input
-                value={form.city}
-                onChange={(event) => updateFormField("city", event.target.value)}
-                className="w-full rounded-md border border-slate-200 px-3 py-2 outline-none ring-emerald-300 focus:ring-2"
-                placeholder="Ikeja"
-              />
-            </label>
-
-            <label className="space-y-2 text-sm">
-              <span className="font-medium text-slate-700">State</span>
-              <input
-                value={form.state}
-                onChange={(event) => updateFormField("state", event.target.value)}
-                className="w-full rounded-md border border-slate-200 px-3 py-2 outline-none ring-emerald-300 focus:ring-2"
-                placeholder="Lagos"
-              />
-            </label>
-
-            <label className="space-y-2 text-sm">
-              <span className="font-medium text-slate-700">Country</span>
-              <input
-                value={form.country}
-                onChange={(event) => updateFormField("country", event.target.value)}
-                className="w-full rounded-md border border-slate-200 px-3 py-2 outline-none ring-emerald-300 focus:ring-2"
-                placeholder="Nigeria"
-              />
-            </label>
-
-            <label className="space-y-2 text-sm">
-              <span className="font-medium text-slate-700">Location source</span>
-              <select
-                value={form.location_source}
-                onChange={(event) =>
-                  updateFormField("location_source", event.target.value as "manual" | "gps")
-                }
-                className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 outline-none ring-emerald-300 focus:ring-2"
-              >
-                <option value="manual">Manual</option>
-                <option value="gps">GPS</option>
-              </select>
-            </label>
-
-            <label className="space-y-2 text-sm">
-              <span className="font-medium text-slate-700">Latitude (optional)</span>
-              <input
-                value={form.latitude}
-                onChange={(event) => updateFormField("latitude", event.target.value)}
-                className="w-full rounded-md border border-slate-200 px-3 py-2 outline-none ring-emerald-300 focus:ring-2"
-                placeholder="6.601838"
-              />
-            </label>
-
-            <label className="space-y-2 text-sm">
-              <span className="font-medium text-slate-700">Longitude (optional)</span>
-              <input
-                value={form.longitude}
-                onChange={(event) => updateFormField("longitude", event.target.value)}
-                className="w-full rounded-md border border-slate-200 px-3 py-2 outline-none ring-emerald-300 focus:ring-2"
-                placeholder="3.351486"
-              />
-            </label>
-          </div>
-
-          <p className="mt-3 text-xs text-slate-600">
-            {hasCoordinates
-              ? "Coordinates captured. Nearby search will use precise distance."
-              : "Tip: Add coordinates for accurate nearby search results."}
-          </p>
-        </div>
-
-        <label className="space-y-2 text-sm">
-          <span className="font-medium text-slate-700">Logo URL (fallback)</span>
-          <input
-            value={form.logo_url}
-            onChange={(event) => updateFormField("logo_url", event.target.value)}
-            className="w-full rounded-md border border-slate-200 px-3 py-2 outline-none ring-emerald-300 focus:ring-2"
-            placeholder="https://..."
-          />
-        </label>
-        <div className="space-y-2 text-sm rounded-xl border border-slate-200 bg-slate-50 p-3">
-          <UploadDropzone
-            title="Upload logo"
-            hint="Square image recommended"
-            onFile={(file) => void uploadAsset("logo", file)}
-            state={uploadState.logo}
-          />
-          {previewLogoUrl ? (
-            <div className="relative h-16 w-16 overflow-hidden rounded-full border border-slate-200 bg-slate-100">
-              <Image
-                src={previewLogoUrl}
-                alt="Logo preview"
-                fill
-                unoptimized
-                sizes="64px"
-                className="object-cover"
-              />
-            </div>
-          ) : null}
-        </div>
-
-        <label className="col-span-full flex items-center gap-2 text-sm text-slate-700">
-          <input
-            type="checkbox"
-            checked={form.is_active}
-            onChange={(event) => updateFormField("is_active", event.target.checked)}
-          />
-          Store is active and visible publicly.
-        </label>
-
-        {error ? (
-          <p className="col-span-full rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-            {error}
-          </p>
-        ) : null}
-
-        {message ? (
-          <p className="col-span-full rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
-            {message}
-          </p>
-        ) : null}
-
-        {showVendorSuccessBanner ? (
-          <p className="col-span-full rounded-md border border-emerald-300 bg-emerald-100 px-3 py-2 text-sm font-semibold text-emerald-800">
-            You are now a vendor.
-          </p>
-        ) : null}
-
-        <div className="col-span-full flex flex-wrap gap-3">
+        <div className="fixed bottom-16 left-1/2 z-30 flex w-[calc(100%-1rem)] max-w-2xl -translate-x-1/2 flex-wrap gap-3 rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-white/85 sm:static sm:w-auto sm:max-w-none sm:translate-x-0 sm:rounded-2xl sm:shadow-md">
           <button
             type="submit"
             disabled={isSaving || isAnyUploading}
-            className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
+            className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
           >
             {isSaving
               ? "Saving..."
@@ -1165,24 +1237,22 @@ export function StoreSetupForm({ initialStore }: StoreSetupFormProps) {
                   ? "Update store"
                   : "Create store"}
           </button>
-
           {shareablePath ? (
             <a
               href={shareablePath}
               target="_blank"
               rel="noreferrer"
-              className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50"
+              className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50"
             >
               Open public store
             </a>
           ) : null}
+          {store?.slug ? (
+            <p className="self-center text-xs text-slate-600 sm:text-sm">
+              Shareable link: <span className="font-medium">{shareablePath}</span>
+            </p>
+          ) : null}
         </div>
-
-        {store?.slug ? (
-          <p className="col-span-full text-sm text-slate-600">
-            Shareable link: <span className="font-medium">{shareablePath}</span>
-          </p>
-        ) : null}
       </form>
     </section>
   );

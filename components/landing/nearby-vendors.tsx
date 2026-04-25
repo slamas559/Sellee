@@ -29,6 +29,7 @@ export function NearbyVendors({ initialVendors }: NearbyVendorsProps) {
   const [vendors, setVendors] = useState(initialVendors);
   const [isLocating, setIsLocating] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
+  const [detectedLocation, setDetectedLocation] = useState<string | null>(null);
 
   const hasDistance = useMemo(
     () => vendors.some((vendor) => typeof vendor.distance_km === "number"),
@@ -63,14 +64,44 @@ export function NearbyVendors({ initialVendors }: NearbyVendorsProps) {
     }
 
     setLocationError(null);
+    setDetectedLocation(null);
     setIsLocating(true);
 
     navigator.geolocation.getCurrentPosition(
       async (position) => {
         try {
+          const lat = position.coords.latitude;
+          const lng = position.coords.longitude;
+          const reverseResponse = await fetch(
+            `/api/location/reverse?lat=${lat.toFixed(6)}&lng=${lng.toFixed(6)}`,
+            { cache: "no-store" },
+          );
+
+          if (reverseResponse.ok) {
+            const reversePayload = (await reverseResponse.json()) as {
+              location?: {
+                city?: string | null;
+                state?: string | null;
+                country?: string | null;
+                display_name?: string | null;
+              };
+            };
+            const city = reversePayload.location?.city?.trim() ?? "";
+            const state = reversePayload.location?.state?.trim() ?? "";
+            const country = reversePayload.location?.country?.trim() ?? "";
+            const label =
+              [city, state, country].filter(Boolean).join(", ") ||
+              reversePayload.location?.display_name?.trim() ||
+              "";
+
+            if (label) {
+              setDetectedLocation(label);
+            }
+          }
+
           await loadNearbyWithCoordinates(
-            position.coords.latitude,
-            position.coords.longitude,
+            lat,
+            lng,
           );
         } catch (error) {
           setLocationError(
@@ -114,6 +145,11 @@ export function NearbyVendors({ initialVendors }: NearbyVendorsProps) {
       {locationError ? (
         <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
           {locationError}
+        </p>
+      ) : null}
+      {!locationError && detectedLocation ? (
+        <p className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
+          Showing vendors near: {detectedLocation}
         </p>
       ) : null}
 

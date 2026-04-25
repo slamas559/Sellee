@@ -102,6 +102,7 @@ export async function POST(request: Request) {
       .from("orders")
       .insert({
         store_id: parsed.data.store_id,
+        customer_user_id: user.id,
         customer_name: customerName,
         customer_whatsapp: customerWhatsapp,
         status: "pending_whatsapp",

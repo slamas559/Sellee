@@ -20,6 +20,7 @@ type MarketplacePageProps = {
     max_price?: string;
     lat?: string;
     lng?: string;
+    loc?: string;
     radius_km?: string;
   }>;
 };
@@ -61,6 +62,7 @@ type SearchState = {
   max_price: number | null;
   lat: number | null;
   lng: number | null;
+  loc: string;
   radius_km: number;
 };
 
@@ -94,6 +96,7 @@ function parseSearchState(raw: Awaited<MarketplacePageProps["searchParams"]>): S
     max_price: parseNumber(raw.max_price),
     lat: parseNumber(raw.lat),
     lng: parseNumber(raw.lng),
+    loc: raw.loc?.trim() ?? "",
     radius_km: radius && radius > 0 ? Math.min(radius, 200) : DEFAULT_RADIUS_KM,
   };
 }
@@ -218,6 +221,7 @@ function buildMarketplaceHref(
     max_price: number | null;
     lat: number | null;
     lng: number | null;
+    loc: string;
     radius_km: number;
   }>,
 ) {
@@ -233,6 +237,7 @@ function buildMarketplaceHref(
   if (nextState.max_price !== null) params.set("max_price", String(nextState.max_price));
   if (nextState.lat !== null) params.set("lat", String(nextState.lat));
   if (nextState.lng !== null) params.set("lng", String(nextState.lng));
+  if (nextState.loc) params.set("loc", nextState.loc);
   if (nextState.radius_km !== DEFAULT_RADIUS_KM) params.set("radius_km", String(nextState.radius_km));
 
   const query = params.toString();
@@ -391,6 +396,7 @@ function MarketplaceFilterForm({
 
         <input type="hidden" name="lat" value={state.lat ?? ""} />
         <input type="hidden" name="lng" value={state.lng ?? ""} />
+        <input type="hidden" name="loc" value={state.loc} />
 
         <div className="flex items-center gap-2">
           <button
@@ -412,7 +418,7 @@ function MarketplaceFilterForm({
         <LocationFilterButton radiusKm={state.radius_km} />
         {hasLocationFilter ? (
           <p className="mt-3 text-xs text-emerald-700">
-            Location filter active at {state.radius_km} km radius.
+            Location filter active{state.loc ? ` near ${state.loc}` : ""} at {state.radius_km} km radius.
           </p>
         ) : (
           <p className="mt-3 text-xs text-slate-500">
@@ -458,8 +464,8 @@ export default async function MarketplacePage({ searchParams }: MarketplacePageP
   }
   if (hasLocationFilter) {
     activeFilters.push({
-      label: `Near me (${state.radius_km} km)`,
-      clearHref: buildMarketplaceHref(state, { lat: null, lng: null }),
+      label: state.loc ? `Near ${state.loc} (${state.radius_km} km)` : `Near me (${state.radius_km} km)`,
+      clearHref: buildMarketplaceHref(state, { lat: null, lng: null, loc: "" }),
     });
   }
 

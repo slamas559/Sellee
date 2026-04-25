@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { getServerSession } from "next-auth";
 import { NearbyVendors } from "@/components/landing/nearby-vendors";
+import { UserMenu } from "@/components/layout/user-menu";
 import { ProductShowcaseCard } from "@/components/marketplace/product-showcase-card";
 import { authOptions } from "@/lib/auth";
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
@@ -131,11 +132,7 @@ export default async function Home({ searchParams }: HomeProps) {
   const { stores, products, categories, storesById } = await getMarketplaceData(q, category);
   const isLoggedIn = Boolean(session?.user?.id);
   const isVendor = session?.user?.role === "vendor";
-  const topRightPrimaryHref = !isLoggedIn ? "/login" : isVendor ? "/dashboard" : "/dashboard/store";
-  const topRightPrimaryLabel = !isLoggedIn ? "Login / Create account" : isVendor ? "Dashboard" : "Become a Vendor";
-  const secondaryTopHref = isLoggedIn && !isVendor ? "/dashboard" : null;
-  const secondaryTopLabel = isLoggedIn && !isVendor ? "Account" : null;
-  const heroPrimaryHref = !isLoggedIn ? "/login" : isVendor ? "/dashboard" : "/dashboard/store";
+  const heroPrimaryHref = !isLoggedIn ? "/login" : isVendor ? "/dashboard" : "/become-vendor";
   const heroPrimaryLabel = !isLoggedIn ? "Login to start" : isVendor ? "Open Dashboard" : "Become a Vendor";
 
   return (
@@ -143,15 +140,7 @@ export default async function Home({ searchParams }: HomeProps) {
       <header className="rounded-3xl border border-emerald-100 bg-white shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-3 py-3 text-xs text-slate-600 sm:px-6">
           <p>Sellee Marketplace</p>
-          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-            <Link href={topRightPrimaryHref} className="whitespace-nowrap hover:text-emerald-700">{topRightPrimaryLabel}</Link>
-            {secondaryTopHref && secondaryTopLabel ? (
-              <>
-                <span className="text-slate-300">|</span>
-                <Link href={secondaryTopHref} className="whitespace-nowrap hover:text-emerald-700">{secondaryTopLabel}</Link>
-              </>
-            ) : null}
-          </div>
+          <UserMenu isLoggedIn={isLoggedIn} isVendor={isVendor} />
         </div>
 
         <div className="flex flex-wrap items-center gap-3 px-3 py-4 sm:gap-4 sm:px-6">
@@ -285,7 +274,7 @@ export default async function Home({ searchParams }: HomeProps) {
             No products match this filter yet.
           </div>
         ) : (
-          <div className="mt-4 grid grid-cols-2 justify-items-center gap-2 [@media(max-width:320px)]:grid-cols-1 sm:mt-5 sm:gap-3 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="mt-4 grid grid-cols-2 justify-items-center gap-1 [@media(max-width:320px)]:grid-cols-1 sm:mt-5 sm:gap-3 lg:grid-cols-3 xl:grid-cols-4">
             {products.map((product) => {
               const store = storesById.get(product.store_id);
               if (!store) return null;

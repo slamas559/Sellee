@@ -170,7 +170,7 @@ export function OrderButton({
           {!isPrefilling && !profile?.phone?.trim() ? (
             <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
               Add your phone number in account profile before ordering.
-              <Link href="/dashboard/account" className="ml-1 font-semibold underline">
+              <Link href="/account" className="ml-1 font-semibold underline">
                 Open account
               </Link>
             </div>

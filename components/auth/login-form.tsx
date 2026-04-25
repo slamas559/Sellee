@@ -32,7 +32,7 @@ export function LoginForm() {
         return;
       }
 
-      const next = params.get("callbackUrl") ?? "/dashboard";
+      const next = params.get("callbackUrl") ?? "/";
       router.push(next);
       router.refresh();
     } catch {
@@ -92,7 +92,7 @@ export function LoginForm() {
 
       <button
         type="button"
-        onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
+        onClick={() => signIn("google", { callbackUrl: "/" })}
         className="w-full rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-900 transition hover:bg-slate-50"
       >
         Continue with Google

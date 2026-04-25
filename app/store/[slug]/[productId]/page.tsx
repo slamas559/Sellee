@@ -228,9 +228,12 @@ export default async function StoreProductPage({ params }: ProductPageProps) {
             No other products from this vendor yet.
           </p>
         ) : (
-          <div className="grid grid-cols-2 justify-items-center gap-2 [@media(max-width:320px)]:grid-cols-1 sm:gap-3 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="-mx-1 flex snap-x snap-mandatory gap-3 overflow-x-auto px-1 pb-2">
             {vendorProducts.map((item) => (
-              <div key={item.id} className="w-full max-w-[320px]">
+              <div
+                key={item.id}
+                className="w-[46%] min-w-[170px] max-w-[220px] shrink-0 snap-start sm:w-full sm:max-w-[320px]"
+              >
                 <ProductShowcaseCard
                   product={item}
                   store={{
@@ -261,9 +264,12 @@ export default async function StoreProductPage({ params }: ProductPageProps) {
             Related products will appear here as more vendors list this category.
           </p>
         ) : (
-          <div className="grid grid-cols-2 justify-items-center gap-2 [@media(max-width:320px)]:grid-cols-1 sm:gap-3 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="-mx-1 flex snap-x snap-mandatory gap-3 overflow-x-auto px-1 pb-2">
             {relatedProducts.map((item) => (
-              <div key={item.id} className="w-full max-w-[320px]">
+              <div
+                key={item.id}
+                className="w-[46%] min-w-[170px] max-w-[220px] shrink-0 snap-start sm:w-full sm:max-w-[320px]"
+              >
                 <ProductShowcaseCard
                   product={item}
                   store={item.store}

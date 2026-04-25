@@ -15,6 +15,10 @@ export default async function DashboardLayout({ children }: DashboardLayoutProps
     redirect("/login");
   }
 
+  if (session.user.role !== "vendor") {
+    redirect("/");
+  }
+
   return (
     <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 px-4 pb-24 pt-20 sm:px-6 lg:flex-row lg:items-start lg:gap-8 lg:px-6 lg:py-8">
       <DashboardMobileNav name={session.user.name} email={session.user.email} />

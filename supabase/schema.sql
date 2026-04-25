@@ -78,6 +78,7 @@ create index if not exists idx_products_category on public.products (category);
 create table if not exists public.orders (
   id uuid primary key default gen_random_uuid(),
   store_id uuid not null references public.stores(id) on delete cascade,
+  customer_user_id uuid references public.users(id) on delete set null,
   customer_name text,
   customer_whatsapp text not null,
   status text not null default 'pending_whatsapp',
@@ -85,6 +86,8 @@ create table if not exists public.orders (
   payment_method text,
   created_at timestamptz not null default now()
 );
+
+create index if not exists idx_orders_customer_user_id on public.orders (customer_user_id, created_at desc);
 
 create table if not exists public.order_items (
   id uuid primary key default gen_random_uuid(),
