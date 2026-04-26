@@ -3,10 +3,12 @@ import { inferCommand } from "@/lib/whatsapp-bot/parse";
 import { resolveVendorStoreByPhone } from "@/lib/whatsapp-bot/repository";
 import { handleCustomerCommand } from "@/lib/whatsapp-bot/customer-commands";
 import {
+  handleBroadcast,
   handleConfirmReject,
   handleLinkCommand,
   handleListOrders,
   handleLowStock,
+  handleScheduleBroadcast,
   handleSalesToday,
 } from "@/lib/whatsapp-bot/vendor-commands";
 import { sendWhatsAppTextMessage } from "@/lib/whatsapp-cloud";
@@ -102,10 +104,34 @@ export async function routeIncomingText(from: string, body: string): Promise<Web
       };
     }
 
+    if (normalized.startsWith("BROADCAST ")) {
+      await handleBroadcast(from, body, store);
+      return {
+        from,
+        body,
+        inferred_command: inferredCommand,
+        role: "vendor",
+        scope_store_id: store.id,
+        status: "ok",
+      };
+    }
+
+    if (normalized.startsWith("SCHEDULE BROADCAST ")) {
+      await handleScheduleBroadcast(from, body, store);
+      return {
+        from,
+        body,
+        inferred_command: inferredCommand,
+        role: "vendor",
+        scope_store_id: store.id,
+        status: "ok",
+      };
+    }
+
     await sendWhatsAppTextMessage({
       to: from,
       message:
-        "Vendor commands: LINK <CODE>, LIST ORDERS, SALES TODAY, LOW STOCK, CONFIRM <ORDER_REF>, REJECT <ORDER_REF>. Customer commands: MY ORDERS, TRACK <ORDER_REF>, CANCEL <ORDER_REF>, FOLLOW <STORE>, UNFOLLOW <STORE>, MY FOLLOWS.",
+        "Vendor commands: LINK <CODE>, LIST ORDERS, SALES TODAY, LOW STOCK, CONFIRM <ORDER_REF>, REJECT <ORDER_REF>, BROADCAST <message>, SCHEDULE BROADCAST <ISO_DATE_TIME> | <message>. Customer commands: MY ORDERS, TRACK <ORDER_REF>, CANCEL <ORDER_REF>, FOLLOW <STORE>, UNFOLLOW <STORE>, MY FOLLOWS.",
     });
     return {
       from,

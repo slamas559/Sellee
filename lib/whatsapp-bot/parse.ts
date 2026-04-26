@@ -21,6 +21,8 @@ export function inferCommand(body: string): string {
   if (normalized.startsWith("LINK ")) return "LINK";
   if (normalized.startsWith("CONFIRM ")) return "CONFIRM";
   if (normalized.startsWith("REJECT ")) return "REJECT";
+  if (normalized.startsWith("BROADCAST ")) return "BROADCAST";
+  if (normalized.startsWith("SCHEDULE BROADCAST ")) return "SCHEDULE BROADCAST";
   if (normalized.startsWith("TRACK ")) return "TRACK";
   if (normalized.startsWith("CANCEL ")) return "CANCEL";
   if (normalized.startsWith("FOLLOW ")) return "FOLLOW";

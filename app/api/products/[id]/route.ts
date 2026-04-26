@@ -5,6 +5,7 @@ import { z } from "zod";
 import { authOptions } from "@/lib/auth";
 import { logDevError } from "@/lib/logger";
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
+import { notifyRestockSubscribers } from "@/lib/whatsapp-bot/restock-alerts";
 
 const updateSchema = z.object({
   name: z.string().min(2).max(120),
@@ -29,6 +30,21 @@ async function getVendorStoreId(vendorId: string): Promise<string | null> {
   }
 
   return data?.id ?? null;
+}
+
+async function getStoreName(storeId: string): Promise<string | null> {
+  const supabase = createAdminSupabaseClient();
+  const { data, error } = await supabase
+    .from("stores")
+    .select("name")
+    .eq("id", storeId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data?.name ?? null;
 }
 
 async function getAllowedCategoriesForStore(storeId: string): Promise<string[]> {
@@ -162,7 +178,7 @@ export async function PATCH(
 
     const { data: existingProduct, error: existingProductError } = await supabase
       .from("products")
-      .select("id, store_id, image_url, image_urls")
+      .select("id, store_id, name, stock_count, image_url, image_urls")
       .eq("id", id)
       .eq("store_id", storeId)
       .maybeSingle();
@@ -219,6 +235,29 @@ export async function PATCH(
     if (error || !data) {
       logDevError("products.update", error, { id, storeId });
       return NextResponse.json({ error: "Could not update product." }, { status: 500 });
+    }
+
+    const previousStock = Number(existingProduct.stock_count ?? 0);
+    const nextStock = Number(parsed.data.stock_count);
+    const becameInStock = previousStock <= 0 && nextStock > 0;
+
+    if (becameInStock) {
+      try {
+        const storeName = (await getStoreName(storeId)) ?? "your store";
+        await notifyRestockSubscribers({
+          storeId,
+          storeName,
+          productId: data.id,
+          productName: data.name,
+        });
+      } catch (restockError) {
+        logDevError("products.update.restock-notify", restockError, {
+          id,
+          storeId,
+          previousStock,
+          nextStock,
+        });
+      }
     }
 
     return NextResponse.json({ product: data, message: "Product updated successfully." });

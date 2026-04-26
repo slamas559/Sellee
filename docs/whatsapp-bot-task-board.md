@@ -78,7 +78,7 @@ Expand WhatsApp from vendor-only command utility into a dual-role assistant for:
 - [x] B2. Implement command handlers: `MY ORDERS`, `TRACK`, `CANCEL`, `FOLLOW`, `UNFOLLOW`, `MY FOLLOWS`, `HELP`
 - [x] B3. Auto-create `whatsapp_customer_links` on first customer command
 - [x] B4. Add dashboard visibility/analytics for customer command usage
-- [ ] B5. End-to-end WhatsApp tests with real sender numbers
+- [x] B5. End-to-end WhatsApp tests with real sender numbers
 
 ### Planned Commands
 - `HELP`
@@ -103,6 +103,12 @@ Expand WhatsApp from vendor-only command utility into a dual-role assistant for:
 ---
 
 ## Sprint C: Vendor Marketing + Notification Engine
+
+### Status
+- [x] C1. Vendor `BROADCAST <message>` command (followers target) + delivery counters
+- [x] C2. Store restock alert fan-out to subscribed customers
+- [x] C3. Scheduled broadcast execution
+- [ ] C4. Outbound WhatsApp log persistence
 
 ### Planned Features
 - Vendor command:

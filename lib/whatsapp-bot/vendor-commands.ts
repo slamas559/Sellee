@@ -1,6 +1,7 @@
 import { formatNaira } from "@/lib/format";
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
 import { normalizeWhatsAppNumber } from "@/lib/whatsapp";
+import { executeBroadcastNow, scheduleBroadcast } from "@/lib/whatsapp-bot/broadcasts";
 import { sendWhatsAppTextMessage } from "@/lib/whatsapp-cloud";
 import { extractRef, todayStartIso } from "@/lib/whatsapp-bot/parse";
 import { findOrderByReference } from "@/lib/whatsapp-bot/repository";
@@ -12,6 +13,45 @@ function generateCode(): string {
 
 function inTenMinutesIso(): string {
   return new Date(Date.now() + 10 * 60 * 1000).toISOString();
+}
+
+function extractBroadcastMessage(commandText: string): string {
+  return commandText.trim().slice("BROADCAST".length).trim();
+}
+
+function parseScheduleBroadcastInput(commandText: string): {
+  scheduledAt: string;
+  message: string;
+} | null {
+  const raw = commandText.trim().slice("SCHEDULE BROADCAST".length).trim();
+  if (!raw) {
+    return null;
+  }
+
+  const separatorIndex = raw.indexOf("|");
+  if (separatorIndex < 0) {
+    return null;
+  }
+
+  const datePart = raw.slice(0, separatorIndex).trim();
+  const messagePart = raw.slice(separatorIndex + 1).trim();
+  if (!datePart || !messagePart) {
+    return null;
+  }
+
+  const scheduledDate = new Date(datePart);
+  if (Number.isNaN(scheduledDate.getTime())) {
+    return null;
+  }
+
+  if (scheduledDate.getTime() <= Date.now() + 60_000) {
+    return null;
+  }
+
+  return {
+    scheduledAt: scheduledDate.toISOString(),
+    message: messagePart,
+  };
 }
 
 export async function handleLinkCommand(from: string, body: string) {
@@ -108,7 +148,7 @@ export async function handleLinkCommand(from: string, body: string) {
   await sendWhatsAppTextMessage({
     to: from,
     message:
-      "WhatsApp linked successfully. You can now run commands: LIST ORDERS, SALES TODAY, LOW STOCK, CONFIRM <ORDER_REF>, REJECT <ORDER_REF>",
+      "WhatsApp linked successfully. You can now run commands: LIST ORDERS, SALES TODAY, LOW STOCK, CONFIRM <ORDER_REF>, REJECT <ORDER_REF>, BROADCAST <message>, SCHEDULE BROADCAST <ISO_DATE_TIME> | <message>",
   });
 }
 
@@ -283,5 +323,55 @@ export async function handleLowStock(from: string, store: StoreForCommand) {
   await sendWhatsAppTextMessage({
     to: from,
     message: `Low stock (${store.name}):\n${lines.join("\n")}`,
+  });
+}
+
+export async function handleBroadcast(from: string, body: string, store: StoreForCommand) {
+  const message = extractBroadcastMessage(body);
+
+  if (!message) {
+    await sendWhatsAppTextMessage({
+      to: from,
+      message: "Usage: BROADCAST <message>. Example: BROADCAST Flash sale today: 10% off all items.",
+    });
+    return;
+  }
+
+  const result = await executeBroadcastNow({
+    vendorId: store.vendor_id,
+    storeId: store.id,
+    message,
+    targetScope: "followers",
+  });
+
+  await sendWhatsAppTextMessage({
+    to: from,
+    message: `Broadcast sent. Delivered: ${result.sentCount}, Failed: ${result.failedCount}, Targets: ${result.targetCount}.`,
+  });
+}
+
+export async function handleScheduleBroadcast(from: string, body: string, store: StoreForCommand) {
+  const parsed = parseScheduleBroadcastInput(body);
+
+  if (!parsed) {
+    await sendWhatsAppTextMessage({
+      to: from,
+      message:
+        "Usage: SCHEDULE BROADCAST <ISO_DATE_TIME> | <message>. Example: SCHEDULE BROADCAST 2026-04-30T14:00:00Z | Flash sale starts now.",
+    });
+    return;
+  }
+
+  const result = await scheduleBroadcast({
+    vendorId: store.vendor_id,
+    storeId: store.id,
+    message: parsed.message,
+    scheduledAt: parsed.scheduledAt,
+    targetScope: "followers",
+  });
+
+  await sendWhatsAppTextMessage({
+    to: from,
+    message: `Broadcast scheduled for ${result.scheduledAt}. ID: ${result.broadcastId.slice(0, 8).toUpperCase()}.`,
   });
 }

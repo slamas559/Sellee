@@ -45,6 +45,7 @@ Required for Meta WhatsApp Cloud API:
 - `WHATSAPP_PHONE_NUMBER_ID`
 - `WHATSAPP_WEBHOOK_VERIFY_TOKEN`
 - `WHATSAPP_API_VERSION` (default `v20.0`)
+- `WHATSAPP_BROADCAST_CRON_SECRET` (required in production for scheduled broadcast runner)
 - `OBSERVABILITY_LOGS` (optional, default `true`)
 
 ## 3) Configure Supabase
@@ -93,6 +94,7 @@ npm run dev
 - `GET/POST /api/reviews/vendor`
 - `GET/POST /api/whatsapp/webhook`
 - `GET/POST /api/whatsapp/link`
+- `GET/POST /api/whatsapp/broadcasts/run`
 
 ## Notes
 
@@ -100,13 +102,32 @@ npm run dev
 - Product images upload to Supabase Storage bucket `product-images`.
 - Storage policies enforce `auth.uid()/...` scoped writes.
 - WhatsApp order button now logs a `pending_whatsapp` order before opening `wa.me`.
-- Webhook supports vendor bot commands: `LIST ORDERS`, `SALES TODAY`, `LOW STOCK`, `CONFIRM <ORDER_REF>`, `REJECT <ORDER_REF>`.
+- Webhook supports vendor bot commands: `LIST ORDERS`, `SALES TODAY`, `LOW STOCK`, `CONFIRM <ORDER_REF>`, `REJECT <ORDER_REF>`, `BROADCAST <message>`, `SCHEDULE BROADCAST <ISO_DATE_TIME> | <message>`.
 - Webhook now supports customer bot commands: `MY ORDERS`, `TRACK <ORDER_REF>`, `CANCEL <ORDER_REF>`, `FOLLOW <STORE>`, `UNFOLLOW <STORE>`, `MY FOLLOWS`, `HELP`.
 - Vendors can now generate a link code in dashboard and connect their WhatsApp by sending `LINK <CODE>` to the business number.
 - `GET /api/health` now checks both Supabase DB connectivity and WhatsApp config sanity.
 - `POST /api/whatsapp/webhook?debug=1` debug response is available in development, or in production when `WHATSAPP_WEBHOOK_DEBUG=true`.
 - Vendors can choose storefront template styles: `classic`, `bold`, `minimal`.
 - WhatsApp bot roadmap and sprint status board: `docs/whatsapp-bot-task-board.md`.
+
+## Scheduled Broadcast Ops (C3)
+
+1. Vendor schedules via bot command:
+   - `SCHEDULE BROADCAST 2026-05-01T09:00:00Z | Flash sale starts now`
+2. Trigger due scheduled jobs (PowerShell):
+
+```powershell
+$BASE_URL = "https://sellee.vercel.app"
+$CRON_SECRET = "YOUR_WHATSAPP_BROADCAST_CRON_SECRET"
+
+Invoke-RestMethod -Method Post `
+  -Uri "$BASE_URL/api/whatsapp/broadcasts/run?limit=20" `
+  -Headers @{ Authorization = "Bearer $CRON_SECRET" } | ConvertTo-Json -Depth 10
+```
+
+3. In production, configure Vercel Cron to call:
+   - `GET /api/whatsapp/broadcasts/run`
+   - with `Authorization: Bearer $WHATSAPP_BROADCAST_CRON_SECRET`
 
 ## WhatsApp Ops (Live)
 
