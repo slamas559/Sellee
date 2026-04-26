@@ -108,7 +108,7 @@ Expand WhatsApp from vendor-only command utility into a dual-role assistant for:
 - [x] C1. Vendor `BROADCAST <message>` command (followers target) + delivery counters
 - [x] C2. Store restock alert fan-out to subscribed customers
 - [x] C3. Scheduled broadcast execution
-- [ ] C4. Outbound WhatsApp log persistence
+- [x] C4. Outbound WhatsApp log persistence
 
 ### Planned Features
 - Vendor command:

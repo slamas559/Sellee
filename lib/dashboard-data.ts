@@ -98,6 +98,18 @@ export type VendorCustomerBotActivity = {
   }>;
 };
 
+export type VendorOutboundBotTrends = {
+  total_last_7d: number;
+  success_count: number;
+  failed_count: number;
+  by_command: Array<{ command: string; count: number }>;
+  daily: Array<{
+    date: string;
+    success: number;
+    failed: number;
+  }>;
+};
+
 export async function getVendorOrders(vendorId: string): Promise<VendorOrderView[]> {
   const store = await getVendorStore(vendorId);
 
@@ -356,5 +368,95 @@ export async function getVendorCustomerBotActivity(
       created_at: row.created_at,
       status: row.status ?? null,
     })),
+  };
+}
+
+function toIsoDate(value: string): string {
+  return new Date(value).toISOString().slice(0, 10);
+}
+
+export async function getVendorOutboundBotTrends(
+  vendorId: string,
+): Promise<VendorOutboundBotTrends> {
+  const store = await getVendorStore(vendorId);
+  if (!store) {
+    return {
+      total_last_7d: 0,
+      success_count: 0,
+      failed_count: 0,
+      by_command: [],
+      daily: [],
+    };
+  }
+
+  const supabase = createAdminSupabaseClient();
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+
+  const { data, error } = await supabase
+    .from("whatsapp_message_logs")
+    .select("id, command, created_at, status")
+    .eq("direction", "outbound")
+    .gte("created_at", sevenDaysAgo)
+    .filter("provider_payload->>scope_store_id", "eq", store.id)
+    .order("created_at", { ascending: false })
+    .limit(500);
+
+  if (error) {
+    return {
+      total_last_7d: 0,
+      success_count: 0,
+      failed_count: 0,
+      by_command: [],
+      daily: [],
+    };
+  }
+
+  const rows =
+    (data as Array<{
+      id: string;
+      command?: string | null;
+      created_at: string;
+      status?: string | null;
+    }> | null) ?? [];
+
+  const commandCounter = new Map<string, number>();
+  const dailyCounter = new Map<string, { success: number; failed: number }>();
+  let successCount = 0;
+  let failedCount = 0;
+
+  for (const row of rows) {
+    const command = (row.command ?? "OUTBOUND").trim() || "OUTBOUND";
+    commandCounter.set(command, (commandCounter.get(command) ?? 0) + 1);
+
+    const dateKey = toIsoDate(row.created_at);
+    const bucket = dailyCounter.get(dateKey) ?? { success: 0, failed: 0 };
+    if (row.status === "ok") {
+      bucket.success += 1;
+      successCount += 1;
+    } else {
+      bucket.failed += 1;
+      failedCount += 1;
+    }
+    dailyCounter.set(dateKey, bucket);
+  }
+
+  const byCommand = [...commandCounter.entries()]
+    .map(([command, count]) => ({ command, count }))
+    .sort((a, b) => b.count - a.count);
+
+  const daily = [...dailyCounter.entries()]
+    .map(([date, values]) => ({
+      date,
+      success: values.success,
+      failed: values.failed,
+    }))
+    .sort((a, b) => a.date.localeCompare(b.date));
+
+  return {
+    total_last_7d: rows.length,
+    success_count: successCount,
+    failed_count: failedCount,
+    by_command: byCommand,
+    daily,
   };
 }

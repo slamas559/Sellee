@@ -147,6 +147,9 @@ async function executeExistingBroadcast(
       await sendWhatsAppTextMessage({
         to,
         message: outboundMessage,
+        command: "BROADCAST",
+        role: "vendor",
+        scopeStoreId: storeId,
       });
       sentCount += 1;
     } catch (error) {

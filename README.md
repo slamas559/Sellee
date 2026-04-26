@@ -105,6 +105,7 @@ npm run dev
 - Webhook supports vendor bot commands: `LIST ORDERS`, `SALES TODAY`, `LOW STOCK`, `CONFIRM <ORDER_REF>`, `REJECT <ORDER_REF>`, `BROADCAST <message>`, `SCHEDULE BROADCAST <ISO_DATE_TIME> | <message>`.
 - Webhook now supports customer bot commands: `MY ORDERS`, `TRACK <ORDER_REF>`, `CANCEL <ORDER_REF>`, `FOLLOW <STORE>`, `UNFOLLOW <STORE>`, `MY FOLLOWS`, `HELP`.
 - Vendors can now generate a link code in dashboard and connect their WhatsApp by sending `LINK <CODE>` to the business number.
+- Outbound bot messages are now persisted to `whatsapp_message_logs` automatically (success + error) for observability.
 - `GET /api/health` now checks both Supabase DB connectivity and WhatsApp config sanity.
 - `POST /api/whatsapp/webhook?debug=1` debug response is available in development, or in production when `WHATSAPP_WEBHOOK_DEBUG=true`.
 - Vendors can choose storefront template styles: `classic`, `bold`, `minimal`.

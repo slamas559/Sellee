@@ -15,29 +15,6 @@ type NotifyRestockResult = {
   failedCount: number;
 };
 
-async function logOutboundRestockMessage(
-  recipientPhone: string,
-  messageText: string,
-  status: "ok" | "error",
-  errorMessage?: string,
-) {
-  try {
-    const supabase = createAdminSupabaseClient();
-    await supabase.from("whatsapp_message_logs").insert({
-      direction: "outbound",
-      recipient_phone: recipientPhone,
-      message_text: messageText,
-      command: "RESTOCK_ALERT",
-      role: "system",
-      status,
-      error_message: errorMessage ?? null,
-      provider_payload: null,
-    });
-  } catch (error) {
-    logDevError("whatsapp.restock.log-outbound", error, { recipientPhone });
-  }
-}
-
 export async function notifyRestockSubscribers({
   storeId,
   storeName,
@@ -92,17 +69,13 @@ export async function notifyRestockSubscribers({
       await sendWhatsAppTextMessage({
         to: phone,
         message,
+        command: "RESTOCK_ALERT",
+        role: "system",
+        scopeStoreId: storeId,
       });
       sentCount += 1;
-      await logOutboundRestockMessage(phone, message, "ok");
-    } catch (error) {
+    } catch {
       failedCount += 1;
-      await logOutboundRestockMessage(
-        phone,
-        message,
-        "error",
-        error instanceof Error ? error.message : "Unknown restock send error",
-      );
     }
   }
 

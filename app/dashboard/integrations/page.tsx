@@ -1,9 +1,14 @@
 import type { Metadata } from "next";
 import { getServerSession } from "next-auth";
 import { CustomerBotActivityCard } from "@/components/dashboard/customer-bot-activity-card";
+import { OutboundBotTrendsCard } from "@/components/dashboard/outbound-bot-trends-card";
 import { WhatsAppLinkingCard } from "@/components/dashboard/whatsapp-linking-card";
 import { authOptions } from "@/lib/auth";
-import { getVendorCustomerBotActivity, getVendorWhatsAppLinkStatus } from "@/lib/dashboard-data";
+import {
+  getVendorCustomerBotActivity,
+  getVendorOutboundBotTrends,
+  getVendorWhatsAppLinkStatus,
+} from "@/lib/dashboard-data";
 
 export const metadata: Metadata = {
   title: "Integrations",
@@ -17,6 +22,9 @@ export default async function DashboardIntegrationsPage() {
   const customerBotActivity = session?.user?.id
     ? await getVendorCustomerBotActivity(session.user.id)
     : { total_last_7d: 0, by_command: [], recent: [] };
+  const outboundBotTrends = session?.user?.id
+    ? await getVendorOutboundBotTrends(session.user.id)
+    : { total_last_7d: 0, success_count: 0, failed_count: 0, by_command: [], daily: [] };
 
   return (
     <section className="space-y-4">
@@ -31,6 +39,7 @@ export default async function DashboardIntegrationsPage() {
       </header>
       <WhatsAppLinkingCard initialStatus={whatsappLinkStatus} />
       <CustomerBotActivityCard activity={customerBotActivity} />
+      <OutboundBotTrendsCard trends={outboundBotTrends} />
     </section>
   );
 }
