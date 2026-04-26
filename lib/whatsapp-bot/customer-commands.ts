@@ -2,7 +2,12 @@ import { formatNaira, slugify } from "@/lib/format";
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
 import { normalizeWhatsAppNumber } from "@/lib/whatsapp";
 import { sendWhatsAppTextMessage } from "@/lib/whatsapp-cloud";
-import { extractRef } from "@/lib/whatsapp-bot/parse";
+import {
+  type BotCommand,
+  extractRef,
+  extractSearchQuery,
+  normalizeIntentText,
+} from "@/lib/whatsapp-bot/parse";
 
 type StoreLite = {
   id: string;
@@ -20,6 +25,16 @@ type OrderLite = {
   status: string;
   total_amount: number;
   created_at: string;
+};
+
+type ProductSearchRow = {
+  id: string;
+  store_id: string;
+  name: string;
+  price: number;
+  category?: string | null;
+  stock_count?: number | null;
+  is_available?: boolean | null;
 };
 
 type CustomerCommandResult = {
@@ -156,8 +171,27 @@ async function resolveStoreByInput(rawInput: string): Promise<StoreResolution> {
 function formatStoreCandidates(candidates: StoreLite[]) {
   return candidates
     .slice(0, 5)
-    .map((store) => `• ${store.name} (${store.slug})`)
+    .map((store) => `- ${store.name} (${store.slug})`)
     .join("\n");
+}
+
+function extractStoreTarget(body: string, command: "FOLLOW" | "UNFOLLOW"): string {
+  const normalized = normalizeIntentText(body);
+  const prefixes = command === "FOLLOW"
+    ? ["FOLLOW ", "SUBSCRIBE TO ", "SUBSCRIBE "]
+    : ["UNFOLLOW ", "UNSUBSCRIBE FROM ", "UNSUBSCRIBE ", "STOP FOLLOWING "];
+
+  for (const prefix of prefixes) {
+    if (normalized.startsWith(prefix)) {
+      return body.trim().slice(prefix.length).trim();
+    }
+  }
+
+  return body.trim().slice(command.length).trim();
+}
+
+function getPublicBaseUrl(): string {
+  return (process.env.NEXTAUTH_URL || "http://localhost:3000").replace(/\/$/, "");
 }
 
 async function handleMyOrders(from: string, normalizedFrom: string) {
@@ -179,6 +213,40 @@ async function handleMyOrders(from: string, normalizedFrom: string) {
   await sendWhatsAppTextMessage({
     to: from,
     message: `Your recent orders:\n${lines.join("\n")}`,
+  });
+}
+
+async function handleMyStatus(from: string, normalizedFrom: string) {
+  const orders = await getCustomerOrders(normalizedFrom, 20);
+  if (orders.length === 0) {
+    await sendWhatsAppTextMessage({
+      to: from,
+      message: "You have no active status yet. Place an order first, then check MY STATUS.",
+    });
+    return;
+  }
+
+  const activeStatuses = new Set(["pending_whatsapp", "confirmed", "processing", "shipped"]);
+  const active = orders.filter((order) => activeStatuses.has(String(order.status)));
+  const latest = orders.slice(0, 5);
+
+  const statusCounter = new Map<string, number>();
+  for (const order of latest) {
+    const status = String(order.status ?? "unknown");
+    statusCounter.set(status, (statusCounter.get(status) ?? 0) + 1);
+  }
+
+  const statusSummary = [...statusCounter.entries()]
+    .map(([status, count]) => `${status}: ${count}`)
+    .join(" | ");
+
+  const latestLines = latest.map(
+    (order) => `#${shortRef(order.id)} - ${order.status} - ${formatNaira(Number(order.total_amount))}`,
+  );
+
+  await sendWhatsAppTextMessage({
+    to: from,
+    message: `Order status snapshot:\nActive orders: ${active.length}\nRecent mix: ${statusSummary || "none"}\n\nLatest:\n${latestLines.join("\n")}`,
   });
 }
 
@@ -267,7 +335,7 @@ async function handleCancel(from: string, normalizedFrom: string, body: string):
 }
 
 async function handleFollow(from: string, normalizedFrom: string, body: string): Promise<string | null> {
-  const storeTarget = body.trim().slice("FOLLOW".length).trim();
+  const storeTarget = extractStoreTarget(body, "FOLLOW");
   if (!storeTarget) {
     await sendWhatsAppTextMessage({
       to: from,
@@ -319,7 +387,7 @@ async function handleFollow(from: string, normalizedFrom: string, body: string):
 }
 
 async function handleUnfollow(from: string, normalizedFrom: string, body: string): Promise<string | null> {
-  const storeTarget = body.trim().slice("UNFOLLOW".length).trim();
+  const storeTarget = extractStoreTarget(body, "UNFOLLOW");
   if (!storeTarget) {
     await sendWhatsAppTextMessage({
       to: from,
@@ -392,7 +460,7 @@ async function handleMyFollows(from: string, normalizedFrom: string) {
   const lines = storeIds
     .map((id) => storesMap.get(id))
     .filter((store): store is StoreLite => Boolean(store))
-    .map((store) => `• ${store.name} (${store.slug})`);
+    .map((store) => `- ${store.name} (${store.slug})`);
 
   await sendWhatsAppTextMessage({
     to: from,
@@ -400,59 +468,142 @@ async function handleMyFollows(from: string, normalizedFrom: string) {
   });
 }
 
+async function handleSearchProducts(from: string, query: string): Promise<string | null> {
+  const supabase = createAdminSupabaseClient();
+  const trimmedQuery = query.trim();
+  if (trimmedQuery.length < 2) {
+    await sendWhatsAppTextMessage({
+      to: from,
+      message: "Usage: SEARCH <product>. Example: SEARCH rice",
+    });
+    return null;
+  }
+
+  const { data, error } = await supabase
+    .from("products")
+    .select("id, store_id, name, price, category, stock_count, is_available")
+    .or(`name.ilike.%${trimmedQuery}%,description.ilike.%${trimmedQuery}%,category.ilike.%${trimmedQuery}%`)
+    .eq("is_available", true)
+    .gt("stock_count", 0)
+    .order("created_at", { ascending: false })
+    .limit(8);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const products = (data ?? []) as ProductSearchRow[];
+  if (products.length === 0) {
+    await sendWhatsAppTextMessage({
+      to: from,
+      message: `No products found for "${trimmedQuery}". Try another keyword.`,
+    });
+    return null;
+  }
+
+  const storeIds = Array.from(new Set(products.map((product) => product.store_id)));
+  const storesMap = await getStoresMap(storeIds);
+  const baseUrl = getPublicBaseUrl();
+
+  const lines = products.map((product, index) => {
+    const store = storesMap.get(product.store_id);
+    const storeName = store?.name ?? "Store";
+    const productUrl = store?.slug
+      ? `${baseUrl}/store/${store.slug}/${product.id}`
+      : `${baseUrl}/marketplace`;
+    return `${index + 1}. ${product.name} - ${formatNaira(Number(product.price))} - ${storeName}\n${productUrl}`;
+  });
+
+  await sendWhatsAppTextMessage({
+    to: from,
+    message: `Search results for "${trimmedQuery}":\n${lines.join("\n\n")}`,
+  });
+
+  return products[0]?.store_id ?? null;
+}
+
+async function handleGreeting(from: string) {
+  await sendWhatsAppTextMessage({
+    to: from,
+    message:
+      "Hi, welcome to Sellee. I help with customer actions (MY ORDERS, MY STATUS, TRACK <ORDER_REF>, CANCEL <ORDER_REF>, SEARCH <product>, FOLLOW <store>) and vendor actions (LIST ORDERS, SALES TODAY, LOW STOCK, CONFIRM/REJECT, BROADCAST, BROADCAST STATUS). Send HELP to see commands.",
+  });
+}
+
 export async function handleCustomerHelp(from: string) {
   await sendWhatsAppTextMessage({
     to: from,
     message:
-      "Customer commands: MY ORDERS, TRACK <ORDER_REF>, CANCEL <ORDER_REF>, FOLLOW <STORE>, UNFOLLOW <STORE>, MY FOLLOWS.",
+      "Customer commands: MY ORDERS, MY STATUS, TRACK <ORDER_REF>, CANCEL <ORDER_REF>, SEARCH <product>, FOLLOW <STORE>, UNFOLLOW <STORE>, MY FOLLOWS.",
   });
 }
 
-export async function handleCustomerCommand(from: string, body: string): Promise<CustomerCommandResult> {
-  const normalized = body.trim().toUpperCase();
+export async function handleCustomerCommand(
+  from: string,
+  body: string,
+  command: BotCommand,
+): Promise<CustomerCommandResult> {
   const normalizedFrom = normalizeWhatsAppNumber(from);
 
-  if (normalized === "HELP") {
-    await ensureCustomerLink(normalizedFrom);
-    await handleCustomerHelp(from);
-    return { handled: true };
-  }
+  switch (command) {
+    case "GREETING":
+      await ensureCustomerLink(normalizedFrom);
+      await handleGreeting(from);
+      return { handled: true };
 
-  if (normalized === "MY ORDERS") {
-    await ensureCustomerLink(normalizedFrom);
-    await handleMyOrders(from, normalizedFrom);
-    return { handled: true };
-  }
+    case "HELP":
+      await ensureCustomerLink(normalizedFrom);
+      await handleCustomerHelp(from);
+      return { handled: true };
 
-  if (normalized.startsWith("TRACK ")) {
-    await ensureCustomerLink(normalizedFrom);
-    const scopeStoreId = await handleTrack(from, normalizedFrom, body);
-    return { handled: true, scopeStoreId };
-  }
+    case "MY ORDERS":
+      await ensureCustomerLink(normalizedFrom);
+      await handleMyOrders(from, normalizedFrom);
+      return { handled: true };
 
-  if (normalized.startsWith("CANCEL ")) {
-    await ensureCustomerLink(normalizedFrom);
-    const scopeStoreId = await handleCancel(from, normalizedFrom, body);
-    return { handled: true, scopeStoreId };
-  }
+    case "MY STATUS":
+      await ensureCustomerLink(normalizedFrom);
+      await handleMyStatus(from, normalizedFrom);
+      return { handled: true };
 
-  if (normalized.startsWith("FOLLOW ")) {
-    await ensureCustomerLink(normalizedFrom);
-    const scopeStoreId = await handleFollow(from, normalizedFrom, body);
-    return { handled: true, scopeStoreId };
-  }
+    case "TRACK": {
+      await ensureCustomerLink(normalizedFrom);
+      const scopeStoreId = await handleTrack(from, normalizedFrom, body);
+      return { handled: true, scopeStoreId };
+    }
 
-  if (normalized.startsWith("UNFOLLOW ")) {
-    await ensureCustomerLink(normalizedFrom);
-    const scopeStoreId = await handleUnfollow(from, normalizedFrom, body);
-    return { handled: true, scopeStoreId };
-  }
+    case "CANCEL": {
+      await ensureCustomerLink(normalizedFrom);
+      const scopeStoreId = await handleCancel(from, normalizedFrom, body);
+      return { handled: true, scopeStoreId };
+    }
 
-  if (normalized === "MY FOLLOWS") {
-    await ensureCustomerLink(normalizedFrom);
-    await handleMyFollows(from, normalizedFrom);
-    return { handled: true };
-  }
+    case "SEARCH": {
+      await ensureCustomerLink(normalizedFrom);
+      const query = extractSearchQuery(body) ?? "";
+      const scopeStoreId = await handleSearchProducts(from, query);
+      return { handled: true, scopeStoreId };
+    }
 
-  return { handled: false };
+    case "FOLLOW": {
+      await ensureCustomerLink(normalizedFrom);
+      const scopeStoreId = await handleFollow(from, normalizedFrom, body);
+      return { handled: true, scopeStoreId };
+    }
+
+    case "UNFOLLOW": {
+      await ensureCustomerLink(normalizedFrom);
+      const scopeStoreId = await handleUnfollow(from, normalizedFrom, body);
+      return { handled: true, scopeStoreId };
+    }
+
+    case "MY FOLLOWS":
+      await ensureCustomerLink(normalizedFrom);
+      await handleMyFollows(from, normalizedFrom);
+      return { handled: true };
+
+    default:
+      return { handled: false };
+  }
 }
+

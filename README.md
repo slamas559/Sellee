@@ -46,6 +46,7 @@ Required for Meta WhatsApp Cloud API:
 - `WHATSAPP_WEBHOOK_VERIFY_TOKEN`
 - `WHATSAPP_API_VERSION` (default `v20.0`)
 - `WHATSAPP_BROADCAST_CRON_SECRET` (required in production for scheduled broadcast runner)
+- `WHATSAPP_BROADCAST_ALLOW_VERCEL_CRON` (`true` to allow Vercel Cron calls with `x-vercel-cron` header)
 - `OBSERVABILITY_LOGS` (optional, default `true`)
 
 ## 3) Configure Supabase
@@ -102,8 +103,9 @@ npm run dev
 - Product images upload to Supabase Storage bucket `product-images`.
 - Storage policies enforce `auth.uid()/...` scoped writes.
 - WhatsApp order button now logs a `pending_whatsapp` order before opening `wa.me`.
-- Webhook supports vendor bot commands: `LIST ORDERS`, `SALES TODAY`, `LOW STOCK`, `CONFIRM <ORDER_REF>`, `REJECT <ORDER_REF>`, `BROADCAST <message>`, `SCHEDULE BROADCAST <date time> | <message>`.
-- Webhook now supports customer bot commands: `MY ORDERS`, `TRACK <ORDER_REF>`, `CANCEL <ORDER_REF>`, `FOLLOW <STORE>`, `UNFOLLOW <STORE>`, `MY FOLLOWS`, `HELP`.
+- Webhook supports vendor bot commands: `LIST ORDERS`, `SALES TODAY`, `LOW STOCK`, `CONFIRM <ORDER_REF>`, `REJECT <ORDER_REF>`, `BROADCAST <message>`, `BROADCAST STATUS`, `SCHEDULE BROADCAST <date time> | <message>`.
+- Webhook now supports customer bot commands: `MY ORDERS`, `MY STATUS`, `TRACK <ORDER_REF>`, `CANCEL <ORDER_REF>`, `SEARCH <product>`, `FOLLOW <STORE>`, `UNFOLLOW <STORE>`, `MY FOLLOWS`, `HELP`.
+- Bot understands common aliases and greetings (for example: `hello`, `show my orders`, `find rice`, `accept order <ref>`, `decline order <ref>`).
 - Vendors can now generate a link code in dashboard and connect their WhatsApp by sending `LINK <CODE>` to the business number.
 - Outbound bot messages are now persisted to `whatsapp_message_logs` automatically (success + error) for observability.
 - `GET /api/health` now checks both Supabase DB connectivity and WhatsApp config sanity.
@@ -128,7 +130,8 @@ Invoke-RestMethod -Method Post `
 
 3. In production, configure Vercel Cron to call:
    - `GET /api/whatsapp/broadcasts/run`
-   - with `Authorization: Bearer $WHATSAPP_BROADCAST_CRON_SECRET`
+   - either with `Authorization: Bearer $WHATSAPP_BROADCAST_CRON_SECRET` (recommended via external scheduler)
+   - or set `WHATSAPP_BROADCAST_ALLOW_VERCEL_CRON=true` and use built-in Vercel cron (`vercel.json`).
 
 ## WhatsApp Ops (Live)
 

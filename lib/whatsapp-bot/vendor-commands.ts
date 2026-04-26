@@ -3,7 +3,7 @@ import { createAdminSupabaseClient } from "@/lib/supabase-admin";
 import { normalizeWhatsAppNumber } from "@/lib/whatsapp";
 import { executeBroadcastNow, scheduleBroadcast } from "@/lib/whatsapp-bot/broadcasts";
 import { sendWhatsAppTextMessage } from "@/lib/whatsapp-cloud";
-import { extractRef, todayStartIso } from "@/lib/whatsapp-bot/parse";
+import { extractRef, parseFlexibleScheduleDate, todayStartIso } from "@/lib/whatsapp-bot/parse";
 import { findOrderByReference } from "@/lib/whatsapp-bot/repository";
 import type { StoreForCommand } from "@/lib/whatsapp-bot/types";
 
@@ -52,58 +52,6 @@ function parseScheduleBroadcastInput(commandText: string): {
     scheduledAt: scheduledDate.toISOString(),
     message: messagePart,
   };
-}
-
-function parseFlexibleScheduleDate(input: string): Date | null {
-  const trimmed = input.trim();
-  if (!trimmed) {
-    return null;
-  }
-
-  const isoParsed = new Date(trimmed);
-  if (!Number.isNaN(isoParsed.getTime())) {
-    return isoParsed;
-  }
-
-  const ymdMatch = trimmed.match(
-    /^(\d{4})-(\d{1,2})-(\d{1,2})(?:[ T](\d{1,2})(?::(\d{1,2}))?)?$/,
-  );
-  if (ymdMatch) {
-    const [, y, m, d, hh = "0", mm = "0"] = ymdMatch;
-    const parsed = new Date(
-      Number(y),
-      Number(m) - 1,
-      Number(d),
-      Number(hh),
-      Number(mm),
-      0,
-      0,
-    );
-    if (!Number.isNaN(parsed.getTime())) {
-      return parsed;
-    }
-  }
-
-  const dmyMatch = trimmed.match(
-    /^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:[ T](\d{1,2})(?::(\d{1,2}))?)?$/,
-  );
-  if (dmyMatch) {
-    const [, d, m, y, hh = "0", mm = "0"] = dmyMatch;
-    const parsed = new Date(
-      Number(y),
-      Number(m) - 1,
-      Number(d),
-      Number(hh),
-      Number(mm),
-      0,
-      0,
-    );
-    if (!Number.isNaN(parsed.getTime())) {
-      return parsed;
-    }
-  }
-
-  return null;
 }
 
 export async function handleLinkCommand(from: string, body: string) {
@@ -200,7 +148,7 @@ export async function handleLinkCommand(from: string, body: string) {
   await sendWhatsAppTextMessage({
     to: from,
     message:
-      "WhatsApp linked successfully. You can now run commands: LIST ORDERS, SALES TODAY, LOW STOCK, CONFIRM <ORDER_REF>, REJECT <ORDER_REF>, BROADCAST <message>, SCHEDULE BROADCAST <ISO_DATE_TIME> | <message>",
+      "WhatsApp linked successfully. You can now run commands: LIST ORDERS, SALES TODAY, LOW STOCK, CONFIRM <ORDER_REF>, REJECT <ORDER_REF>, BROADCAST <message>, BROADCAST STATUS, SCHEDULE BROADCAST <date time> | <message>",
   });
 }
 
@@ -399,6 +347,54 @@ export async function handleBroadcast(from: string, body: string, store: StoreFo
   await sendWhatsAppTextMessage({
     to: from,
     message: `Broadcast sent. Delivered: ${result.sentCount}, Failed: ${result.failedCount}, Targets: ${result.targetCount}.`,
+  });
+}
+
+export async function handleBroadcastStatus(from: string, store: StoreForCommand) {
+  const supabase = createAdminSupabaseClient();
+  const { data, error } = await supabase
+    .from("whatsapp_broadcasts")
+    .select("id, status, scheduled_at, sent_at, sent_count, failed_count, message, created_at")
+    .eq("store_id", store.id)
+    .order("created_at", { ascending: false })
+    .limit(8);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const rows =
+    (data ?? []) as Array<{
+      id: string;
+      status: string;
+      scheduled_at?: string | null;
+      sent_at?: string | null;
+      sent_count?: number | null;
+      failed_count?: number | null;
+      message?: string | null;
+    }>;
+
+  if (rows.length === 0) {
+    await sendWhatsAppTextMessage({
+      to: from,
+      message: `No broadcast history for ${store.name} yet.`,
+    });
+    return;
+  }
+
+  const lines = rows.map((row) => {
+    const shortId = String(row.id).slice(0, 8).toUpperCase();
+    const status = String(row.status ?? "unknown");
+    const sent = Number(row.sent_count ?? 0);
+    const failed = Number(row.failed_count ?? 0);
+    const when = row.scheduled_at ?? row.sent_at ?? "";
+    const whenText = when ? new Date(when).toISOString().slice(0, 16).replace("T", " ") : "-";
+    return `#${shortId} | ${status} | ok:${sent} fail:${failed} | ${whenText}`;
+  });
+
+  await sendWhatsAppTextMessage({
+    to: from,
+    message: `Broadcast status (${store.name}):\n${lines.join("\n")}`,
   });
 }
 

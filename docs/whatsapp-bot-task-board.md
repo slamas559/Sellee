@@ -85,6 +85,7 @@ Expand WhatsApp from vendor-only command utility into a dual-role assistant for:
 - `MY ORDERS`
 - `TRACK <ORDER_REF>`
 - `CANCEL <ORDER_REF>` (pending only)
+- `SEARCH <product>`
 - `FOLLOW <STORE>`
 - `UNFOLLOW <STORE>`
 - `MY FOLLOWS`
@@ -134,6 +135,12 @@ Expand WhatsApp from vendor-only command utility into a dual-role assistant for:
 ### Planned Features
 - Natural language mapping for both vendor and customer prompts
 - Keep strict command fallback always available
+- D-lite shipped:
+  - Alias intent mapping with ambiguity-safe replies
+  - Greeting intro (`HI`, `HELLO`, etc.)
+  - Customer `SEARCH <product>`
+  - Customer `MY STATUS`
+  - Vendor `BROADCAST STATUS`
 
 ### Planned Files
 - `lib/whatsapp-bot/intent.ts` (new)

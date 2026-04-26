@@ -3,6 +3,13 @@ import { runDueScheduledBroadcasts } from "@/lib/whatsapp-bot/broadcasts";
 import { logDevError } from "@/lib/logger";
 
 function isAuthorized(request: Request): boolean {
+  const vercelCronHeader = request.headers.get("x-vercel-cron");
+  const allowVercelCron = process.env.WHATSAPP_BROADCAST_ALLOW_VERCEL_CRON === "true";
+
+  if (allowVercelCron && Boolean(vercelCronHeader)) {
+    return true;
+  }
+
   const configuredSecret = process.env.WHATSAPP_BROADCAST_CRON_SECRET;
 
   if (!configuredSecret) {
