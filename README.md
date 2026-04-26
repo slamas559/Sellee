@@ -102,7 +102,7 @@ npm run dev
 - Product images upload to Supabase Storage bucket `product-images`.
 - Storage policies enforce `auth.uid()/...` scoped writes.
 - WhatsApp order button now logs a `pending_whatsapp` order before opening `wa.me`.
-- Webhook supports vendor bot commands: `LIST ORDERS`, `SALES TODAY`, `LOW STOCK`, `CONFIRM <ORDER_REF>`, `REJECT <ORDER_REF>`, `BROADCAST <message>`, `SCHEDULE BROADCAST <ISO_DATE_TIME> | <message>`.
+- Webhook supports vendor bot commands: `LIST ORDERS`, `SALES TODAY`, `LOW STOCK`, `CONFIRM <ORDER_REF>`, `REJECT <ORDER_REF>`, `BROADCAST <message>`, `SCHEDULE BROADCAST <date time> | <message>`.
 - Webhook now supports customer bot commands: `MY ORDERS`, `TRACK <ORDER_REF>`, `CANCEL <ORDER_REF>`, `FOLLOW <STORE>`, `UNFOLLOW <STORE>`, `MY FOLLOWS`, `HELP`.
 - Vendors can now generate a link code in dashboard and connect their WhatsApp by sending `LINK <CODE>` to the business number.
 - Outbound bot messages are now persisted to `whatsapp_message_logs` automatically (success + error) for observability.

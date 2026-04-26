@@ -39,8 +39,8 @@ function parseScheduleBroadcastInput(commandText: string): {
     return null;
   }
 
-  const scheduledDate = new Date(datePart);
-  if (Number.isNaN(scheduledDate.getTime())) {
+  const scheduledDate = parseFlexibleScheduleDate(datePart);
+  if (!scheduledDate) {
     return null;
   }
 
@@ -52,6 +52,58 @@ function parseScheduleBroadcastInput(commandText: string): {
     scheduledAt: scheduledDate.toISOString(),
     message: messagePart,
   };
+}
+
+function parseFlexibleScheduleDate(input: string): Date | null {
+  const trimmed = input.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  const isoParsed = new Date(trimmed);
+  if (!Number.isNaN(isoParsed.getTime())) {
+    return isoParsed;
+  }
+
+  const ymdMatch = trimmed.match(
+    /^(\d{4})-(\d{1,2})-(\d{1,2})(?:[ T](\d{1,2})(?::(\d{1,2}))?)?$/,
+  );
+  if (ymdMatch) {
+    const [, y, m, d, hh = "0", mm = "0"] = ymdMatch;
+    const parsed = new Date(
+      Number(y),
+      Number(m) - 1,
+      Number(d),
+      Number(hh),
+      Number(mm),
+      0,
+      0,
+    );
+    if (!Number.isNaN(parsed.getTime())) {
+      return parsed;
+    }
+  }
+
+  const dmyMatch = trimmed.match(
+    /^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:[ T](\d{1,2})(?::(\d{1,2}))?)?$/,
+  );
+  if (dmyMatch) {
+    const [, d, m, y, hh = "0", mm = "0"] = dmyMatch;
+    const parsed = new Date(
+      Number(y),
+      Number(m) - 1,
+      Number(d),
+      Number(hh),
+      Number(mm),
+      0,
+      0,
+    );
+    if (!Number.isNaN(parsed.getTime())) {
+      return parsed;
+    }
+  }
+
+  return null;
 }
 
 export async function handleLinkCommand(from: string, body: string) {
@@ -357,7 +409,7 @@ export async function handleScheduleBroadcast(from: string, body: string, store:
     await sendWhatsAppTextMessage({
       to: from,
       message:
-        "Usage: SCHEDULE BROADCAST <ISO_DATE_TIME> | <message>. Example: SCHEDULE BROADCAST 2026-04-30T14:00:00Z | Flash sale starts now.",
+        "Usage: SCHEDULE BROADCAST <date time> | <message>. Examples: 2026-04-30 14:00 | Flash sale starts now OR 30/04/2026 14:00 | Flash sale starts now.",
     });
     return;
   }

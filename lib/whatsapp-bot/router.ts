@@ -131,7 +131,7 @@ export async function routeIncomingText(from: string, body: string): Promise<Web
     await sendWhatsAppTextMessage({
       to: from,
       message:
-        "Vendor commands: LINK <CODE>, LIST ORDERS, SALES TODAY, LOW STOCK, CONFIRM <ORDER_REF>, REJECT <ORDER_REF>, BROADCAST <message>, SCHEDULE BROADCAST <ISO_DATE_TIME> | <message>. Customer commands: MY ORDERS, TRACK <ORDER_REF>, CANCEL <ORDER_REF>, FOLLOW <STORE>, UNFOLLOW <STORE>, MY FOLLOWS.",
+        "Vendor commands: LINK <CODE>, LIST ORDERS, SALES TODAY, LOW STOCK, CONFIRM <ORDER_REF>, REJECT <ORDER_REF>, BROADCAST <message>, SCHEDULE BROADCAST <date time> | <message>. Customer commands: MY ORDERS, TRACK <ORDER_REF>, CANCEL <ORDER_REF>, FOLLOW <STORE>, UNFOLLOW <STORE>, MY FOLLOWS.",
     });
     return {
       from,
