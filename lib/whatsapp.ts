@@ -13,6 +13,7 @@ export function normalizeWhatsAppNumber(value: string): string {
   return value.replace(/[^0-9]/g, "");
 }
 
+
 export function buildOrderMessage({
   productName,
   quantity,
