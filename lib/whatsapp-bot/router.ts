@@ -1,4 +1,6 @@
 import { logServerInfo } from "@/lib/logger";
+import { waList, waMessage, waTitle } from "@/lib/whatsapp-bot/message-format";
+import { handleMorePagination } from "@/lib/whatsapp-bot/pagination";
 import { type BotCommand, inferCommand } from "@/lib/whatsapp-bot/parse";
 import { resolveVendorStoreByPhone } from "@/lib/whatsapp-bot/repository";
 import { handleCustomerCommand } from "@/lib/whatsapp-bot/customer-commands";
@@ -15,21 +17,43 @@ import {
 import { sendWhatsAppTextMessage } from "@/lib/whatsapp-cloud";
 import type { WebhookDebugResult } from "@/lib/whatsapp-bot/types";
 
-const VENDOR_HELP = `Vendor commands:
-Orders: LIST ORDERS, CONFIRM <ref>, REJECT <ref>
-Sales: SALES TODAY, LOW STOCK
-Marketing: BROADCAST <msg>, BROADCAST STATUS, SCHEDULE BROADCAST <date> | <msg>
-Account: LINK <code>
+const VENDOR_HELP = waMessage(
+  waTitle("Vendor Commands"),
+  waList([
+    "LIST ORDERS - shows recent orders",
+    "CONFIRM <ref> - confirm one order",
+    "REJECT <ref> - reject one order",
+    "SALES TODAY - today's revenue summary",
+    "LOW STOCK - products needing restock",
+    "BROADCAST <message> - send promo now",
+    "BROADCAST STATUS - campaign delivery results",
+    "SCHEDULE BROADCAST <date> | <message> - send later",
+    "LINK <code> - connect WhatsApp to vendor account",
+    "MORE - next page for long lists",
+  ]),
+  "Customer commands also work from your number.",
+  "Send HI for a quick intro.",
+);
 
-Customer commands also work from your number.
-Send HI for a quick intro.`;
-
-const UNLINKED_HELP = `Hi! Here is what I can do:
-
-Customer: MY ORDERS, MY STATUS, TRACK <ref>, CANCEL <ref>, SEARCH <product>, FOLLOW <store>, MY FOLLOWS
-Vendor: Generate a link code in your dashboard then send LINK <code>
-
-Send HI to learn more.`;
+const UNLINKED_HELP = waMessage(
+  waTitle("Welcome to Sellee Bot"),
+  waTitle("Customer Commands"),
+  waList([
+    "MY ORDERS - shows your recent orders",
+    "MY STATUS - quick status snapshot",
+    "TRACK <ref> - order details",
+    "CANCEL <ref> - cancel pending order",
+    "SEARCH <product> - find products",
+    "FOLLOW <store> - get store updates",
+    "UNFOLLOW <store> - stop updates",
+    "MY FOLLOWS - list followed stores",
+    "MORE - next page for long lists",
+  ]),
+  waTitle("Vendor Linking"),
+  "Generate a code in dashboard integrations, then send:",
+  "LINK <code>",
+  "Send HI to learn more.",
+);
 
 function toCanonicalVendorBody(command: BotCommand, body: string): string {
   const trimmed = body.trim();
@@ -71,8 +95,20 @@ export async function routeIncomingText(from: string, body: string): Promise<Web
   if (command === "AMBIGUOUS") {
     await sendWhatsAppTextMessage({
       to: from,
-      message:
-        "I found multiple actions in your message. Please send one command at a time.\n\nExamples:\nTRACK ABCD1234\nCANCEL ABCD1234\nCONFIRM ABCD1234\nREJECT ABCD1234\nSEARCH rice\nLIST ORDERS",
+      message: waMessage(
+        waTitle("Ambiguous Request"),
+        "I found multiple actions in your message.",
+        "Please send one command at a time.",
+        waTitle("Examples"),
+        waList([
+          "TRACK ABCD1234",
+          "CANCEL ABCD1234",
+          "CONFIRM ABCD1234",
+          "REJECT ABCD1234",
+          "SEARCH rice",
+          "LIST ORDERS",
+        ]),
+      ),
     });
     return result(from, body, command, "system");
   }
@@ -80,6 +116,21 @@ export async function routeIncomingText(from: string, body: string): Promise<Web
   if (command === "LINK") {
     await handleLinkCommand(from, body);
     return result(from, body, command, "vendor");
+  }
+
+  if (command === "MORE") {
+    const hasMore = await handleMorePagination(from);
+    if (!hasMore) {
+      await sendWhatsAppTextMessage({
+        to: from,
+        message: waMessage(
+          waTitle("Nothing More To Show"),
+          "No active paginated results found.",
+          "Run a list command first, then send MORE.",
+        ),
+      });
+    }
+    return result(from, body, command, "system");
   }
 
   const customerResult = await handleCustomerCommand(from, body, command);

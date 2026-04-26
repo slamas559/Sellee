@@ -2,6 +2,8 @@ import { formatNaira, slugify } from "@/lib/format";
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
 import { normalizeWhatsAppNumber } from "@/lib/whatsapp";
 import { sendWhatsAppTextMessage } from "@/lib/whatsapp-cloud";
+import { formatBotStatus, waList, waMessage, waTitle } from "@/lib/whatsapp-bot/message-format";
+import { sendPaginatedList } from "@/lib/whatsapp-bot/pagination";
 import {
   type BotCommand,
   extractRef,
@@ -199,7 +201,11 @@ async function handleMyOrders(from: string, normalizedFrom: string) {
   if (orders.length === 0) {
     await sendWhatsAppTextMessage({
       to: from,
-      message: "You have no orders yet. Place an order from Sellee marketplace and check again.",
+      message: waMessage(
+        waTitle("No Orders Yet"),
+        "You have no orders yet.",
+        "Place an order from the marketplace, then send MY ORDERS again.",
+      ),
     });
     return;
   }
@@ -207,12 +213,17 @@ async function handleMyOrders(from: string, normalizedFrom: string) {
   const storesMap = await getStoresMap(Array.from(new Set(orders.map((order) => order.store_id))));
   const lines = orders.map((order) => {
     const storeName = storesMap.get(order.store_id)?.name ?? "Store";
-    return `#${shortRef(order.id)} | ${order.status} | ${formatNaira(Number(order.total_amount))} | ${storeName}`;
+    return `#${shortRef(order.id)} | ${formatBotStatus(order.status)} | ${formatNaira(Number(order.total_amount))} | ${storeName}`;
   });
 
-  await sendWhatsAppTextMessage({
+  await sendPaginatedList({
     to: from,
-    message: `Your recent orders:\n${lines.join("\n")}`,
+    role: "customer",
+    title: "Your Recent Orders",
+    lines,
+    pageSize: 5,
+    emptyMessage: waMessage(waTitle("No Orders"), "No recent orders found."),
+    hint: "Tip: Send TRACK <ORDER_REF> for full details.",
   });
 }
 
@@ -221,7 +232,10 @@ async function handleMyStatus(from: string, normalizedFrom: string) {
   if (orders.length === 0) {
     await sendWhatsAppTextMessage({
       to: from,
-      message: "You have no active status yet. Place an order first, then check MY STATUS.",
+      message: waMessage(
+        waTitle("No Order Status Yet"),
+        "Place an order first, then send MY STATUS.",
+      ),
     });
     return;
   }
@@ -237,16 +251,22 @@ async function handleMyStatus(from: string, normalizedFrom: string) {
   }
 
   const statusSummary = [...statusCounter.entries()]
-    .map(([status, count]) => `${status}: ${count}`)
+    .map(([status, count]) => `${formatBotStatus(status)}: ${count}`)
     .join(" | ");
 
   const latestLines = latest.map(
-    (order) => `#${shortRef(order.id)} - ${order.status} - ${formatNaira(Number(order.total_amount))}`,
+    (order) => `#${shortRef(order.id)} - ${formatBotStatus(order.status)} - ${formatNaira(Number(order.total_amount))}`,
   );
 
   await sendWhatsAppTextMessage({
     to: from,
-    message: `Order status snapshot:\nActive orders: ${active.length}\nRecent mix: ${statusSummary || "none"}\n\nLatest:\n${latestLines.join("\n")}`,
+    message: waMessage(
+      waTitle("Order Status Snapshot"),
+      `Active orders: ${active.length}`,
+      `Recent mix: ${statusSummary || "None"}`,
+      waTitle("Latest"),
+      waList(latestLines),
+    ),
   });
 }
 
@@ -255,7 +275,11 @@ async function handleTrack(from: string, normalizedFrom: string, body: string): 
   if (!ref) {
     await sendWhatsAppTextMessage({
       to: from,
-      message: "Usage: TRACK <ORDER_REF>. Example: TRACK ABCD1234",
+      message: waMessage(
+        waTitle("Usage"),
+        "TRACK <ORDER_REF>",
+        "Example: TRACK ABCD1234",
+      ),
     });
     return null;
   }
@@ -264,7 +288,11 @@ async function handleTrack(from: string, normalizedFrom: string, body: string): 
   if (!order) {
     await sendWhatsAppTextMessage({
       to: from,
-      message: `Order ${ref} not found for this number.`,
+      message: waMessage(
+        waTitle("Order Not Found"),
+        `No order matched: ${ref}`,
+        "Send MY ORDERS to see your recent order references.",
+      ),
     });
     return null;
   }
@@ -274,7 +302,12 @@ async function handleTrack(from: string, normalizedFrom: string, body: string): 
 
   await sendWhatsAppTextMessage({
     to: from,
-    message: `Order #${shortRef(order.id)}\nStore: ${storeName}\nStatus: ${order.status}\nTotal: ${formatNaira(Number(order.total_amount))}`,
+    message: waMessage(
+      waTitle(`Order #${shortRef(order.id)}`),
+      `Store: ${storeName}`,
+      `Status: ${formatBotStatus(order.status)}`,
+      `Total: ${formatNaira(Number(order.total_amount))}`,
+    ),
   });
   return order.store_id;
 }
@@ -284,7 +317,11 @@ async function handleCancel(from: string, normalizedFrom: string, body: string):
   if (!ref) {
     await sendWhatsAppTextMessage({
       to: from,
-      message: "Usage: CANCEL <ORDER_REF>. Example: CANCEL ABCD1234",
+      message: waMessage(
+        waTitle("Usage"),
+        "CANCEL <ORDER_REF>",
+        "Example: CANCEL ABCD1234",
+      ),
     });
     return null;
   }
@@ -293,7 +330,11 @@ async function handleCancel(from: string, normalizedFrom: string, body: string):
   if (!order) {
     await sendWhatsAppTextMessage({
       to: from,
-      message: `Order ${ref} not found for this number.`,
+      message: waMessage(
+        waTitle("Order Not Found"),
+        `No order matched: ${ref}`,
+        "Send MY ORDERS to see your recent order references.",
+      ),
     });
     return null;
   }
@@ -301,7 +342,11 @@ async function handleCancel(from: string, normalizedFrom: string, body: string):
   if (order.status !== "pending_whatsapp") {
     await sendWhatsAppTextMessage({
       to: from,
-      message: `Order #${shortRef(order.id)} cannot be cancelled because it is currently "${order.status}".`,
+      message: waMessage(
+        waTitle("Cannot Cancel Order"),
+        `Order #${shortRef(order.id)} is currently: ${formatBotStatus(order.status)}.`,
+        "Only pending orders can be cancelled.",
+      ),
     });
     return order.store_id;
   }
@@ -322,7 +367,10 @@ async function handleCancel(from: string, normalizedFrom: string, body: string):
 
   await sendWhatsAppTextMessage({
     to: from,
-    message: `Order #${shortRef(order.id)} has been cancelled successfully.`,
+    message: waMessage(
+      waTitle("Order Cancelled"),
+      `Order #${shortRef(order.id)} was cancelled successfully.`,
+    ),
   });
 
   if (store?.whatsapp_number) {
@@ -339,7 +387,11 @@ async function handleFollow(from: string, normalizedFrom: string, body: string):
   if (!storeTarget) {
     await sendWhatsAppTextMessage({
       to: from,
-      message: "Usage: FOLLOW <STORE_NAME_OR_SLUG>. Example: FOLLOW moores-furniture",
+      message: waMessage(
+        waTitle("Usage"),
+        "FOLLOW <STORE_NAME_OR_SLUG>",
+        "Example: FOLLOW moores-furniture",
+      ),
     });
     return null;
   }
@@ -348,17 +400,22 @@ async function handleFollow(from: string, normalizedFrom: string, body: string):
   if (resolved.kind === "none") {
     await sendWhatsAppTextMessage({
       to: from,
-      message:
-        "Store not found. Use exact store slug from the store URL and try again.",
+      message: waMessage(
+        waTitle("Store Not Found"),
+        "Use the exact store slug from the store URL and try again.",
+      ),
     });
     return null;
   }
   if (resolved.kind === "ambiguous") {
     await sendWhatsAppTextMessage({
       to: from,
-      message: `Multiple stores matched. Use exact slug:\n${formatStoreCandidates(
-        resolved.candidates,
-      )}\nExample: FOLLOW store-slug`,
+      message: waMessage(
+        waTitle("Multiple Stores Found"),
+        "Use an exact slug:",
+        formatStoreCandidates(resolved.candidates),
+        "Example: FOLLOW store-slug",
+      ),
     });
     return null;
   }
@@ -381,7 +438,10 @@ async function handleFollow(from: string, normalizedFrom: string, body: string):
 
   await sendWhatsAppTextMessage({
     to: from,
-    message: `You are now following ${store.name}.`,
+    message: waMessage(
+      waTitle("Followed Successfully"),
+      `You are now following ${store.name}.`,
+    ),
   });
   return store.id;
 }
@@ -391,7 +451,11 @@ async function handleUnfollow(from: string, normalizedFrom: string, body: string
   if (!storeTarget) {
     await sendWhatsAppTextMessage({
       to: from,
-      message: "Usage: UNFOLLOW <STORE_NAME_OR_SLUG>. Example: UNFOLLOW moores-furniture",
+      message: waMessage(
+        waTitle("Usage"),
+        "UNFOLLOW <STORE_NAME_OR_SLUG>",
+        "Example: UNFOLLOW moores-furniture",
+      ),
     });
     return null;
   }
@@ -400,17 +464,22 @@ async function handleUnfollow(from: string, normalizedFrom: string, body: string
   if (resolved.kind === "none") {
     await sendWhatsAppTextMessage({
       to: from,
-      message:
-        "Store not found. Use exact store slug from the store URL and try again.",
+      message: waMessage(
+        waTitle("Store Not Found"),
+        "Use the exact store slug from the store URL and try again.",
+      ),
     });
     return null;
   }
   if (resolved.kind === "ambiguous") {
     await sendWhatsAppTextMessage({
       to: from,
-      message: `Multiple stores matched. Use exact slug:\n${formatStoreCandidates(
-        resolved.candidates,
-      )}\nExample: UNFOLLOW store-slug`,
+      message: waMessage(
+        waTitle("Multiple Stores Found"),
+        "Use an exact slug:",
+        formatStoreCandidates(resolved.candidates),
+        "Example: UNFOLLOW store-slug",
+      ),
     });
     return null;
   }
@@ -429,7 +498,10 @@ async function handleUnfollow(from: string, normalizedFrom: string, body: string
 
   await sendWhatsAppTextMessage({
     to: from,
-    message: `You unfollowed ${store.name}.`,
+    message: waMessage(
+      waTitle("Unfollowed"),
+      `You no longer follow ${store.name}.`,
+    ),
   });
   return store.id;
 }
@@ -451,7 +523,11 @@ async function handleMyFollows(from: string, normalizedFrom: string) {
   if (storeIds.length === 0) {
     await sendWhatsAppTextMessage({
       to: from,
-      message: "You are not following any stores yet. Use FOLLOW <STORE_SLUG>.",
+      message: waMessage(
+        waTitle("No Followed Stores"),
+        "You are not following any stores yet.",
+        "Use: FOLLOW <STORE_SLUG>",
+      ),
     });
     return;
   }
@@ -462,9 +538,13 @@ async function handleMyFollows(from: string, normalizedFrom: string) {
     .filter((store): store is StoreLite => Boolean(store))
     .map((store) => `- ${store.name} (${store.slug})`);
 
-  await sendWhatsAppTextMessage({
+  await sendPaginatedList({
     to: from,
-    message: `Your followed stores:\n${lines.join("\n")}`,
+    role: "customer",
+    title: "Your Followed Stores",
+    lines,
+    pageSize: 5,
+    emptyMessage: waMessage(waTitle("No Followed Stores"), "You are not following any stores yet."),
   });
 }
 
@@ -474,7 +554,11 @@ async function handleSearchProducts(from: string, query: string): Promise<string
   if (trimmedQuery.length < 2) {
     await sendWhatsAppTextMessage({
       to: from,
-      message: "Usage: SEARCH <product>. Example: SEARCH rice",
+      message: waMessage(
+        waTitle("Usage"),
+        "SEARCH <product>",
+        "Example: SEARCH rice",
+      ),
     });
     return null;
   }
@@ -496,7 +580,11 @@ async function handleSearchProducts(from: string, query: string): Promise<string
   if (products.length === 0) {
     await sendWhatsAppTextMessage({
       to: from,
-      message: `No products found for "${trimmedQuery}". Try another keyword.`,
+      message: waMessage(
+        waTitle("No Products Found"),
+        `No results for "${trimmedQuery}".`,
+        "Try another keyword.",
+      ),
     });
     return null;
   }
@@ -514,9 +602,14 @@ async function handleSearchProducts(from: string, query: string): Promise<string
     return `${index + 1}. ${product.name} - ${formatNaira(Number(product.price))} - ${storeName}\n${productUrl}`;
   });
 
-  await sendWhatsAppTextMessage({
+  await sendPaginatedList({
     to: from,
-    message: `Search results for "${trimmedQuery}":\n${lines.join("\n\n")}`,
+    role: "customer",
+    title: `Search Results: "${trimmedQuery}"`,
+    lines,
+    pageSize: 5,
+    emptyMessage: waMessage(waTitle("No Products Found"), `No results for "${trimmedQuery}".`),
+    hint: "Tip: Open any listed link to view full product details.",
   });
 
   return products[0]?.store_id ?? null;
@@ -525,16 +618,51 @@ async function handleSearchProducts(from: string, query: string): Promise<string
 async function handleGreeting(from: string) {
   await sendWhatsAppTextMessage({
     to: from,
-    message:
-      "Hi, welcome to Sellee. I help with customer actions (MY ORDERS, MY STATUS, TRACK <ORDER_REF>, CANCEL <ORDER_REF>, SEARCH <product>, FOLLOW <store>) and vendor actions (LIST ORDERS, SALES TODAY, LOW STOCK, CONFIRM/REJECT, BROADCAST, BROADCAST STATUS). Send HELP to see commands.",
+    message: waMessage(
+      waTitle("Welcome to Sellee"),
+      waTitle("Customer Commands"),
+      waList([
+        "MY ORDERS",
+        "MY STATUS",
+        "TRACK <ORDER_REF>",
+        "CANCEL <ORDER_REF>",
+        "SEARCH <product>",
+        "FOLLOW <store>",
+        "UNFOLLOW <store>",
+        "MY FOLLOWS",
+      ]),
+      waTitle("Vendor Commands"),
+      waList([
+        "LIST ORDERS",
+        "SALES TODAY",
+        "LOW STOCK",
+        "CONFIRM <ORDER_REF>",
+        "REJECT <ORDER_REF>",
+        "BROADCAST <message>",
+        "BROADCAST STATUS",
+      ]),
+      "Send HELP to view this menu anytime.",
+    ),
   });
 }
 
 export async function handleCustomerHelp(from: string) {
   await sendWhatsAppTextMessage({
     to: from,
-    message:
-      "Customer commands: MY ORDERS, MY STATUS, TRACK <ORDER_REF>, CANCEL <ORDER_REF>, SEARCH <product>, FOLLOW <STORE>, UNFOLLOW <STORE>, MY FOLLOWS.",
+    message: waMessage(
+      waTitle("Customer Commands"),
+      waList([
+        "MY ORDERS - shows your recent orders",
+        "MY STATUS - quick status summary",
+        "TRACK <ORDER_REF> - view one order details",
+        "CANCEL <ORDER_REF> - cancel pending order",
+        "SEARCH <product> - find products across stores",
+        "FOLLOW <STORE> - get updates from a store",
+        "UNFOLLOW <STORE> - stop store updates",
+        "MY FOLLOWS - list followed stores",
+        "MORE - show next page for long results",
+      ]),
+    ),
   });
 }
 
@@ -601,6 +729,9 @@ export async function handleCustomerCommand(
       await ensureCustomerLink(normalizedFrom);
       await handleMyFollows(from, normalizedFrom);
       return { handled: true };
+
+    case "MORE":
+      return { handled: false };
 
     default:
       return { handled: false };

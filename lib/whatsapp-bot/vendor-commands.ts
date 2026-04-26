@@ -3,6 +3,8 @@ import { createAdminSupabaseClient } from "@/lib/supabase-admin";
 import { normalizeWhatsAppNumber } from "@/lib/whatsapp";
 import { executeBroadcastNow, scheduleBroadcast } from "@/lib/whatsapp-bot/broadcasts";
 import { sendWhatsAppTextMessage } from "@/lib/whatsapp-cloud";
+import { formatBotStatus, waList, waMessage, waTitle } from "@/lib/whatsapp-bot/message-format";
+import { sendPaginatedList } from "@/lib/whatsapp-bot/pagination";
 import { extractRef, parseFlexibleScheduleDate, todayStartIso } from "@/lib/whatsapp-bot/parse";
 import { findOrderByReference } from "@/lib/whatsapp-bot/repository";
 import type { StoreForCommand } from "@/lib/whatsapp-bot/types";
@@ -60,7 +62,11 @@ export async function handleLinkCommand(from: string, body: string) {
   if (!code) {
     await sendWhatsAppTextMessage({
       to: from,
-      message: "Usage: LINK <CODE>. Generate code from Sellee dashboard first.",
+      message: waMessage(
+        waTitle("Usage"),
+        "LINK <CODE>",
+        "Generate the code from your Sellee dashboard first.",
+      ),
     });
     return;
   }
@@ -83,7 +89,11 @@ export async function handleLinkCommand(from: string, body: string) {
   if (!linkCode?.vendor_id) {
     await sendWhatsAppTextMessage({
       to: from,
-      message: "Invalid or expired link code. Generate a new code from your dashboard.",
+      message: waMessage(
+        waTitle("Invalid Link Code"),
+        "This code is invalid or expired.",
+        "Generate a new code from dashboard integrations and try again.",
+      ),
     });
     return;
   }
@@ -103,8 +113,11 @@ export async function handleLinkCommand(from: string, body: string) {
   if (existingByNumber?.vendor_id && String(existingByNumber.vendor_id) !== vendorId) {
     await sendWhatsAppTextMessage({
       to: from,
-      message:
-        "This number is already linked to another vendor account. Contact support if this is incorrect.",
+      message: waMessage(
+        waTitle("Linking Blocked"),
+        "This number is already linked to another vendor account.",
+        "Contact support if this looks incorrect.",
+      ),
     });
     return;
   }
@@ -147,8 +160,21 @@ export async function handleLinkCommand(from: string, body: string) {
 
   await sendWhatsAppTextMessage({
     to: from,
-    message:
-      "WhatsApp linked successfully. You can now run commands: LIST ORDERS, SALES TODAY, LOW STOCK, CONFIRM <ORDER_REF>, REJECT <ORDER_REF>, BROADCAST <message>, BROADCAST STATUS, SCHEDULE BROADCAST <date time> | <message>",
+    message: waMessage(
+      waTitle("WhatsApp Linked Successfully"),
+      waTitle("Available Commands"),
+      waList([
+        "LIST ORDERS - shows recent store orders",
+        "SALES TODAY - revenue + order count today",
+        "LOW STOCK - products that need restock",
+        "CONFIRM <ORDER_REF> - mark order as confirmed",
+        "REJECT <ORDER_REF> - mark order as rejected",
+        "BROADCAST <message> - send promo to followers",
+        "BROADCAST STATUS - recent campaign results",
+        "SCHEDULE BROADCAST <date time> | <message> - send later",
+        "MORE - next page for long lists",
+      ]),
+    ),
   });
 }
 
@@ -187,7 +213,11 @@ export async function handleConfirmReject(
   if (!ref) {
     await sendWhatsAppTextMessage({
       to: from,
-      message: `Usage: ${command} <ORDER_REF>. Example: ${command} ABCD1234`,
+      message: waMessage(
+        waTitle("Usage"),
+        `${command} <ORDER_REF>`,
+        `Example: ${command} ABCD1234`,
+      ),
     });
     return;
   }
@@ -197,7 +227,11 @@ export async function handleConfirmReject(
   if (!order) {
     await sendWhatsAppTextMessage({
       to: from,
-      message: `Order ${ref} not found for ${store.name}.`,
+      message: waMessage(
+        waTitle("Order Not Found"),
+        `No order matched: ${ref}`,
+        `Store: ${store.name}`,
+      ),
     });
     return;
   }
@@ -219,7 +253,10 @@ export async function handleConfirmReject(
 
   await sendWhatsAppTextMessage({
     to: from,
-    message: `Order #${shortRef} marked as ${nextStatus}.`,
+    message: waMessage(
+      waTitle(`Order #${shortRef} Updated`),
+      `New status: ${formatBotStatus(nextStatus)}`,
+    ),
   });
 
   const customerPhone = String(order.customer_whatsapp ?? "");
@@ -232,7 +269,10 @@ export async function handleConfirmReject(
 
     await sendWhatsAppTextMessage({
       to: customerPhone,
-      message: customerMessage,
+      message: waMessage(
+        waTitle(`Order #${shortRef}`),
+        customerMessage,
+      ),
     });
   }
 }
@@ -254,19 +294,27 @@ export async function handleListOrders(from: string, store: StoreForCommand) {
   if (!orders || orders.length === 0) {
     await sendWhatsAppTextMessage({
       to: from,
-      message: `No orders found for ${store.name}.`,
+      message: waMessage(
+        waTitle("No Orders"),
+        `No recent orders found for ${store.name}.`,
+      ),
     });
     return;
   }
 
   const lines = orders.map((order) => {
     const shortRef = String(order.id).slice(0, 8).toUpperCase();
-    return `#${shortRef} | ${order.status} | ${formatNaira(Number(order.total_amount))}`;
+    return `#${shortRef} | ${formatBotStatus(order.status)} | ${formatNaira(Number(order.total_amount))}`;
   });
 
-  await sendWhatsAppTextMessage({
+  await sendPaginatedList({
     to: from,
-    message: `Recent orders (${store.name}):\n${lines.join("\n")}`,
+    role: "vendor",
+    title: `Recent Orders - ${store.name}`,
+    lines,
+    pageSize: 5,
+    emptyMessage: waMessage(waTitle("No Orders"), `No recent orders found for ${store.name}.`),
+    hint: "Tip: Use CONFIRM <ORDER_REF> or REJECT <ORDER_REF>.",
   });
 }
 
@@ -290,7 +338,11 @@ export async function handleSalesToday(from: string, store: StoreForCommand) {
 
   await sendWhatsAppTextMessage({
     to: from,
-    message: `Sales today (${store.name}): ${formatNaira(totalRevenue)} from ${orders?.length ?? 0} orders.`,
+    message: waMessage(
+      waTitle(`Sales Today - ${store.name}`),
+      `Revenue: ${formatNaira(totalRevenue)}`,
+      `Orders: ${orders?.length ?? 0}`,
+    ),
   });
 }
 
@@ -313,16 +365,24 @@ export async function handleLowStock(from: string, store: StoreForCommand) {
   if (!products || products.length === 0) {
     await sendWhatsAppTextMessage({
       to: from,
-      message: `No low-stock alerts for ${store.name}.`,
+      message: waMessage(
+        waTitle(`Low Stock - ${store.name}`),
+        "No low-stock alerts right now.",
+      ),
     });
     return;
   }
 
   const lines = products.map((product) => `${product.name}: ${product.stock_count} left`);
 
-  await sendWhatsAppTextMessage({
+  await sendPaginatedList({
     to: from,
-    message: `Low stock (${store.name}):\n${lines.join("\n")}`,
+    role: "vendor",
+    title: `Low Stock - ${store.name}`,
+    lines,
+    pageSize: 5,
+    emptyMessage: waMessage(waTitle("Low Stock"), "No low-stock alerts right now."),
+    hint: "Tip: Update inventory from dashboard products page.",
   });
 }
 
@@ -332,7 +392,11 @@ export async function handleBroadcast(from: string, body: string, store: StoreFo
   if (!message) {
     await sendWhatsAppTextMessage({
       to: from,
-      message: "Usage: BROADCAST <message>. Example: BROADCAST Flash sale today: 10% off all items.",
+      message: waMessage(
+        waTitle("Usage"),
+        "BROADCAST <message>",
+        "Example: BROADCAST Flash sale today: 10% off all items.",
+      ),
     });
     return;
   }
@@ -346,7 +410,12 @@ export async function handleBroadcast(from: string, body: string, store: StoreFo
 
   await sendWhatsAppTextMessage({
     to: from,
-    message: `Broadcast sent. Delivered: ${result.sentCount}, Failed: ${result.failedCount}, Targets: ${result.targetCount}.`,
+    message: waMessage(
+      waTitle("Broadcast Sent"),
+      `Targets: ${result.targetCount}`,
+      `Delivered: ${result.sentCount}`,
+      `Failed: ${result.failedCount}`,
+    ),
   });
 }
 
@@ -377,14 +446,17 @@ export async function handleBroadcastStatus(from: string, store: StoreForCommand
   if (rows.length === 0) {
     await sendWhatsAppTextMessage({
       to: from,
-      message: `No broadcast history for ${store.name} yet.`,
+      message: waMessage(
+        waTitle(`Broadcast Status - ${store.name}`),
+        "No broadcast history yet.",
+      ),
     });
     return;
   }
 
   const lines = rows.map((row) => {
     const shortId = String(row.id).slice(0, 8).toUpperCase();
-    const status = String(row.status ?? "unknown");
+    const status = formatBotStatus(String(row.status ?? "unknown"));
     const sent = Number(row.sent_count ?? 0);
     const failed = Number(row.failed_count ?? 0);
     const when = row.scheduled_at ?? row.sent_at ?? "";
@@ -392,9 +464,14 @@ export async function handleBroadcastStatus(from: string, store: StoreForCommand
     return `#${shortId} | ${status} | ok:${sent} fail:${failed} | ${whenText}`;
   });
 
-  await sendWhatsAppTextMessage({
+  await sendPaginatedList({
     to: from,
-    message: `Broadcast status (${store.name}):\n${lines.join("\n")}`,
+    role: "vendor",
+    title: `Broadcast Status - ${store.name}`,
+    lines,
+    pageSize: 5,
+    emptyMessage: waMessage(waTitle("Broadcast Status"), "No broadcast history yet."),
+    hint: "Tip: Send BROADCAST <message> to create a campaign.",
   });
 }
 
@@ -404,8 +481,16 @@ export async function handleScheduleBroadcast(from: string, body: string, store:
   if (!parsed) {
     await sendWhatsAppTextMessage({
       to: from,
-      message:
-        "Usage: SCHEDULE BROADCAST <date time> | <message>. Examples: 2026-04-30 14:00 | Flash sale starts now OR 30/04/2026 14:00 | Flash sale starts now.",
+      message: waMessage(
+        waTitle("Usage"),
+        "SCHEDULE BROADCAST <date time> | <message>",
+        "Examples:",
+        waList([
+          "2026-04-30 14:00 | Flash sale starts now",
+          "30/04/2026 14:00 | Flash sale starts now",
+          "tomorrow 2pm | Flash sale starts now",
+        ]),
+      ),
     });
     return;
   }
@@ -420,6 +505,10 @@ export async function handleScheduleBroadcast(from: string, body: string, store:
 
   await sendWhatsAppTextMessage({
     to: from,
-    message: `Broadcast scheduled for ${result.scheduledAt}. ID: ${result.broadcastId.slice(0, 8).toUpperCase()}.`,
+    message: waMessage(
+      waTitle("Broadcast Scheduled"),
+      `Time: ${result.scheduledAt}`,
+      `ID: ${result.broadcastId.slice(0, 8).toUpperCase()}`,
+    ),
   });
 }

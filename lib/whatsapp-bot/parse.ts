@@ -321,6 +321,7 @@ export type BotCommand =
   | "TRACK"
   | "CANCEL"
   | "REORDER"
+  | "MORE"
   | "SEARCH"
   | "FOLLOW"
   | "UNFOLLOW"
@@ -395,6 +396,13 @@ export function inferCommand(body: string): BotCommand {
     stripped.startsWith("ORDER AGAIN ") ||
     stripped.startsWith("REPEAT ORDER ")
   ) return "REORDER";
+
+  if (
+    stripped === "MORE" ||
+    stripped === "NEXT" ||
+    stripped === "CONTINUE" ||
+    stripped === "SHOW MORE"
+  ) return "MORE";
 
   if (
     stripped.startsWith("REVIEW ") ||
