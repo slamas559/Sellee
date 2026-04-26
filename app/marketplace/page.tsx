@@ -14,6 +14,7 @@ export const metadata: Metadata = {
 type MarketplacePageProps = {
   searchParams: Promise<{
     q?: string;
+    niche?: string;
     category?: string;
     sort?: "latest" | "price_asc" | "price_desc" | "distance";
     min_price?: string;
@@ -54,8 +55,26 @@ type ProductLite = {
   created_at: string;
 };
 
+type NicheLite = {
+  id: string;
+  slug: string;
+  name: string;
+};
+
+type NicheCategoryLite = {
+  niche_id: string;
+  name: string;
+};
+
+type CategoryGroup = {
+  niche_id: string;
+  niche_name: string;
+  categories: string[];
+};
+
 type SearchState = {
   q: string;
+  niche: string;
   category: string;
   sort: "latest" | "price_asc" | "price_desc" | "distance";
   min_price: number | null;
@@ -90,6 +109,7 @@ function parseSearchState(raw: Awaited<MarketplacePageProps["searchParams"]>): S
 
   return {
     q: raw.q?.trim() ?? "",
+    niche: raw.niche?.trim() ?? "",
     category: raw.category?.trim() ?? "",
     sort,
     min_price: parseNumber(raw.min_price),
@@ -103,20 +123,54 @@ function parseSearchState(raw: Awaited<MarketplacePageProps["searchParams"]>): S
 
 async function getMarketplaceResults(state: SearchState) {
   const supabase = createAdminSupabaseClient();
-  const { data: stores } = await supabase
-    .from("stores")
-    .select("id, name, slug, city, state, country, logo_url, rating_avg, rating_count, latitude, longitude")
-    .eq("is_active", true)
-    .limit(500);
+  const [{ data: stores }, { data: nichesData }, { data: nicheCategoriesData }] =
+    await Promise.all([
+      supabase
+        .from("stores")
+        .select(
+          "id, name, slug, city, state, country, logo_url, rating_avg, rating_count, latitude, longitude",
+        )
+        .eq("is_active", true)
+        .limit(500),
+      supabase.from("niches").select("id, slug, name").order("name", { ascending: true }),
+      supabase
+        .from("niche_categories")
+        .select("niche_id, name")
+        .order("name", { ascending: true }),
+    ]);
 
   const typedStores = ((stores ?? []) as StoreLite[]);
   const storesById = new Map(typedStores.map((store) => [store.id, store]));
   const activeStoreIds = [...storesById.keys()];
 
+  const niches = ((nichesData ?? []) as NicheLite[]);
+  const nicheCategories = ((nicheCategoriesData ?? []) as NicheCategoryLite[]);
+  const categoriesByNicheId = new Map<string, string[]>();
+  for (const row of nicheCategories) {
+    const categoryName = row.name?.trim();
+    if (!categoryName) continue;
+    const current = categoriesByNicheId.get(row.niche_id) ?? [];
+    current.push(categoryName);
+    categoriesByNicheId.set(row.niche_id, current);
+  }
+
+  const groupedCategories: CategoryGroup[] = niches.map((niche) => ({
+    niche_id: niche.id,
+    niche_name: niche.name,
+    categories: Array.from(new Set(categoriesByNicheId.get(niche.id) ?? [])).sort((a, b) =>
+      a.localeCompare(b),
+    ),
+  }));
+
+  const selectedNicheGroup =
+    groupedCategories.find((group) => group.niche_id === state.niche) ?? null;
+  const categoriesInSelectedNiche = selectedNicheGroup?.categories ?? [];
+
   if (activeStoreIds.length === 0) {
     return {
       products: [] as Array<ProductLite & { distance_km: number | null; store: StoreLite }>,
       categories: [] as string[],
+      grouped_categories: groupedCategories,
     };
   }
 
@@ -130,6 +184,14 @@ async function getMarketplaceResults(state: SearchState) {
 
   if (state.category) {
     productsQuery = productsQuery.eq("category", state.category);
+  } else if (state.niche && categoriesInSelectedNiche.length > 0) {
+    productsQuery = productsQuery.in("category", categoriesInSelectedNiche);
+  } else if (state.niche && categoriesInSelectedNiche.length === 0) {
+    return {
+      products: [] as Array<ProductLite & { distance_km: number | null; store: StoreLite }>,
+      categories: [] as string[],
+      grouped_categories: groupedCategories,
+    };
   }
 
   if (state.q) {
@@ -137,23 +199,10 @@ async function getMarketplaceResults(state: SearchState) {
     productsQuery = productsQuery.or(`name.ilike.%${safeQ}%,description.ilike.%${safeQ}%`);
   }
 
-  const [{ data: products }, { data: categoryRows }] = await Promise.all([
-    productsQuery,
-    supabase
-      .from("products")
-      .select("category")
-      .eq("is_available", true)
-      .not("category", "is", null)
-      .limit(200),
-  ]);
-
-  const categories = [
-    ...new Set(
-      (categoryRows ?? [])
-        .map((row) => String(row.category ?? "").trim())
-        .filter(Boolean),
-    ),
-  ].sort((a, b) => a.localeCompare(b));
+  const { data: products } = await productsQuery;
+  const categories = Array.from(new Set((
+    state.niche && selectedNicheGroup ? selectedNicheGroup.categories : groupedCategories.flatMap((group) => group.categories)
+  ).filter(Boolean)));
 
   const filtered = ((products ?? []) as ProductLite[])
     .map((product) => {
@@ -203,7 +252,11 @@ async function getMarketplaceResults(state: SearchState) {
     return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
   });
 
-  return { products: filtered.slice(0, 72), categories };
+  return {
+    products: filtered.slice(0, 72),
+    categories,
+    grouped_categories: groupedCategories,
+  };
 }
 
 function StoreLocation({ store }: { store: StoreLite }) {
@@ -215,6 +268,7 @@ function buildMarketplaceHref(
   state: SearchState,
   updates: Partial<{
     q: string;
+    niche: string;
     category: string;
     sort: SearchState["sort"];
     min_price: number | null;
@@ -231,6 +285,7 @@ function buildMarketplaceHref(
   };
   const params = new URLSearchParams();
   if (nextState.q) params.set("q", nextState.q);
+  if (nextState.niche) params.set("niche", nextState.niche);
   if (nextState.category) params.set("category", nextState.category);
   if (nextState.sort && nextState.sort !== "latest") params.set("sort", nextState.sort);
   if (nextState.min_price !== null) params.set("min_price", String(nextState.min_price));
@@ -296,14 +351,20 @@ function FilterLabel({
 function MarketplaceFilterForm({
   state,
   categories,
+  groupedCategories,
   hasLocationFilter,
   containerClassName,
 }: {
   state: SearchState;
   categories: string[];
+  groupedCategories: CategoryGroup[];
   hasLocationFilter: boolean;
   containerClassName?: string;
 }) {
+  const visibleGroups = state.niche
+    ? groupedCategories.filter((group) => group.niche_id === state.niche)
+    : groupedCategories;
+
   return (
     <div className={containerClassName}>
       <form action="/marketplace" className="space-y-5">
@@ -321,6 +382,24 @@ function MarketplaceFilterForm({
 
         <div className="space-y-2">
           <label>
+            <FilterLabel icon="tag">Niche</FilterLabel>
+          </label>
+          <select
+            name="niche"
+            defaultValue={state.niche}
+            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none ring-emerald-300 transition focus:ring-2"
+          >
+            <option value="">All niches</option>
+            {groupedCategories.map((group) => (
+              <option key={group.niche_id} value={group.niche_id}>
+                {group.niche_name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="space-y-2">
+          <label>
             <FilterLabel icon="tag">Category</FilterLabel>
           </label>
           <select
@@ -329,11 +408,23 @@ function MarketplaceFilterForm({
             className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none ring-emerald-300 transition focus:ring-2"
           >
             <option value="">All categories</option>
-            {categories.map((category) => (
-              <option key={category} value={category}>
-                {category}
-              </option>
-            ))}
+            {visibleGroups.length > 0 ? (
+              visibleGroups.map((group) => (
+                <optgroup key={group.niche_id} label={group.niche_name}>
+                  {group.categories.map((category) => (
+                    <option key={`${group.niche_id}-${category}`} value={category}>
+                      {category}
+                    </option>
+                  ))}
+                </optgroup>
+              ))
+            ) : (
+              categories.map((category) => (
+                <option key={category} value={category}>
+                  {category}
+                </option>
+              ))
+            )}
           </select>
         </div>
 
@@ -432,7 +523,7 @@ function MarketplaceFilterForm({
 
 export default async function MarketplacePage({ searchParams }: MarketplacePageProps) {
   const state = parseSearchState(await searchParams);
-  const { products, categories } = await getMarketplaceResults(state);
+  const { products, categories, grouped_categories } = await getMarketplaceResults(state);
   const hasLocationFilter = state.lat !== null && state.lng !== null;
 
   const activeFilters: Array<{ label: string; clearHref: string }> = [];
@@ -440,6 +531,13 @@ export default async function MarketplacePage({ searchParams }: MarketplacePageP
     activeFilters.push({
       label: `Search: ${state.q}`,
       clearHref: buildMarketplaceHref(state, { q: "" }),
+    });
+  }
+  if (state.niche) {
+    const matchedNiche = grouped_categories.find((group) => group.niche_id === state.niche);
+    activeFilters.push({
+      label: `Niche: ${matchedNiche?.niche_name ?? "Selected"}`,
+      clearHref: buildMarketplaceHref(state, { niche: "", category: "" }),
     });
   }
   if (state.category) {
@@ -508,6 +606,7 @@ export default async function MarketplacePage({ searchParams }: MarketplacePageP
           <MarketplaceFilterForm
             state={state}
             categories={categories}
+            groupedCategories={grouped_categories}
             hasLocationFilter={hasLocationFilter}
           />
         </div>
@@ -529,6 +628,7 @@ export default async function MarketplacePage({ searchParams }: MarketplacePageP
           <MarketplaceFilterForm
             state={state}
             categories={categories}
+            groupedCategories={grouped_categories}
             hasLocationFilter={hasLocationFilter}
           />
         </aside>

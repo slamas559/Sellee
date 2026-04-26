@@ -36,6 +36,7 @@ const storeSchema = z.object({
     .optional(),
   theme_color: z.string().regex(/^#([A-Fa-f0-9]{6})$/),
   logo_url: z.string().url().optional().or(z.literal("")),
+  niche_ids: z.array(z.string().uuid()).max(8).optional().default([]),
   is_active: z.boolean().optional().default(true),
 });
 
@@ -115,6 +116,16 @@ async function parseStoreRequest(request: Request): Promise<{
       storefront_config: storefrontConfig,
       theme_color: toOptionalString(formData.get("theme_color")),
       logo_url: toOptionalString(formData.get("logo_url")) ?? "",
+      niche_ids: (() => {
+        const raw = toOptionalString(formData.get("niche_ids"));
+        if (!raw) return [];
+        try {
+          const parsedNiches = JSON.parse(raw);
+          return Array.isArray(parsedNiches) ? parsedNiches : [];
+        } catch {
+          return [];
+        }
+      })(),
       is_active: toOptionalString(formData.get("is_active")) === "true",
     });
 
@@ -168,6 +179,97 @@ async function ensureUniqueSlug(baseSlug: string, storeId?: string): Promise<str
   throw new Error("Unable to allocate a unique store slug.");
 }
 
+type StoreRow = {
+  id: string;
+  vendor_id: string;
+  name: string;
+  slug: string;
+  logo_url: string | null;
+  whatsapp_number: string;
+  address_line1: string | null;
+  city: string | null;
+  state: string | null;
+  country: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  location_source: "manual" | "gps" | null;
+  store_template: string;
+  store_theme_preset: string;
+  storefront_config: unknown;
+  rating_avg: number;
+  rating_count: number;
+  theme_color: string | null;
+  is_active: boolean;
+  created_at: string;
+};
+
+async function validateNicheIds(nicheIds: string[]): Promise<string[]> {
+  if (nicheIds.length === 0) return [];
+  const supabase = createAdminSupabaseClient();
+  const { data, error } = await supabase.from("niches").select("id").in("id", nicheIds);
+  if (error) {
+    throw new Error(error.message);
+  }
+  return ((data ?? []) as Array<{ id: string }>).map((row) => row.id);
+}
+
+async function saveStoreNiches(storeId: string, nicheIds: string[]) {
+  const supabase = createAdminSupabaseClient();
+  const validIds = await validateNicheIds(Array.from(new Set(nicheIds)));
+
+  const { error: deleteError } = await supabase
+    .from("store_niches")
+    .delete()
+    .eq("store_id", storeId);
+
+  if (deleteError) {
+    throw new Error(deleteError.message);
+  }
+
+  if (validIds.length === 0) {
+    return;
+  }
+
+  const { error: insertError } = await supabase
+    .from("store_niches")
+    .insert(validIds.map((nicheId) => ({ store_id: storeId, niche_id: nicheId })));
+
+  if (insertError) {
+    throw new Error(insertError.message);
+  }
+}
+
+async function attachNichesToStores(stores: StoreRow[]) {
+  if (stores.length === 0) return [];
+
+  const supabase = createAdminSupabaseClient();
+  const storeIds = stores.map((store) => store.id);
+  const { data, error } = await supabase
+    .from("store_niches")
+    .select("store_id, niche_id, niche:niche_id(name)")
+    .in("store_id", storeIds);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const grouped = new Map<string, { niche_ids: string[]; niche_names: string[] }>();
+  for (const row of ((data ?? []) as Array<{ store_id: string; niche_id: string; niche?: { name?: string } | null }>)) {
+    const current = grouped.get(row.store_id) ?? { niche_ids: [], niche_names: [] };
+    current.niche_ids.push(row.niche_id);
+    if (row.niche?.name) {
+      current.niche_names.push(row.niche.name);
+    }
+    grouped.set(row.store_id, current);
+  }
+
+  return stores.map((store) => ({
+    ...store,
+    niche_ids: grouped.get(store.id)?.niche_ids ?? [],
+    niche_names: grouped.get(store.id)?.niche_names ?? [],
+  }));
+}
+
 export async function GET() {
   const session = await getServerSession(authOptions);
 
@@ -188,7 +290,13 @@ export async function GET() {
     return NextResponse.json({ error: "Could not load stores." }, { status: 500 });
   }
 
-  return NextResponse.json({ stores: data ?? [] });
+  try {
+    const storesWithNiches = await attachNichesToStores((data ?? []) as StoreRow[]);
+    return NextResponse.json({ stores: storesWithNiches });
+  } catch (error) {
+    logDevError("stores.get.attach-niches", error, { userId: session.user.id });
+    return NextResponse.json({ stores: data ?? [] });
+  }
 }
 
 export async function POST(request: Request) {
@@ -294,6 +402,15 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "Could not update store." }, { status: 500 });
       }
 
+      try {
+        await saveStoreNiches(data.id, parsedData.niche_ids ?? []);
+      } catch (nicheError) {
+        logDevError("stores.update.niches", nicheError, { storeId: data.id, userId: session.user.id });
+        return NextResponse.json({ error: "Store updated, but niches could not be saved." }, { status: 500 });
+      }
+
+      const [storeWithNiches] = await attachNichesToStores([data as StoreRow]);
+
       const { data: promotedRows, error: roleError } = await supabase
         .from("users")
         .update({ role: "vendor" })
@@ -306,7 +423,7 @@ export async function POST(request: Request) {
       }
 
       return NextResponse.json({
-        store: data,
+        store: storeWithNiches,
         action: "updated",
         became_vendor: Boolean(promotedRows?.length),
       });
@@ -341,6 +458,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Could not create store." }, { status: 500 });
     }
 
+    try {
+      await saveStoreNiches(data.id, parsedData.niche_ids ?? []);
+    } catch (nicheError) {
+      logDevError("stores.create.niches", nicheError, { storeId: data.id, userId: session.user.id });
+      return NextResponse.json({ error: "Store created, but niches could not be saved." }, { status: 500 });
+    }
+
+    const [storeWithNiches] = await attachNichesToStores([data as StoreRow]);
+
     const { data: promotedRows, error: roleError } = await supabase
       .from("users")
       .update({ role: "vendor" })
@@ -353,7 +479,7 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({
-      store: data,
+      store: storeWithNiches,
       action: "created",
       became_vendor: Boolean(promotedRows?.length),
     });

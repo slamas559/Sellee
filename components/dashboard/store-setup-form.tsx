@@ -26,6 +26,17 @@ type UploadState = {
   error: string | null;
 };
 
+type NicheOption = {
+  id: string;
+  slug: string;
+  name: string;
+  categories: Array<{
+    id: string;
+    slug: string;
+    name: string;
+  }>;
+};
+
 const INITIAL_UPLOAD_STATE: UploadState = {
   isUploading: false,
   progress: 0,
@@ -327,6 +338,8 @@ export function StoreSetupForm({ initialStore }: StoreSetupFormProps) {
   const [isDetectingLocation, setIsDetectingLocation] = useState(false);
   const [showVendorSuccessBanner, setShowVendorSuccessBanner] = useState(false);
   const [bannerUrlInput, setBannerUrlInput] = useState("");
+  const [nicheOptions, setNicheOptions] = useState<NicheOption[]>([]);
+  const [isLoadingNiches, setIsLoadingNiches] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({
@@ -352,6 +365,7 @@ export function StoreSetupForm({ initialStore }: StoreSetupFormProps) {
     secondary_banner_url: initialConfig.secondary_banner_url,
     banner_urls: initialConfig.banner_urls,
     sections_order: initialConfig.sections_order ?? DEFAULT_STOREFRONT_SECTIONS_ORDER,
+    niche_ids: initialStore?.niche_ids ?? [],
   });
 
   const shareablePath = store?.slug ? `/store/${store.slug}` : null;
@@ -366,6 +380,42 @@ export function StoreSetupForm({ initialStore }: StoreSetupFormProps) {
   const previewHeroUrl = useObjectUrl(heroImageFile, form.hero_image_url);
   const previewSecondaryBannerUrl = useObjectUrl(secondaryBannerFile, form.secondary_banner_url);
   const isAnyUploading = Object.values(uploadState).some((state) => state.isUploading);
+  const selectedNicheNames = useMemo(
+    () =>
+      nicheOptions
+        .filter((niche) => form.niche_ids.includes(niche.id))
+        .map((niche) => niche.name),
+    [form.niche_ids, nicheOptions],
+  );
+
+  useEffect(() => {
+    let ignore = false;
+
+    async function loadCatalog() {
+      setIsLoadingNiches(true);
+      try {
+        const response = await fetch("/api/catalog", { cache: "no-store" });
+        const payload = (await response.json()) as {
+          niches?: NicheOption[];
+        };
+        if (!response.ok || ignore) return;
+        setNicheOptions(payload.niches ?? []);
+      } catch {
+        if (!ignore) {
+          setNicheOptions([]);
+        }
+      } finally {
+        if (!ignore) {
+          setIsLoadingNiches(false);
+        }
+      }
+    }
+
+    void loadCatalog();
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   function pushBannerUrl(url: string) {
     const normalized = url.trim();
@@ -613,6 +663,12 @@ export function StoreSetupForm({ initialStore }: StoreSetupFormProps) {
       return;
     }
 
+    if (form.niche_ids.length === 0) {
+      setError("Select at least one niche for your store.");
+      setIsSaving(false);
+      return;
+    }
+
     const storefrontConfig = normalizeStorefrontConfig({
       hero_title: form.hero_title || DEFAULT_STOREFRONT_CONFIG.hero_title,
       hero_subtitle: form.hero_subtitle || DEFAULT_STOREFRONT_CONFIG.hero_subtitle,
@@ -644,6 +700,7 @@ export function StoreSetupForm({ initialStore }: StoreSetupFormProps) {
       body.append("logo_url", form.logo_url);
       body.append("is_active", String(form.is_active));
       body.append("storefront_config", JSON.stringify(storefrontConfig));
+      body.append("niche_ids", JSON.stringify(form.niche_ids));
 
       const response = await fetch("/api/stores", {
         method: "POST",
@@ -684,6 +741,7 @@ export function StoreSetupForm({ initialStore }: StoreSetupFormProps) {
         secondary_banner_url: nextConfig.secondary_banner_url,
         banner_urls: nextConfig.banner_urls,
         sections_order: nextConfig.sections_order ?? DEFAULT_STOREFRONT_SECTIONS_ORDER,
+        niche_ids: nextStore.niche_ids ?? [],
       });
 
       setMessage(
@@ -777,6 +835,57 @@ export function StoreSetupForm({ initialStore }: StoreSetupFormProps) {
                 placeholder="2348012345678"
               />
             </label>
+            <div className="space-y-2 text-sm md:col-span-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="font-medium text-slate-700">Store niches</span>
+                <span className="text-xs text-slate-500">
+                  {form.niche_ids.length > 0
+                    ? `${form.niche_ids.length} selected`
+                    : "Select at least one niche"}
+                </span>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                {isLoadingNiches ? (
+                  <p className="text-xs text-slate-500">Loading niches...</p>
+                ) : nicheOptions.length === 0 ? (
+                  <p className="text-xs text-slate-500">
+                    No niche options available yet. Run the niches SQL migration.
+                  </p>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {nicheOptions.map((niche) => {
+                      const selected = form.niche_ids.includes(niche.id);
+                      return (
+                        <button
+                          key={niche.id}
+                          type="button"
+                          onClick={() =>
+                            setForm((prev) => ({
+                              ...prev,
+                              niche_ids: selected
+                                ? prev.niche_ids.filter((id) => id !== niche.id)
+                                : [...prev.niche_ids, niche.id].slice(0, 8),
+                            }))
+                          }
+                          className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+                            selected
+                              ? "border-emerald-600 bg-emerald-600 text-white"
+                              : "border-slate-200 bg-white text-slate-700 hover:border-emerald-300"
+                          }`}
+                        >
+                          {niche.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+              {selectedNicheNames.length > 0 ? (
+                <p className="text-xs text-slate-600">
+                  Selected: {selectedNicheNames.join(", ")}
+                </p>
+              ) : null}
+            </div>
             <label className="space-y-2 text-sm">
               <span className="font-medium text-slate-700">Logo URL (fallback)</span>
               <input

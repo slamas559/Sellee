@@ -50,6 +50,8 @@ export type StoreRecord = {
   storefront_config: StorefrontConfig | null;
   rating_avg: number | null;
   rating_count: number;
+  niche_ids?: string[];
+  niche_names?: string[];
   theme_color: string | null;
   is_active: boolean;
   created_at: string;

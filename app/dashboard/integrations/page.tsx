@@ -16,13 +16,13 @@ export default async function DashboardIntegrationsPage() {
 
   return (
     <section className="space-y-4">
-      <header className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-        <p className="text-sm font-medium text-emerald-700">Integrations</p>
-        <h1 className="mt-1 text-2xl font-black text-slate-900">
+      <header className="rounded-2xl border border-emerald-100 bg-gradient-to-r from-white via-emerald-50 to-sky-50 p-5 shadow-sm sm:p-6">
+        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">Integrations</p>
+        <h1 className="mt-1 text-2xl font-black tracking-tight text-slate-900">
           WhatsApp Bot Connection
         </h1>
         <p className="mt-1 text-sm text-slate-600">
-          Link your vendor WhatsApp number and manage command access.
+          Link your operator number in under a minute: generate code, send LINK command, then refresh status.
         </p>
       </header>
       <WhatsAppLinkingCard initialStatus={whatsappLinkStatus} />

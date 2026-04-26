@@ -31,6 +31,43 @@ async function getVendorStoreId(vendorId: string): Promise<string | null> {
   return data?.id ?? null;
 }
 
+async function getAllowedCategoriesForStore(storeId: string): Promise<string[]> {
+  const supabase = createAdminSupabaseClient();
+  const { data: storeNichesData, error: storeNichesError } = await supabase
+    .from("store_niches")
+    .select("niche_id")
+    .eq("store_id", storeId);
+
+  if (storeNichesError) {
+    throw new Error(storeNichesError.message);
+  }
+
+  const nicheIds = ((storeNichesData ?? []) as Array<{ niche_id: string }>).map(
+    (row) => row.niche_id,
+  );
+
+  if (nicheIds.length === 0) {
+    return [];
+  }
+
+  const { data, error } = await supabase
+    .from("niche_categories")
+    .select("name")
+    .in("niche_id", nicheIds);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const names = new Set(
+    ((data ?? []) as Array<{ name?: string | null }>)
+      .map((row) => row.name?.trim() ?? "")
+      .filter(Boolean),
+  );
+
+  return [...names].sort((a, b) => a.localeCompare(b));
+}
+
 async function uploadProductImage(vendorId: string, file: File): Promise<string> {
   const supabase = createAdminSupabaseClient();
   const bytes = await file.arrayBuffer();
@@ -72,7 +109,7 @@ export async function GET() {
     const storeId = await getVendorStoreId(session.user.id);
 
     if (!storeId) {
-      return NextResponse.json({ products: [] });
+      return NextResponse.json({ products: [], allowed_categories: [] });
     }
 
     const supabase = createAdminSupabaseClient();
@@ -87,7 +124,17 @@ export async function GET() {
       return NextResponse.json({ error: "Could not load products." }, { status: 500 });
     }
 
-    return NextResponse.json({ products: data ?? [] });
+    let allowedCategories: string[] = [];
+    try {
+      allowedCategories = await getAllowedCategoriesForStore(storeId);
+    } catch (categoryError) {
+      logDevError("products.get.allowed-categories", categoryError, {
+        userId: session.user.id,
+        storeId,
+      });
+    }
+
+    return NextResponse.json({ products: data ?? [], allowed_categories: allowedCategories });
   } catch (error) {
     logDevError("products.get.unhandled", error, { userId: session.user.id });
     return NextResponse.json({ error: "Unexpected products error." }, { status: 500 });
@@ -126,6 +173,32 @@ export async function POST(request: Request) {
       );
     }
 
+    let allowedCategories: string[] = [];
+    try {
+      allowedCategories = await getAllowedCategoriesForStore(storeId);
+    } catch (categoryError) {
+      logDevError("products.create.allowed-categories", categoryError, {
+        userId: session.user.id,
+        storeId,
+      });
+    }
+
+    const normalizedCategory = parsed.data.category.trim();
+    if (allowedCategories.length > 0) {
+      if (!normalizedCategory) {
+        return NextResponse.json(
+          { error: "Select a category based on your selected niches." },
+          { status: 400 },
+        );
+      }
+      if (!allowedCategories.includes(normalizedCategory)) {
+        return NextResponse.json(
+          { error: "Selected category is not allowed for your store niches." },
+          { status: 400 },
+        );
+      }
+    }
+
     const imageFiles = formData
       .getAll("images")
       .filter((value): value is File => value instanceof File && value.size > 0);
@@ -146,7 +219,7 @@ export async function POST(request: Request) {
         store_id: storeId,
         name: parsed.data.name,
         description: parsed.data.description || null,
-        category: parsed.data.category || null,
+        category: normalizedCategory || null,
         price: parsed.data.price,
         image_url: imageUrl,
         image_urls: uploadedImageUrls,
@@ -167,3 +240,4 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unexpected create product error." }, { status: 500 });
   }
 }
+

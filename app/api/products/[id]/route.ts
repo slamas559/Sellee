@@ -31,6 +31,43 @@ async function getVendorStoreId(vendorId: string): Promise<string | null> {
   return data?.id ?? null;
 }
 
+async function getAllowedCategoriesForStore(storeId: string): Promise<string[]> {
+  const supabase = createAdminSupabaseClient();
+  const { data: storeNichesData, error: storeNichesError } = await supabase
+    .from("store_niches")
+    .select("niche_id")
+    .eq("store_id", storeId);
+
+  if (storeNichesError) {
+    throw new Error(storeNichesError.message);
+  }
+
+  const nicheIds = ((storeNichesData ?? []) as Array<{ niche_id: string }>).map(
+    (row) => row.niche_id,
+  );
+
+  if (nicheIds.length === 0) {
+    return [];
+  }
+
+  const { data, error } = await supabase
+    .from("niche_categories")
+    .select("name")
+    .in("niche_id", nicheIds);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const names = new Set(
+    ((data ?? []) as Array<{ name?: string | null }>)
+      .map((row) => row.name?.trim() ?? "")
+      .filter(Boolean),
+  );
+
+  return [...names].sort((a, b) => a.localeCompare(b));
+}
+
 async function uploadProductImage(vendorId: string, file: File): Promise<string> {
   const supabase = createAdminSupabaseClient();
   const bytes = await file.arrayBuffer();
@@ -95,6 +132,32 @@ export async function PATCH(
       return NextResponse.json({ error: "Store not found for this vendor." }, { status: 400 });
     }
 
+    let allowedCategories: string[] = [];
+    try {
+      allowedCategories = await getAllowedCategoriesForStore(storeId);
+    } catch (categoryError) {
+      logDevError("products.update.allowed-categories", categoryError, {
+        userId: session.user.id,
+        storeId,
+      });
+    }
+
+    const normalizedCategory = parsed.data.category.trim();
+    if (allowedCategories.length > 0) {
+      if (!normalizedCategory) {
+        return NextResponse.json(
+          { error: "Select a category based on your selected niches." },
+          { status: 400 },
+        );
+      }
+      if (!allowedCategories.includes(normalizedCategory)) {
+        return NextResponse.json(
+          { error: "Selected category is not allowed for your store niches." },
+          { status: 400 },
+        );
+      }
+    }
+
     const supabase = createAdminSupabaseClient();
 
     const { data: existingProduct, error: existingProductError } = await supabase
@@ -141,7 +204,7 @@ export async function PATCH(
       .update({
         name: parsed.data.name,
         description: parsed.data.description || null,
-        category: parsed.data.category || null,
+        category: normalizedCategory || null,
         price: parsed.data.price,
         stock_count: parsed.data.stock_count,
         is_available: parsed.data.is_available,
@@ -201,3 +264,4 @@ export async function DELETE(
     return NextResponse.json({ error: "Unexpected delete product error." }, { status: 500 });
   }
 }
+

@@ -57,6 +57,33 @@ create table if not exists public.stores (
 
 create index if not exists idx_stores_lat_lng on public.stores (latitude, longitude);
 
+create table if not exists public.niches (
+  id uuid primary key default gen_random_uuid(),
+  slug text unique not null,
+  name text unique not null,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.niche_categories (
+  id uuid primary key default gen_random_uuid(),
+  niche_id uuid not null references public.niches(id) on delete cascade,
+  slug text not null,
+  name text not null,
+  created_at timestamptz not null default now(),
+  unique (niche_id, slug),
+  unique (niche_id, name)
+);
+
+create table if not exists public.store_niches (
+  store_id uuid not null references public.stores(id) on delete cascade,
+  niche_id uuid not null references public.niches(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (store_id, niche_id)
+);
+
+create index if not exists idx_store_niches_store on public.store_niches (store_id);
+create index if not exists idx_store_niches_niche on public.store_niches (niche_id);
+
 create table if not exists public.products (
   id uuid primary key default gen_random_uuid(),
   store_id uuid not null references public.stores(id) on delete cascade,
@@ -149,6 +176,9 @@ create index if not exists idx_product_reviews_product_id on public.product_revi
 alter table public.users enable row level security;
 alter table public.stores enable row level security;
 alter table public.products enable row level security;
+alter table public.niches enable row level security;
+alter table public.niche_categories enable row level security;
+alter table public.store_niches enable row level security;
 alter table public.orders enable row level security;
 alter table public.order_items enable row level security;
 alter table public.payments enable row level security;
@@ -169,6 +199,34 @@ create policy "stores_vendor_all"
 on public.stores for all
 using (vendor_id::text = auth.uid()::text)
 with check (vendor_id::text = auth.uid()::text);
+
+drop policy if exists "niches_public_read" on public.niches;
+create policy "niches_public_read"
+on public.niches for select
+using (true);
+
+drop policy if exists "niche_categories_public_read" on public.niche_categories;
+create policy "niche_categories_public_read"
+on public.niche_categories for select
+using (true);
+
+drop policy if exists "store_niches_vendor_all" on public.store_niches;
+create policy "store_niches_vendor_all"
+on public.store_niches for all
+using (
+  exists (
+    select 1 from public.stores s
+    where s.id = store_niches.store_id
+    and s.vendor_id::text = auth.uid()::text
+  )
+)
+with check (
+  exists (
+    select 1 from public.stores s
+    where s.id = store_niches.store_id
+    and s.vendor_id::text = auth.uid()::text
+  )
+);
 
 drop policy if exists "products_vendor_all" on public.products;
 create policy "products_vendor_all"
@@ -313,3 +371,55 @@ drop policy if exists "product_reviews_public_read" on public.product_reviews;
 create policy "product_reviews_public_read"
 on public.product_reviews for select
 using (true);
+
+insert into public.niches (slug, name)
+values
+  ('groceries', 'Groceries'),
+  ('fashion', 'Fashion'),
+  ('electronics', 'Electronics'),
+  ('beauty', 'Beauty'),
+  ('home-living', 'Home & Living'),
+  ('health-fitness', 'Health & Fitness'),
+  ('baby-kids', 'Baby & Kids'),
+  ('automotive', 'Automotive')
+on conflict (slug) do update set name = excluded.name;
+
+insert into public.niche_categories (niche_id, slug, name)
+select n.id, v.slug, v.name
+from (
+  values
+    ('groceries', 'fruits-vegetables', 'Fruits & Vegetables'),
+    ('groceries', 'grains-rice', 'Grains & Rice'),
+    ('groceries', 'beverages', 'Beverages'),
+    ('groceries', 'snacks', 'Snacks'),
+    ('groceries', 'frozen-foods', 'Frozen Foods'),
+    ('fashion', 'mens-wear', 'Men''s Wear'),
+    ('fashion', 'womens-wear', 'Women''s Wear'),
+    ('fashion', 'shoes', 'Shoes'),
+    ('fashion', 'bags', 'Bags'),
+    ('fashion', 'accessories', 'Accessories'),
+    ('electronics', 'phones-tablets', 'Phones & Tablets'),
+    ('electronics', 'computing', 'Computing'),
+    ('electronics', 'audio', 'Audio'),
+    ('electronics', 'gaming', 'Gaming'),
+    ('electronics', 'appliances', 'Appliances'),
+    ('beauty', 'skincare', 'Skincare'),
+    ('beauty', 'haircare', 'Haircare'),
+    ('beauty', 'makeup', 'Makeup'),
+    ('beauty', 'fragrance', 'Fragrance'),
+    ('home-living', 'furniture', 'Furniture'),
+    ('home-living', 'kitchen-dining', 'Kitchen & Dining'),
+    ('home-living', 'decor', 'Decor'),
+    ('home-living', 'storage-organization', 'Storage & Organization'),
+    ('health-fitness', 'supplements', 'Supplements'),
+    ('health-fitness', 'fitness-equipment', 'Fitness Equipment'),
+    ('health-fitness', 'wellness', 'Wellness'),
+    ('baby-kids', 'baby-care', 'Baby Care'),
+    ('baby-kids', 'kids-fashion', 'Kids Fashion'),
+    ('baby-kids', 'toys-games', 'Toys & Games'),
+    ('automotive', 'car-care', 'Car Care'),
+    ('automotive', 'accessories', 'Accessories'),
+    ('automotive', 'parts-tools', 'Parts & Tools')
+) as v(niche_slug, slug, name)
+join public.niches n on n.slug = v.niche_slug
+on conflict (niche_id, slug) do update set name = excluded.name;

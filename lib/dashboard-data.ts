@@ -12,7 +12,25 @@ export async function getVendorStore(vendorId: string): Promise<StoreRecord | nu
     .limit(1)
     .maybeSingle();
 
-  return (data as StoreRecord | null) ?? null;
+  const store = (data as StoreRecord | null) ?? null;
+  if (!store) {
+    return null;
+  }
+
+  const { data: storeNichesData } = await supabase
+    .from("store_niches")
+    .select("niche_id, niche:niche_id(name)")
+    .eq("store_id", store.id);
+
+  const nicheRows =
+    (storeNichesData as Array<{ niche_id: string; niche?: { name?: string } | null }> | null) ??
+    [];
+
+  return {
+    ...store,
+    niche_ids: nicheRows.map((row) => row.niche_id),
+    niche_names: nicheRows.map((row) => row.niche?.name ?? "").filter(Boolean),
+  };
 }
 
 export async function getVendorProducts(vendorId: string): Promise<ProductRecord[]> {

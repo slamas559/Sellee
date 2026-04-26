@@ -26,6 +26,7 @@ type VendorRow = {
   theme_color: string | null;
   rating_avg: number;
   rating_count: number;
+  niche_names?: string[];
 };
 
 export async function GET(request: Request) {
@@ -54,6 +55,29 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Could not load vendors." }, { status: 500 });
     }
 
+    const typedStores = ((stores as VendorRow[] | null) ?? []);
+    const storeIds = typedStores.map((store) => store.id);
+    const nichesByStoreId = new Map<string, string[]>();
+    if (storeIds.length > 0) {
+      const { data: storeNiches, error: storeNichesError } = await supabase
+        .from("store_niches")
+        .select("store_id, niche:niche_id(name)")
+        .in("store_id", storeIds);
+
+      if (storeNichesError) {
+        logDevError("vendors.nearby.store-niches", storeNichesError);
+      } else {
+        for (const row of (storeNiches ??
+          []) as Array<{ store_id: string; niche?: { name?: string } | null }>) {
+          const nicheName = row.niche?.name?.trim();
+          if (!nicheName) continue;
+          const current = nichesByStoreId.get(row.store_id) ?? [];
+          current.push(nicheName);
+          nichesByStoreId.set(row.store_id, current);
+        }
+      }
+    }
+
     let allowedStoreIds: Set<string> | null = null;
     if (category) {
       const { data: categoryProducts, error: categoryError } = await supabase
@@ -72,7 +96,7 @@ export async function GET(request: Request) {
 
     const qLower = q?.toLowerCase() ?? null;
 
-    const vendors = (stores as VendorRow[] | null ?? [])
+    const vendors = typedStores
       .filter((store) => {
         if (allowedStoreIds && !allowedStoreIds.has(store.id)) {
           return false;
@@ -99,6 +123,7 @@ export async function GET(request: Request) {
 
         return {
           ...store,
+          niche_names: Array.from(new Set(nichesByStoreId.get(store.id) ?? [])),
           distance_km: distanceKm,
         };
       })

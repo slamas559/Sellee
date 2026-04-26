@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { getServerSession } from "next-auth";
 import { NearbyVendors } from "@/components/landing/nearby-vendors";
+import { WhatsAppBotAccess } from "@/components/landing/whatsapp-bot-access";
 import { UserMenu } from "@/components/layout/user-menu";
 import { ProductShowcaseCard } from "@/components/marketplace/product-showcase-card";
 import { authOptions } from "@/lib/auth";
@@ -29,6 +30,7 @@ type StoreLite = {
   rating_avg: number | null;
   rating_count: number;
   theme_color: string | null;
+  niche_names?: string[];
 };
 
 type ProductLite = {
@@ -105,7 +107,30 @@ async function getMarketplaceData(q?: string, category?: string) {
   const typedStores = (stores ?? []) as StoreLite[];
   const typedProducts = (products ?? []) as ProductLite[];
 
-  const storesById = new Map(typedStores.map((store) => [store.id, store]));
+  const storeIds = typedStores.map((store) => store.id);
+  const nichesByStoreId = new Map<string, string[]>();
+  if (storeIds.length > 0) {
+    const { data: storeNiches } = await supabase
+      .from("store_niches")
+      .select("store_id, niche:niche_id(name)")
+      .in("store_id", storeIds);
+
+    for (const row of (storeNiches ??
+      []) as Array<{ store_id: string; niche?: { name?: string } | null }>) {
+      const nicheName = row.niche?.name?.trim();
+      if (!nicheName) continue;
+      const current = nichesByStoreId.get(row.store_id) ?? [];
+      current.push(nicheName);
+      nichesByStoreId.set(row.store_id, current);
+    }
+  }
+
+  const enrichedStores = typedStores.map((store) => ({
+    ...store,
+    niche_names: Array.from(new Set(nichesByStoreId.get(store.id) ?? [])),
+  }));
+
+  const storesById = new Map(enrichedStores.map((store) => [store.id, store]));
 
   const categories = [
     ...new Set(
@@ -116,7 +141,7 @@ async function getMarketplaceData(q?: string, category?: string) {
   ].slice(0, 12);
 
   return {
-    stores: typedStores,
+    stores: enrichedStores,
     products: typedProducts,
     categories: categories.length > 0 ? categories : FALLBACK_CATEGORIES,
     storesById,
@@ -132,6 +157,7 @@ export default async function Home({ searchParams }: HomeProps) {
   const { stores, products, categories, storesById } = await getMarketplaceData(q, category);
   const isLoggedIn = Boolean(session?.user?.id);
   const isVendor = session?.user?.role === "vendor";
+  const botNumber = process.env.NEXT_PUBLIC_WHATSAPP_BOT_NUMBER?.trim() ?? "";
   const heroPrimaryHref = !isLoggedIn ? "/login" : isVendor ? "/dashboard" : "/become-vendor";
   const heroPrimaryLabel = !isLoggedIn ? "Login to start" : isVendor ? "Open Dashboard" : "Become a Vendor";
 
@@ -216,6 +242,8 @@ export default async function Home({ searchParams }: HomeProps) {
         </div>
       </section>
 
+      {botNumber ? <WhatsAppBotAccess botNumber={botNumber} /> : null}
+
       <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-lg font-bold text-slate-900 sm:text-xl">Browse Categories</h2>
@@ -229,7 +257,7 @@ export default async function Home({ searchParams }: HomeProps) {
             </Link>
           )}
         </div>
-        <div className="mt-4 flex flex-wrap gap-2">
+        <div className="mt-4 -mx-1 flex snap-x snap-mandatory gap-2 overflow-x-auto px-1 pb-1 sm:mx-0 sm:px-0">
           {categories.map((item) => {
             const href = q
               ? `/?q=${encodeURIComponent(q)}&category=${encodeURIComponent(item)}`
@@ -240,7 +268,7 @@ export default async function Home({ searchParams }: HomeProps) {
               <Link
                 key={item}
                 href={href}
-                className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
+                className={`shrink-0 snap-start rounded-full border px-4 py-2 text-sm font-semibold transition ${
                   isActive
                     ? "border-emerald-600 bg-emerald-600 text-white"
                     : "border-slate-200 bg-white text-slate-700 hover:border-emerald-200 hover:bg-emerald-50"

@@ -1,12 +1,13 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { formatNaira } from "@/lib/format";
 import type { ProductRecord } from "@/types";
 
 type ProductsResponse = {
   products?: ProductRecord[];
+  allowed_categories?: string[];
   error?: string;
 };
 
@@ -38,12 +39,17 @@ type ProductsManagerProps = {
 
 export function ProductsManager({ initialProducts }: ProductsManagerProps) {
   const [products, setProducts] = useState<ProductRecord[]>(initialProducts);
+  const [allowedCategories, setAllowedCategories] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [form, setForm] = useState<ProductFormState>(initialForm);
+
+  useEffect(() => {
+    void loadProducts();
+  }, []);
 
   async function loadProducts() {
     setIsLoading(true);
@@ -59,6 +65,7 @@ export function ProductsManager({ initialProducts }: ProductsManagerProps) {
       }
 
       setProducts(payload.products ?? []);
+      setAllowedCategories(payload.allowed_categories ?? []);
     } catch {
       setError("Network error while loading products.");
     } finally {
@@ -94,6 +101,12 @@ export function ProductsManager({ initialProducts }: ProductsManagerProps) {
 
     if (!form.name.trim()) {
       setError("Product name is required.");
+      setIsSaving(false);
+      return;
+    }
+
+    if (allowedCategories.length > 0 && !form.category.trim()) {
+      setError("Select a category based on your store niches.");
       setIsSaving(false);
       return;
     }
@@ -229,13 +242,35 @@ export function ProductsManager({ initialProducts }: ProductsManagerProps) {
           </label>
 
           <label className="space-y-2 text-sm">
-            <span className="font-medium text-slate-700">Category (optional)</span>
-            <input
-              value={form.category}
-              onChange={(event) => setForm((prev) => ({ ...prev, category: event.target.value }))}
-              className="w-full rounded-md border border-slate-200 px-3 py-2 outline-none ring-emerald-300 focus:ring-2"
-              placeholder="Groceries"
-            />
+            <span className="font-medium text-slate-700">
+              Category {allowedCategories.length > 0 ? "" : "(optional)"}
+            </span>
+            {allowedCategories.length > 0 ? (
+              <select
+                required
+                value={form.category}
+                onChange={(event) =>
+                  setForm((prev) => ({ ...prev, category: event.target.value }))
+                }
+                className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 outline-none ring-emerald-300 focus:ring-2"
+              >
+                <option value="">Select a category</option>
+                {allowedCategories.map((category) => (
+                  <option key={category} value={category}>
+                    {category}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input
+                value={form.category}
+                onChange={(event) =>
+                  setForm((prev) => ({ ...prev, category: event.target.value }))
+                }
+                className="w-full rounded-md border border-slate-200 px-3 py-2 outline-none ring-emerald-300 focus:ring-2"
+                placeholder="Set niches in Store Setup to enable guided categories"
+              />
+            )}
           </label>
 
           <label className="space-y-2 text-sm">

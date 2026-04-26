@@ -61,9 +61,11 @@ function HeroVisual({
 function StoreTopBar({
   store,
   primaryColor,
+  nicheNames,
 }: {
   store: StoreRecord;
   primaryColor: string;
+  nicheNames: string[];
 }) {
   return (
     <header className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
@@ -79,6 +81,18 @@ function StoreTopBar({
           <div>
             <h1 className="text-xl font-black text-slate-900 sm:text-2xl">{store.name}</h1>
             <p className="text-xs text-slate-600 sm:text-sm">WhatsApp: {store.whatsapp_number}</p>
+            {nicheNames.length > 0 ? (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {nicheNames.slice(0, 4).map((niche) => (
+                  <span
+                    key={`${store.id}-${niche}`}
+                    className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-800"
+                  >
+                    {niche}
+                  </span>
+                ))}
+              </div>
+            ) : null}
             <StarRating value={store.rating_avg} count={store.rating_count} accent="yellow" />
           </div>
         </div>
@@ -154,6 +168,19 @@ export default async function StorePage({ params }: StorePageProps) {
     .eq("is_available", true)
     .order("created_at", { ascending: false });
 
+  const { data: storeNiches } = await supabase
+    .from("store_niches")
+    .select("niche:niche_id(name)")
+    .eq("store_id", store.id);
+
+  const nicheNames = Array.from(
+    new Set(
+      ((storeNiches ?? []) as Array<{ niche?: { name?: string } | null }>)
+        .map((row) => row.niche?.name?.trim() ?? "")
+        .filter(Boolean),
+    ),
+  );
+
   const availableProducts = (products ?? []) as ProductRecord[];
   const template = normalizeStoreTemplate(store.store_template);
   const themePreset = normalizeThemePreset(store.store_theme_preset);
@@ -172,7 +199,7 @@ export default async function StorePage({ params }: StorePageProps) {
   if (template === "fashion_editorial") {
     return (
       <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 bg-white px-4 py-6 sm:px-6">
-        <StoreTopBar store={store} primaryColor={primaryColor} />
+        <StoreTopBar store={store} primaryColor={primaryColor} nicheNames={nicheNames} />
         <section className="-mx-4 grid gap-4 px-4 lg:grid-cols-[1.3fr_1fr] sm:mx-0 sm:px-0">
           <HeroVisual heroImageUrl={config.hero_image_url} storeName={store.name} className="h-72 sm:h-80" />
           <article className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
@@ -216,7 +243,7 @@ export default async function StorePage({ params }: StorePageProps) {
   if (template === "lifestyle_showcase") {
     return (
       <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 bg-slate-50 px-4 py-6 sm:px-6">
-        <StoreTopBar store={store} primaryColor={primaryColor} />
+        <StoreTopBar store={store} primaryColor={primaryColor} nicheNames={nicheNames} />
         <section
           className="-mx-4 grid gap-4 rounded-none p-4 sm:mx-0 sm:rounded-2xl sm:p-6 lg:grid-cols-[1.5fr_1fr]"
           style={{ backgroundColor: theme.surface }}
@@ -271,7 +298,7 @@ export default async function StorePage({ params }: StorePageProps) {
   if (template === "modern_grid") {
     return (
       <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 bg-slate-100 px-4 py-6 sm:px-6">
-        <StoreTopBar store={store} primaryColor={primaryColor} />
+        <StoreTopBar store={store} primaryColor={primaryColor} nicheNames={nicheNames} />
         <section className="grid gap-4 lg:grid-cols-[260px_1fr]">
           <aside className="space-y-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
             <p className="text-sm font-semibold text-slate-800">Browse</p>
@@ -327,7 +354,7 @@ export default async function StorePage({ params }: StorePageProps) {
   // Default: grocery promo
   return (
     <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 bg-slate-50 px-4 py-6 sm:px-6">
-      <StoreTopBar store={store} primaryColor={primaryColor} />
+      <StoreTopBar store={store} primaryColor={primaryColor} nicheNames={nicheNames} />
       <section
         className="-mx-4 grid gap-4 rounded-none p-4 sm:mx-0 sm:rounded-2xl sm:p-6 lg:grid-cols-[1.2fr_1fr]"
         style={{ backgroundColor: theme.surface }}

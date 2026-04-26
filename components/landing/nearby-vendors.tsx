@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
-type NearbyVendor = {
+export type NearbyVendor = {
   id: string;
   name: string;
   slug: string;
@@ -14,10 +14,14 @@ type NearbyVendor = {
   rating_avg: number | null;
   rating_count: number;
   distance_km: number | null;
+  niche_names?: string[];
 };
 
 type NearbyVendorsProps = {
   initialVendors: NearbyVendor[];
+  title?: string;
+  subtitle?: string;
+  showSeeMoreLink?: boolean;
 };
 
 type NearbyResponse = {
@@ -25,7 +29,80 @@ type NearbyResponse = {
   error?: string;
 };
 
-export function NearbyVendors({ initialVendors }: NearbyVendorsProps) {
+function renderStars(value: number | null) {
+  const count = Math.max(1, Math.round(value ?? 0));
+  return "?".repeat(count);
+}
+
+export function NearbyVendorCard({
+  vendor,
+  hasDistance,
+}: {
+  vendor: NearbyVendor;
+  hasDistance: boolean;
+}) {
+  const niches = (vendor.niche_names ?? []).filter(Boolean).slice(0, 3);
+  const locationText =
+    [vendor.city, vendor.state, vendor.country].filter(Boolean).join(", ") || "Location not set";
+
+  return (
+    <Link
+      href={`/store/${vendor.slug}`}
+      className="group relative min-w-[250px] snap-start overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 transition hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-md sm:min-w-0"
+    >
+      {vendor.logo_url ? (
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat transition group-hover:opacity-35"
+          style={{ backgroundImage: `url(${vendor.logo_url})` }}
+        />
+      ) : null}
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 bg-gradient-to-b from-white/65 via-white/80 to-white/92"
+      />
+
+      <div className="relative z-10">
+        <p className="line-clamp-1 text-base font-semibold text-slate-900 group-hover:text-emerald-700">
+          {vendor.name}
+        </p>
+        <p className="mt-2 text-sm text-slate-600">{locationText}</p>
+        {niches.length > 0 ? (
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {niches.map((niche) => (
+              <span
+                key={`${vendor.id}-${niche}`}
+                className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[9px] font-semibold text-emerald-800"
+              >
+                {niche}
+              </span>
+            ))}
+          </div>
+        ) : null}
+        <p className="mt-2 text-xs text-amber-500">
+          {renderStars(vendor.rating_avg)}{" "}
+          <span className="text-slate-500">
+            {(vendor.rating_avg ?? 0).toFixed(1)} ({vendor.rating_count})
+          </span>
+        </p>
+        <p className="mt-3 text-xs font-medium text-emerald-700">
+          {typeof vendor.distance_km === "number"
+            ? `${vendor.distance_km.toFixed(1)} km away`
+            : hasDistance
+              ? "Distance unavailable"
+              : "Open store"}
+        </p>
+      </div>
+    </Link>
+  );
+}
+
+export function NearbyVendors({
+  initialVendors,
+  title = "Vendors Near You",
+  subtitle = "Vendor Discovery",
+  showSeeMoreLink = true,
+}: NearbyVendorsProps) {
   const [vendors, setVendors] = useState(initialVendors);
   const [isLocating, setIsLocating] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
@@ -99,15 +176,10 @@ export function NearbyVendors({ initialVendors }: NearbyVendorsProps) {
             }
           }
 
-          await loadNearbyWithCoordinates(
-            lat,
-            lng,
-          );
+          await loadNearbyWithCoordinates(lat, lng);
         } catch (error) {
           setLocationError(
-            error instanceof Error
-              ? error.message
-              : "Unable to fetch nearby vendors.",
+            error instanceof Error ? error.message : "Unable to fetch nearby vendors.",
           );
         } finally {
           setIsLocating(false);
@@ -126,20 +198,28 @@ export function NearbyVendors({ initialVendors }: NearbyVendorsProps) {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">
-            Vendor Discovery
+            {subtitle}
           </p>
-          <h2 className="mt-1 text-2xl font-bold tracking-tight text-slate-900">
-            Vendors Near You
-          </h2>
+          <h2 className="mt-1 text-2xl font-bold tracking-tight text-slate-900">{title}</h2>
         </div>
-        <button
-          type="button"
-          onClick={handleUseMyLocation}
-          disabled={isLocating}
-          className="inline-flex shrink-0 items-center justify-center rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-100 disabled:opacity-60"
-        >
-          {isLocating ? "Detecting..." : "Use my location"}
-        </button>
+        <div className="flex items-center gap-2">
+          {showSeeMoreLink ? (
+            <Link
+              href="/vendors"
+              className="inline-flex shrink-0 items-center justify-center rounded-full border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+            >
+              See more
+            </Link>
+          ) : null}
+          <button
+            type="button"
+            onClick={handleUseMyLocation}
+            disabled={isLocating}
+            className="inline-flex shrink-0 items-center justify-center rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-100 disabled:opacity-60"
+          >
+            {isLocating ? "Detecting..." : "Use my location"}
+          </button>
+        </div>
       </div>
 
       {locationError ? (
@@ -160,47 +240,7 @@ export function NearbyVendors({ initialVendors }: NearbyVendorsProps) {
       ) : (
         <div className="mt-5 -mx-1 flex snap-x snap-mandatory gap-3 overflow-x-auto px-1 pb-1 sm:mx-0 sm:grid sm:gap-3 sm:overflow-visible sm:px-0 sm:pb-0 sm:snap-none sm:grid-cols-2 lg:grid-cols-4">
           {vendors.map((vendor) => (
-            <Link
-              key={vendor.id}
-              href={`/store/${vendor.slug}`}
-              className="group relative min-w-[250px] snap-start overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 transition hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-md sm:min-w-0"
-            >
-              {vendor.logo_url ? (
-                <div
-                  aria-hidden="true"
-                  className="absolute inset-0 bg-cover bg-center bg-no-repeat transition group-hover:opacity-35"
-                  style={{ backgroundImage: `url(${vendor.logo_url})` }}
-                />
-              ) : null}
-              <div
-                aria-hidden="true"
-                className="absolute inset-0 bg-gradient-to-b from-white/65 via-white/80 to-white/92"
-              />
-
-              <div className="relative z-10">
-                <p className="line-clamp-1 text-base font-semibold text-slate-900 group-hover:text-emerald-700">
-                  {vendor.name}
-                </p>
-                <p className="mt-2 text-sm text-slate-600">
-                  {[vendor.city, vendor.state, vendor.country]
-                    .filter(Boolean)
-                    .join(", ") || "Location not set"}
-                </p>
-                <p className="mt-2 text-xs text-amber-500">
-                  {"★".repeat(Math.max(1, Math.round(vendor.rating_avg ?? 0)))}{" "}
-                  <span className="text-slate-500">
-                    {(vendor.rating_avg ?? 0).toFixed(1)} ({vendor.rating_count})
-                  </span>
-                </p>
-                <p className="mt-3 text-xs font-medium text-emerald-700">
-                  {typeof vendor.distance_km === "number"
-                    ? `${vendor.distance_km.toFixed(1)} km away`
-                    : hasDistance
-                      ? "Distance unavailable"
-                      : "Open store"}
-                </p>
-              </div>
-            </Link>
+            <NearbyVendorCard key={vendor.id} vendor={vendor} hasDistance={hasDistance} />
           ))}
         </div>
       )}
