@@ -3,14 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { logDevError } from "@/lib/logger";
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
-
-function generateCode(): string {
-  return String(Math.floor(100000 + Math.random() * 900000));
-}
-
-function inTenMinutesIso(): string {
-  return new Date(Date.now() + 10 * 60 * 1000).toISOString();
-}
+import { generateLinkCodeForVendor } from "@/lib/whatsapp-bot/vendor-commands";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -92,29 +85,11 @@ export async function POST() {
       );
     }
 
-    const code = generateCode();
-    const expiresAt = inTenMinutesIso();
-
-    const { error: upsertError } = await supabase.from("whatsapp_link_codes").upsert(
-      {
-        vendor_id: session.user.id,
-        code,
-        expires_at: expiresAt,
-        used_at: null,
-      },
-      {
-        onConflict: "vendor_id",
-      },
-    );
-
-    if (upsertError) {
-      logDevError("whatsapp.link.generate", upsertError, { userId: session.user.id });
-      return NextResponse.json({ error: "Could not generate WhatsApp link code." }, { status: 500 });
-    }
+    const { code, expires_at } = await generateLinkCodeForVendor(session.user.id);
 
     return NextResponse.json({
       code,
-      expires_at: expiresAt,
+      expires_at,
       instructions:
         "Send LINK <code> to your Sellee business WhatsApp number from the phone you want to link.",
     });

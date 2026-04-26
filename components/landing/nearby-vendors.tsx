@@ -31,24 +31,29 @@ type NearbyResponse = {
 
 function renderStars(value: number | null) {
   const count = Math.max(1, Math.round(value ?? 0));
-  return "?".repeat(count);
+  return "★".repeat(count);
 }
 
 export function NearbyVendorCard({
   vendor,
   hasDistance,
+  mode = "carousel",
 }: {
   vendor: NearbyVendor;
   hasDistance: boolean;
+  mode?: "carousel" | "grid";
 }) {
   const niches = (vendor.niche_names ?? []).filter(Boolean).slice(0, 3);
   const locationText =
     [vendor.city, vendor.state, vendor.country].filter(Boolean).join(", ") || "Location not set";
+  const isGrid = mode === "grid";
 
   return (
     <Link
       href={`/store/${vendor.slug}`}
-      className="group relative min-w-[250px] snap-start overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 transition hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-md sm:min-w-0"
+      className={`group relative overflow-hidden rounded-2xl border border-slate-200 bg-white transition hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-md ${
+        isGrid ? "h-full p-3 sm:p-4" : "min-w-[250px] snap-start p-4 sm:min-w-0"
+      }`}
     >
       {vendor.logo_url ? (
         <div
@@ -63,16 +68,16 @@ export function NearbyVendorCard({
       />
 
       <div className="relative z-10">
-        <p className="line-clamp-1 text-base font-semibold text-slate-900 group-hover:text-emerald-700">
+        <p className="line-clamp-1 text-sm font-semibold text-slate-900 group-hover:text-emerald-700 sm:text-base">
           {vendor.name}
         </p>
-        <p className="mt-2 text-sm text-slate-600">{locationText}</p>
+        <p className="mt-1.5 line-clamp-2 text-xs text-slate-600 sm:mt-2 sm:line-clamp-1 sm:text-sm">{locationText}</p>
         {niches.length > 0 ? (
-          <div className="mt-2 flex flex-wrap gap-1.5">
+          <div className="mt-2 flex flex-wrap gap-1">
             {niches.map((niche) => (
               <span
                 key={`${vendor.id}-${niche}`}
-                className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[9px] font-semibold text-emerald-800"
+                className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-800"
               >
                 {niche}
               </span>

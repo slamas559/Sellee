@@ -58,7 +58,8 @@ Run SQL files in Supabase SQL editor in this order:
 5. `supabase/store-templates.sql` (for existing projects only)
 6. `supabase/storage.sql`
 7. `supabase/whatsapp-linking.sql`
-8. `supabase/seed.sql` (optional)
+8. `supabase/whatsapp-bot-sprint-a.sql` (for WhatsApp bot expansion)
+9. `supabase/seed.sql` (optional)
 
 ## 4) Run Development Server
 
@@ -100,10 +101,12 @@ npm run dev
 - Storage policies enforce `auth.uid()/...` scoped writes.
 - WhatsApp order button now logs a `pending_whatsapp` order before opening `wa.me`.
 - Webhook supports vendor bot commands: `LIST ORDERS`, `SALES TODAY`, `LOW STOCK`, `CONFIRM <ORDER_REF>`, `REJECT <ORDER_REF>`.
+- Webhook now supports customer bot commands: `MY ORDERS`, `TRACK <ORDER_REF>`, `CANCEL <ORDER_REF>`, `FOLLOW <STORE>`, `UNFOLLOW <STORE>`, `MY FOLLOWS`, `HELP`.
 - Vendors can now generate a link code in dashboard and connect their WhatsApp by sending `LINK <CODE>` to the business number.
 - `GET /api/health` now checks both Supabase DB connectivity and WhatsApp config sanity.
 - `POST /api/whatsapp/webhook?debug=1` debug response is available in development, or in production when `WHATSAPP_WEBHOOK_DEBUG=true`.
 - Vendors can choose storefront template styles: `classic`, `bold`, `minimal`.
+- WhatsApp bot roadmap and sprint status board: `docs/whatsapp-bot-task-board.md`.
 
 ## WhatsApp Ops (Live)
 

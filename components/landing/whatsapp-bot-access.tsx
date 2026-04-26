@@ -69,7 +69,9 @@ export function WhatsAppBotAccess({ botNumber }: WhatsAppBotAccessProps) {
           rel="noreferrer"
           className="inline-flex items-center rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-emerald-700 sm:text-sm"
         >
-          Open WhatsApp
+          <span className="text-white">
+            Open WhatsApp
+          </span>
         </a>
         <button
           type="button"

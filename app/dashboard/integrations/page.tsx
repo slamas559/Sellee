@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { getServerSession } from "next-auth";
+import { CustomerBotActivityCard } from "@/components/dashboard/customer-bot-activity-card";
 import { WhatsAppLinkingCard } from "@/components/dashboard/whatsapp-linking-card";
 import { authOptions } from "@/lib/auth";
-import { getVendorWhatsAppLinkStatus } from "@/lib/dashboard-data";
+import { getVendorCustomerBotActivity, getVendorWhatsAppLinkStatus } from "@/lib/dashboard-data";
 
 export const metadata: Metadata = {
   title: "Integrations",
@@ -13,6 +14,9 @@ export default async function DashboardIntegrationsPage() {
   const whatsappLinkStatus = session?.user?.id
     ? await getVendorWhatsAppLinkStatus(session.user.id)
     : { linked: null, pending_code: null };
+  const customerBotActivity = session?.user?.id
+    ? await getVendorCustomerBotActivity(session.user.id)
+    : { total_last_7d: 0, by_command: [], recent: [] };
 
   return (
     <section className="space-y-4">
@@ -26,6 +30,7 @@ export default async function DashboardIntegrationsPage() {
         </p>
       </header>
       <WhatsAppLinkingCard initialStatus={whatsappLinkStatus} />
+      <CustomerBotActivityCard activity={customerBotActivity} />
     </section>
   );
 }

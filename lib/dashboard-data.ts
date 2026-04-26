@@ -86,6 +86,18 @@ export type CustomerOrderView = {
   }>;
 };
 
+export type VendorCustomerBotActivity = {
+  total_last_7d: number;
+  by_command: Array<{ command: string; count: number }>;
+  recent: Array<{
+    id: string;
+    sender_phone: string | null;
+    command: string | null;
+    created_at: string;
+    status: string | null;
+  }>;
+};
+
 export async function getVendorOrders(vendorId: string): Promise<VendorOrderView[]> {
   const store = await getVendorStore(vendorId);
 
@@ -280,4 +292,69 @@ export async function getCustomerOrders(userId: string): Promise<CustomerOrderVi
     store: storesById.get(order.store_id) ?? null,
     items: itemsByOrderId.get(order.id) ?? [],
   }));
+}
+
+export async function getVendorCustomerBotActivity(
+  vendorId: string,
+): Promise<VendorCustomerBotActivity> {
+  const store = await getVendorStore(vendorId);
+  if (!store) {
+    return {
+      total_last_7d: 0,
+      by_command: [],
+      recent: [],
+    };
+  }
+
+  const supabase = createAdminSupabaseClient();
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+
+  const { data, error } = await supabase
+    .from("whatsapp_message_logs")
+    .select("id, sender_phone, command, created_at, status, provider_payload")
+    .eq("direction", "inbound")
+    .eq("role", "customer")
+    .gte("created_at", sevenDaysAgo)
+    .filter("provider_payload->>scope_store_id", "eq", store.id)
+    .order("created_at", { ascending: false })
+    .limit(100);
+
+  if (error) {
+    return {
+      total_last_7d: 0,
+      by_command: [],
+      recent: [],
+    };
+  }
+
+  const rows =
+    (data as Array<{
+      id: string;
+      sender_phone?: string | null;
+      command?: string | null;
+      created_at: string;
+      status?: string | null;
+    }> | null) ?? [];
+
+  const counter = new Map<string, number>();
+  for (const row of rows) {
+    const command = (row.command ?? "UNKNOWN").trim() || "UNKNOWN";
+    counter.set(command, (counter.get(command) ?? 0) + 1);
+  }
+
+  const byCommand = [...counter.entries()]
+    .map(([command, count]) => ({ command, count }))
+    .sort((a, b) => b.count - a.count);
+
+  return {
+    total_last_7d: rows.length,
+    by_command: byCommand,
+    recent: rows.slice(0, 10).map((row) => ({
+      id: row.id,
+      sender_phone: row.sender_phone ?? null,
+      command: row.command ?? null,
+      created_at: row.created_at,
+      status: row.status ?? null,
+    })),
+  };
 }
