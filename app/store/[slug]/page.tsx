@@ -2,10 +2,13 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { getServerSession } from "next-auth";
 import { ProductCard } from "@/components/store/product-card";
 import { BannerCarousel } from "@/components/store/banner-carousel";
+import { FollowStoreButton } from "@/components/store/follow-store-button";
 import { StarRating } from "@/components/store/star-rating";
 import { VendorReviewsSection } from "@/components/reviews/vendor-reviews-section";
+import { authOptions } from "@/lib/auth";
 import {
   getThemeByPreset,
   normalizeStoreTemplate,
@@ -62,10 +65,16 @@ function StoreTopBar({
   store,
   primaryColor,
   nicheNames,
+  isLoggedIn,
+  activeUserId,
+  isFollowing,
 }: {
   store: StoreRecord;
   primaryColor: string;
   nicheNames: string[];
+  isLoggedIn: boolean;
+  activeUserId: string | null;
+  isFollowing: boolean;
 }) {
   return (
     <header className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
@@ -96,13 +105,24 @@ function StoreTopBar({
             <StarRating value={store.rating_avg} count={store.rating_count} accent="yellow" />
           </div>
         </div>
-        <Link
-          href={`https://wa.me/${store.whatsapp_number}`}
-          className="rounded-full px-4 py-2 text-sm font-semibold text-white"
-          style={{ backgroundColor: primaryColor }}
-        >
-          Chat vendor
-        </Link>
+        <div className="flex flex-wrap items-center gap-2">
+          <FollowStoreButton
+            storeId={store.id}
+            storeSlug={store.slug}
+            isLoggedIn={isLoggedIn}
+            isOwner={Boolean(activeUserId && activeUserId === store.vendor_id)}
+            initialFollowing={isFollowing}
+          />
+          <Link
+            href={`https://wa.me/${store.whatsapp_number}`}
+            className="rounded-full px-4 py-2 text-sm font-semibold text-white"
+            style={{ backgroundColor: primaryColor }}
+          >
+            <span className="text-white">
+              Chat vendor
+            </span>
+          </Link>
+        </div>
       </div>
     </header>
   );
@@ -148,6 +168,7 @@ function ProductGrid({
 
 export default async function StorePage({ params }: StorePageProps) {
   const { slug } = await params;
+  const session = await getServerSession(authOptions);
   const supabase = createAdminSupabaseClient();
 
   const { data: store, error: storeError } = await supabase
@@ -181,6 +202,24 @@ export default async function StorePage({ params }: StorePageProps) {
     ),
   );
 
+  let isFollowing = false;
+  if (session?.user?.id) {
+    const { data: me } = await supabase
+      .from("users")
+      .select("phone")
+      .eq("id", session.user.id)
+      .maybeSingle();
+    if (me?.phone) {
+      const { data: followRow } = await supabase
+        .from("customer_store_follows")
+        .select("id")
+        .eq("store_id", store.id)
+        .eq("customer_phone", String(me.phone))
+        .maybeSingle();
+      isFollowing = Boolean(followRow?.id);
+    }
+  }
+
   const availableProducts = (products ?? []) as ProductRecord[];
   const template = normalizeStoreTemplate(store.store_template);
   const themePreset = normalizeThemePreset(store.store_theme_preset);
@@ -199,7 +238,14 @@ export default async function StorePage({ params }: StorePageProps) {
   if (template === "fashion_editorial") {
     return (
       <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 bg-white px-4 py-6 sm:px-6">
-        <StoreTopBar store={store} primaryColor={primaryColor} nicheNames={nicheNames} />
+        <StoreTopBar
+          store={store}
+          primaryColor={primaryColor}
+          nicheNames={nicheNames}
+          isLoggedIn={Boolean(session?.user?.id)}
+          activeUserId={session?.user?.id ?? null}
+          isFollowing={isFollowing}
+        />
         <section className="-mx-4 grid gap-4 px-4 lg:grid-cols-[1.3fr_1fr] sm:mx-0 sm:px-0">
           <HeroVisual heroImageUrl={config.hero_image_url} storeName={store.name} className="h-72 sm:h-80" />
           <article className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
@@ -243,7 +289,14 @@ export default async function StorePage({ params }: StorePageProps) {
   if (template === "lifestyle_showcase") {
     return (
       <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 bg-slate-50 px-4 py-6 sm:px-6">
-        <StoreTopBar store={store} primaryColor={primaryColor} nicheNames={nicheNames} />
+        <StoreTopBar
+          store={store}
+          primaryColor={primaryColor}
+          nicheNames={nicheNames}
+          isLoggedIn={Boolean(session?.user?.id)}
+          activeUserId={session?.user?.id ?? null}
+          isFollowing={isFollowing}
+        />
         <section
           className="-mx-4 grid gap-4 rounded-none p-4 sm:mx-0 sm:rounded-2xl sm:p-6 lg:grid-cols-[1.5fr_1fr]"
           style={{ backgroundColor: theme.surface }}
@@ -298,7 +351,14 @@ export default async function StorePage({ params }: StorePageProps) {
   if (template === "modern_grid") {
     return (
       <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 bg-slate-100 px-4 py-6 sm:px-6">
-        <StoreTopBar store={store} primaryColor={primaryColor} nicheNames={nicheNames} />
+        <StoreTopBar
+          store={store}
+          primaryColor={primaryColor}
+          nicheNames={nicheNames}
+          isLoggedIn={Boolean(session?.user?.id)}
+          activeUserId={session?.user?.id ?? null}
+          isFollowing={isFollowing}
+        />
         <section className="grid gap-4 lg:grid-cols-[260px_1fr]">
           <aside className="space-y-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
             <p className="text-sm font-semibold text-slate-800">Browse</p>
@@ -354,7 +414,14 @@ export default async function StorePage({ params }: StorePageProps) {
   // Default: grocery promo
   return (
     <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 bg-slate-50 px-4 py-6 sm:px-6">
-      <StoreTopBar store={store} primaryColor={primaryColor} nicheNames={nicheNames} />
+      <StoreTopBar
+        store={store}
+        primaryColor={primaryColor}
+        nicheNames={nicheNames}
+        isLoggedIn={Boolean(session?.user?.id)}
+        activeUserId={session?.user?.id ?? null}
+        isFollowing={isFollowing}
+      />
       <section
         className="-mx-4 grid gap-4 rounded-none p-4 sm:mx-0 sm:rounded-2xl sm:p-6 lg:grid-cols-[1.2fr_1fr]"
         style={{ backgroundColor: theme.surface }}

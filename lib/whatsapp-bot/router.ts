@@ -1,7 +1,8 @@
 import { logServerInfo } from "@/lib/logger";
 import { waList, waMessage, waTitle } from "@/lib/whatsapp-bot/message-format";
+import { verifyByWhatsAppCommand } from "@/lib/phone-verification";
 import { handleMorePagination } from "@/lib/whatsapp-bot/pagination";
-import { type BotCommand, inferCommand } from "@/lib/whatsapp-bot/parse";
+import { extractRef, type BotCommand, inferCommand } from "@/lib/whatsapp-bot/parse";
 import { resolveVendorStoreByPhone } from "@/lib/whatsapp-bot/repository";
 import { handleCustomerCommand } from "@/lib/whatsapp-bot/customer-commands";
 import {
@@ -40,6 +41,9 @@ const UNLINKED_HELP = waMessage(
   waTitle("Customer Commands"),
   waList([
     "MY ORDERS - shows your recent orders",
+    "MY CONFIRMED ORDERS - only confirmed orders",
+    "MY REJECTED ORDERS - only rejected orders",
+    "MY PENDING ORDERS - only pending orders",
     "MY STATUS - quick status snapshot",
     "TRACK <ref> - order details",
     "CANCEL <ref> - cancel pending order",
@@ -47,11 +51,14 @@ const UNLINKED_HELP = waMessage(
     "FOLLOW <store> - get store updates",
     "UNFOLLOW <store> - stop updates",
     "MY FOLLOWS - list followed stores",
-    "MORE - next page for long lists",
+    "MORE - next page for very long lists",
   ]),
   waTitle("Vendor Linking"),
   "Generate a code in dashboard integrations, then send:",
   "LINK <code>",
+  waTitle("Phone Verification"),
+  "During account signup/phone change you may receive:",
+  "VERIFY <code>",
   "Send HI to learn more.",
 );
 
@@ -116,6 +123,35 @@ export async function routeIncomingText(from: string, body: string): Promise<Web
   if (command === "LINK") {
     await handleLinkCommand(from, body);
     return result(from, body, command, "vendor");
+  }
+
+  if (command === "VERIFY") {
+    const code = extractRef(body);
+    if (!code) {
+      await sendWhatsAppTextMessage({
+        to: from,
+        message: waMessage(
+          waTitle("Usage"),
+          "VERIFY <CODE>",
+          "Example: VERIFY 123456",
+        ),
+      });
+      return result(from, body, command, "system");
+    }
+
+    const verifyResult = await verifyByWhatsAppCommand({
+      fromPhone: from,
+      verifyCode: code,
+    });
+
+    await sendWhatsAppTextMessage({
+      to: from,
+      message: waMessage(
+        verifyResult.completed ? waTitle("Verification Successful") : waTitle("Verification Failed"),
+        verifyResult.message,
+      ),
+    });
+    return result(from, body, command, "system");
   }
 
   if (command === "MORE") {

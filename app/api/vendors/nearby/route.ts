@@ -15,6 +15,7 @@ const nearbyQuerySchema = z.object({
 
 type VendorRow = {
   id: string;
+  vendor_id: string;
   name: string;
   slug: string;
   logo_url: string | null;
@@ -26,6 +27,7 @@ type VendorRow = {
   theme_color: string | null;
   rating_avg: number;
   rating_count: number;
+  follower_count?: number;
   niche_names?: string[];
 };
 
@@ -44,7 +46,7 @@ export async function GET(request: Request) {
     const { data: stores, error: storesError } = await supabase
       .from("stores")
       .select(
-        "id, name, slug, logo_url, city, state, country, latitude, longitude, theme_color, rating_avg, rating_count",
+        "id, vendor_id, name, slug, logo_url, city, state, country, latitude, longitude, theme_color, rating_avg, rating_count",
       )
       .eq("is_active", true)
       .order("created_at", { ascending: false })
@@ -75,6 +77,20 @@ export async function GET(request: Request) {
           current.push(nicheName);
           nichesByStoreId.set(row.store_id, current);
         }
+      }
+    }
+
+    const followerCountByStoreId = new Map<string, number>();
+    if (storeIds.length > 0) {
+      const { data: followsData } = await supabase
+        .from("customer_store_follows")
+        .select("store_id")
+        .in("store_id", storeIds);
+      for (const row of (followsData ?? []) as Array<{ store_id: string }>) {
+        followerCountByStoreId.set(
+          row.store_id,
+          (followerCountByStoreId.get(row.store_id) ?? 0) + 1,
+        );
       }
     }
 
@@ -124,6 +140,7 @@ export async function GET(request: Request) {
         return {
           ...store,
           niche_names: Array.from(new Set(nichesByStoreId.get(store.id) ?? [])),
+          follower_count: followerCountByStoreId.get(store.id) ?? 0,
           distance_km: distanceKm,
         };
       })

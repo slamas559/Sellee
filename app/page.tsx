@@ -21,6 +21,7 @@ type HomeProps = {
 
 type StoreLite = {
   id: string;
+  vendor_id: string;
   name: string;
   slug: string;
   city: string | null;
@@ -29,6 +30,7 @@ type StoreLite = {
   logo_url: string | null;
   rating_avg: number | null;
   rating_count: number;
+  follower_count?: number;
   theme_color: string | null;
   niche_names?: string[];
 };
@@ -71,7 +73,7 @@ async function getMarketplaceData(q?: string, category?: string) {
 
   const storesPromise = supabase
     .from("stores")
-    .select("id, name, slug, city, state, country, logo_url, rating_avg, rating_count, theme_color")
+    .select("id, vendor_id, name, slug, city, state, country, logo_url, rating_avg, rating_count, theme_color")
     .eq("is_active", true)
     .order("created_at", { ascending: false })
     .limit(24);
@@ -125,9 +127,25 @@ async function getMarketplaceData(q?: string, category?: string) {
     }
   }
 
+  const followerCountByStoreId = new Map<string, number>();
+  if (storeIds.length > 0) {
+    const { data: followsData } = await supabase
+      .from("customer_store_follows")
+      .select("store_id")
+      .in("store_id", storeIds);
+
+    for (const row of (followsData ?? []) as Array<{ store_id: string }>) {
+      followerCountByStoreId.set(
+        row.store_id,
+        (followerCountByStoreId.get(row.store_id) ?? 0) + 1,
+      );
+    }
+  }
+
   const enrichedStores = typedStores.map((store) => ({
     ...store,
     niche_names: Array.from(new Set(nichesByStoreId.get(store.id) ?? [])),
+    follower_count: followerCountByStoreId.get(store.id) ?? 0,
   }));
 
   const storesById = new Map(enrichedStores.map((store) => [store.id, store]));

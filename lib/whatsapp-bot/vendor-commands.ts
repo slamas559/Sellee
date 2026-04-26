@@ -313,6 +313,7 @@ export async function handleListOrders(from: string, store: StoreForCommand) {
     title: `Recent Orders - ${store.name}`,
     lines,
     pageSize: 5,
+    paginateWhenAtLeast: 9,
     emptyMessage: waMessage(waTitle("No Orders"), `No recent orders found for ${store.name}.`),
     hint: "Tip: Use CONFIRM <ORDER_REF> or REJECT <ORDER_REF>.",
   });
@@ -381,6 +382,7 @@ export async function handleLowStock(from: string, store: StoreForCommand) {
     title: `Low Stock - ${store.name}`,
     lines,
     pageSize: 5,
+    paginateWhenAtLeast: 9,
     emptyMessage: waMessage(waTitle("Low Stock"), "No low-stock alerts right now."),
     hint: "Tip: Update inventory from dashboard products page.",
   });
@@ -470,6 +472,7 @@ export async function handleBroadcastStatus(from: string, store: StoreForCommand
     title: `Broadcast Status - ${store.name}`,
     lines,
     pageSize: 5,
+    paginateWhenAtLeast: 9,
     emptyMessage: waMessage(waTitle("Broadcast Status"), "No broadcast history yet."),
     hint: "Tip: Send BROADCAST <message> to create a campaign.",
   });

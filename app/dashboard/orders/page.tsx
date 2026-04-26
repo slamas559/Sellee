@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { formatNaira } from "@/lib/format";
 import { authOptions } from "@/lib/auth";
 import { getVendorOrders, getVendorWhatsAppLinkStatus } from "@/lib/dashboard-data";
+import { OrderStatusActions } from "@/components/dashboard/order-status-actions";
 
 export const metadata: Metadata = {
   title: "Orders",
@@ -110,6 +111,10 @@ export default async function DashboardOrdersPage() {
                     Total: <span className="font-semibold">{formatNaira(Number(order.total_amount))}</span>
                   </p>
                 </div>
+
+                {order.status === "pending_whatsapp" ? (
+                  <OrderStatusActions orderId={order.id} />
+                ) : null}
 
                 <div className="mt-3 border-t border-slate-100 pt-3">
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Items</p>

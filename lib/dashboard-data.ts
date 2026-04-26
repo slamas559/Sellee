@@ -86,6 +86,18 @@ export type CustomerOrderView = {
   }>;
 };
 
+export type CustomerFollowStore = {
+  id: string;
+  name: string;
+  slug: string;
+  logo_url: string | null;
+  city: string | null;
+  state: string | null;
+  country: string | null;
+  rating_avg: number | null;
+  rating_count: number | null;
+};
+
 export type VendorCustomerBotActivity = {
   total_last_7d: number;
   by_command: Array<{ command: string; count: number }>;
@@ -108,6 +120,18 @@ export type VendorOutboundBotTrends = {
     success: number;
     failed: number;
   }>;
+};
+
+export type VendorBroadcastHistoryItem = {
+  id: string;
+  status: string;
+  message: string;
+  target_scope: "followers" | "customers" | "all";
+  scheduled_at: string | null;
+  sent_at: string | null;
+  sent_count: number;
+  failed_count: number;
+  created_at: string;
 };
 
 export async function getVendorOrders(vendorId: string): Promise<VendorOrderView[]> {
@@ -306,6 +330,37 @@ export async function getCustomerOrders(userId: string): Promise<CustomerOrderVi
   }));
 }
 
+export async function getCustomerFollows(userId: string): Promise<CustomerFollowStore[]> {
+  const supabase = createAdminSupabaseClient();
+  const { data: user } = await supabase
+    .from("users")
+    .select("phone")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (!user?.phone) {
+    return [];
+  }
+
+  const { data, error } = await supabase
+    .from("customer_store_follows")
+    .select("store_id, stores:store_id(id,name,slug,logo_url,city,state,country,rating_avg,rating_count)")
+    .eq("customer_phone", String(user.phone))
+    .order("created_at", { ascending: false })
+    .limit(100);
+
+  if (error) {
+    return [];
+  }
+
+  return (data ?? [])
+    .map((row) => {
+      const store = (row as { stores?: unknown }).stores as CustomerFollowStore | null;
+      return store;
+    })
+    .filter((store): store is CustomerFollowStore => Boolean(store));
+}
+
 export async function getVendorCustomerBotActivity(
   vendorId: string,
 ): Promise<VendorCustomerBotActivity> {
@@ -459,4 +514,50 @@ export async function getVendorOutboundBotTrends(
     by_command: byCommand,
     daily,
   };
+}
+
+export async function getVendorBroadcastHistory(
+  vendorId: string,
+  limit = 20,
+): Promise<VendorBroadcastHistoryItem[]> {
+  const store = await getVendorStore(vendorId);
+  if (!store) {
+    return [];
+  }
+
+  const supabase = createAdminSupabaseClient();
+  const safeLimit = Math.max(1, Math.min(limit, 50));
+
+  const { data, error } = await supabase
+    .from("whatsapp_broadcasts")
+    .select("id, status, message, target_scope, scheduled_at, sent_at, sent_count, failed_count, created_at")
+    .eq("store_id", store.id)
+    .order("created_at", { ascending: false })
+    .limit(safeLimit);
+
+  if (error) {
+    return [];
+  }
+
+  return ((data ?? []) as Array<{
+    id: string;
+    status?: string | null;
+    message?: string | null;
+    target_scope?: "followers" | "customers" | "all" | null;
+    scheduled_at?: string | null;
+    sent_at?: string | null;
+    sent_count?: number | null;
+    failed_count?: number | null;
+    created_at: string;
+  }>).map((row) => ({
+    id: String(row.id),
+    status: String(row.status ?? "unknown"),
+    message: String(row.message ?? ""),
+    target_scope: (row.target_scope ?? "followers") as "followers" | "customers" | "all",
+    scheduled_at: row.scheduled_at ?? null,
+    sent_at: row.sent_at ?? null,
+    sent_count: Number(row.sent_count ?? 0),
+    failed_count: Number(row.failed_count ?? 0),
+    created_at: String(row.created_at),
+  }));
 }

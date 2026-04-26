@@ -1,104 +1,16 @@
-import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { slugify } from "@/lib/format";
 import { logDevError } from "@/lib/logger";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { DEFAULT_STOREFRONT_CONFIG } from "@/lib/storefront";
-import { createAdminSupabaseClient } from "@/lib/supabase-admin";
-import { normalizeWhatsAppNumber } from "@/lib/whatsapp";
+import { startRegistrationVerification } from "@/lib/phone-verification";
 
-const registerSchema = z.object({
+const registerStartSchema = z.object({
   full_name: z.string().min(2).max(80),
   email: z.string().email(),
   password: z.string().min(8),
-  phone: z.string().min(10).max(20),
+  phone: z.string().min(5).max(30),
+  role: z.enum(["vendor", "customer"]).optional(),
 });
-
-function toTitleCase(input: string): string {
-  return input
-    .split(" ")
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
-}
-
-function deriveDefaultStoreName(email: string): string {
-  const local = email.split("@")[0] ?? "vendor";
-  const cleaned = local.replace(/[._-]+/g, " ").replace(/\s+/g, " ").trim();
-  const name = toTitleCase(cleaned || "Vendor");
-  return `${name} Store`;
-}
-
-async function createOrUpdateVendorStore(params: {
-  userId: string;
-  email: string;
-  phone: string;
-}) {
-  const supabase = createAdminSupabaseClient();
-
-  const { data: existingStore, error: existingStoreError } = await supabase
-    .from("stores")
-    .select("id, name")
-    .eq("vendor_id", params.userId)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (existingStoreError) {
-    throw new Error(existingStoreError.message);
-  }
-
-  if (existingStore) {
-    const { error: updateError } = await supabase
-      .from("stores")
-      .update({
-        whatsapp_number: params.phone,
-        is_active: true,
-      })
-      .eq("id", existingStore.id);
-
-    if (updateError) {
-      throw new Error(updateError.message);
-    }
-
-    return;
-  }
-
-  const storeName = deriveDefaultStoreName(params.email);
-  const baseSlug = slugify(storeName) || `vendor-${params.userId.slice(0, 8)}`;
-  let slug = baseSlug;
-
-  for (let index = 0; index < 30; index += 1) {
-    const { data: takenSlug } = await supabase
-      .from("stores")
-      .select("id")
-      .eq("slug", slug)
-      .limit(1);
-
-    if (!takenSlug || takenSlug.length === 0) {
-      break;
-    }
-
-    slug = `${baseSlug}-${index + 1}`;
-  }
-
-  const { error: insertError } = await supabase.from("stores").insert({
-    vendor_id: params.userId,
-    name: storeName,
-    slug,
-    whatsapp_number: params.phone,
-    store_template: "grocery_promo",
-    store_theme_preset: "emerald_fresh",
-    storefront_config: DEFAULT_STOREFRONT_CONFIG,
-    theme_color: "#059669",
-    is_active: true,
-  });
-
-  if (insertError) {
-    throw new Error(insertError.message);
-  }
-}
 
 function getClientIp(request: Request): string {
   const forwarded = request.headers.get("x-forwarded-for");
@@ -119,8 +31,7 @@ export async function POST(request: Request) {
     if (!limit.allowed) {
       return NextResponse.json(
         {
-          error:
-            "Too many registration attempts. Please wait a few minutes and try again.",
+          error: "Too many registration attempts. Please wait a few minutes and try again.",
         },
         {
           status: 429,
@@ -131,9 +42,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const body = await request.json();
-    const parsed = registerSchema.safeParse(body);
-
+    const parsed = registerStartSchema.safeParse(await request.json());
     if (!parsed.success) {
       return NextResponse.json(
         {
@@ -144,123 +53,35 @@ export async function POST(request: Request) {
       );
     }
 
-    const normalizedPhone = normalizeWhatsAppNumber(parsed.data.phone);
-
-    if (!normalizedPhone || normalizedPhone.length < 10 || normalizedPhone.length > 20) {
-      return NextResponse.json(
-        {
-          error: "Phone number must be 10-20 digits.",
-        },
-        { status: 400 },
-      );
-    }
-
-    const supabase = createAdminSupabaseClient();
-
-    const { data: existingUser, error: existingUserError } = await supabase
-      .from("users")
-      .select("id")
-      .eq("email", parsed.data.email)
-      .maybeSingle();
-
-    if (existingUserError) {
-      logDevError("register.check-existing", existingUserError, {
-        email: parsed.data.email,
-      });
-
-      return NextResponse.json(
-        {
-          error: "Could not check existing account.",
-          details:
-            process.env.NODE_ENV === "development"
-              ? existingUserError.message
-              : undefined,
-          code:
-            process.env.NODE_ENV === "development"
-              ? existingUserError.code
-              : undefined,
-        },
-        { status: 500 },
-      );
-    }
-
-    if (existingUser) {
-      return NextResponse.json(
-        { error: "An account with this email already exists." },
-        { status: 409 },
-      );
-    }
-
-    const passwordHash = await bcrypt.hash(parsed.data.password, 12);
-
-    const { data, error } = await supabase
-      .from("users")
-      .insert({
-        full_name: parsed.data.full_name.trim(),
-        email: parsed.data.email,
-        phone: normalizedPhone,
-        role: "customer",
-        password_hash: passwordHash,
-      })
-      .select("id, email, role, phone")
-      .single();
-
-    if (error || !data) {
-      logDevError("register.create-user", error, { email: parsed.data.email });
-
-      return NextResponse.json(
-        {
-          error: "Could not create account. Please try again.",
-          details:
-            process.env.NODE_ENV === "development" ? error?.message : undefined,
-          code: process.env.NODE_ENV === "development" ? error?.code : undefined,
-        },
-        { status: 500 },
-      );
-    }
-
-    if (data.role === "vendor") {
-      try {
-        await createOrUpdateVendorStore({
-          userId: data.id,
-          email: data.email,
-          phone: String(data.phone ?? normalizedPhone),
-        });
-      } catch (storeSyncError) {
-        logDevError("register.store-sync", storeSyncError, { userId: data.id });
-        await supabase.from("users").delete().eq("id", data.id);
-
-        return NextResponse.json(
-          {
-            error: "Account setup failed while linking store. Please try again.",
-          },
-          { status: 500 },
-        );
-      }
-    }
+    const challenge = await startRegistrationVerification({
+      fullName: parsed.data.full_name,
+      email: parsed.data.email,
+      password: parsed.data.password,
+      role: parsed.data.role ?? "customer",
+      phoneInput: parsed.data.phone,
+    });
 
     return NextResponse.json({
-      message: "Account created successfully.",
-      user: {
-        id: data.id,
-        email: data.email,
-        role: data.role,
+      message: "Verification started. Complete WhatsApp verification to activate account.",
+      challenge: {
+        id: challenge.challengeId,
+        expires_at: challenge.expiresAt,
+        target_phone: challenge.targetPhone,
+        command: challenge.command,
+        verify_code: challenge.verifyCode,
+        wa_link: challenge.waLink,
       },
     });
   } catch (error) {
-    logDevError("register.unhandled", error);
+    const message =
+      error instanceof Error ? error.message : "Unexpected server error during registration.";
+    const status = message.includes("already exists") ? 409 : 400;
 
-    return NextResponse.json(
-      {
-        error: "Unexpected server error during registration.",
-        details:
-          process.env.NODE_ENV === "development"
-            ? error instanceof Error
-              ? error.message
-              : "Unknown error"
-            : undefined,
-      },
-      { status: 500 },
-    );
+    if (status === 400) {
+      logDevError("register.start", error);
+    }
+
+    return NextResponse.json({ error: message }, { status });
   }
 }
+

@@ -307,6 +307,7 @@ export type BotCommand =
   | "HELP"
   | "AMBIGUOUS"
   | "UNKNOWN"
+  | "VERIFY"
   | "LINK"
   | "CONFIRM"
   | "REJECT"
@@ -317,6 +318,7 @@ export type BotCommand =
   | "BROADCAST STATUS"
   | "SCHEDULE BROADCAST"
   | "MY ORDERS"
+  | "MY ORDERS FILTER"
   | "MY STATUS"
   | "TRACK"
   | "CANCEL"
@@ -338,6 +340,7 @@ export function inferCommand(body: string): BotCommand {
   const stripped = stripFillerPrefix(normalized);
 
   if (stripped.startsWith("LINK ")) return "LINK";
+  if (stripped.startsWith("VERIFY ")) return "VERIFY";
 
   if (
     stripped.startsWith("CONFIRM ") ||
@@ -442,6 +445,19 @@ export function inferCommand(body: string): BotCommand {
     stripped === "ORDERS" ||
     stripped === "VIEW ORDERS"
   ) return "LIST ORDERS";
+
+  if (
+    stripped === "MY CONFIRMED ORDERS" ||
+    stripped === "MY REJECTED ORDERS" ||
+    stripped === "MY PENDING ORDERS" ||
+    stripped === "MY CANCELLED ORDERS" ||
+    stripped === "MY CANCELED ORDERS" ||
+    stripped === "MY ORDERS CONFIRMED" ||
+    stripped === "MY ORDERS REJECTED" ||
+    stripped === "MY ORDERS PENDING" ||
+    stripped === "MY ORDERS CANCELLED" ||
+    stripped === "MY ORDERS CANCELED"
+  ) return "MY ORDERS FILTER";
 
   if (
     stripped === "MY ORDERS" ||

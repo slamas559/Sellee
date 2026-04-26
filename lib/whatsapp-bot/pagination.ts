@@ -91,17 +91,35 @@ export async function sendPaginatedList(params: {
   title: string;
   lines: string[];
   pageSize?: number;
+  paginateWhenAtLeast?: number;
   emptyMessage: string;
   hint?: string;
 }): Promise<void> {
   const phone = normalizeWhatsAppNumber(params.to);
   const pageSize = Math.max(1, params.pageSize ?? 5);
+  const paginateWhenAtLeast = Math.max(
+    pageSize + 1,
+    params.paginateWhenAtLeast ?? pageSize + 1,
+  );
 
   if (params.lines.length === 0) {
     await clearPaginationSession(phone, params.role);
     await sendWhatsAppTextMessage({
       to: params.to,
       message: params.emptyMessage,
+    });
+    return;
+  }
+
+  if (params.lines.length < paginateWhenAtLeast) {
+    await clearPaginationSession(phone, params.role);
+    await sendWhatsAppTextMessage({
+      to: params.to,
+      message: waMessage(
+        waTitle(params.title),
+        waList(params.lines),
+        params.hint,
+      ),
     });
     return;
   }

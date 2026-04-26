@@ -65,14 +65,24 @@ async function ensureCustomerLink(customerPhone: string) {
   }
 }
 
-async function getCustomerOrders(customerPhone: string, limit = 20): Promise<OrderLite[]> {
+async function getCustomerOrders(
+  customerPhone: string,
+  limit = 20,
+  statusFilter?: string | null,
+): Promise<OrderLite[]> {
   const supabase = createAdminSupabaseClient();
-  const { data, error } = await supabase
+  let query = supabase
     .from("orders")
     .select("id, store_id, customer_name, customer_whatsapp, status, total_amount, created_at")
     .eq("customer_whatsapp", customerPhone)
-    .order("created_at", { ascending: false })
-    .limit(limit);
+    .order("created_at", { ascending: false });
+
+  if (statusFilter) {
+    query = query.eq("status", statusFilter);
+  }
+
+  query = query.limit(limit);
+  const { data, error } = await query;
 
   if (error) {
     throw new Error(error.message);
@@ -196,15 +206,36 @@ function getPublicBaseUrl(): string {
   return (process.env.NEXTAUTH_URL || "http://localhost:3000").replace(/\/$/, "");
 }
 
-async function handleMyOrders(from: string, normalizedFrom: string) {
-  const orders = await getCustomerOrders(normalizedFrom, 10);
+function extractOrderStatusFilter(body: string): string | null {
+  const normalized = normalizeIntentText(body);
+  if (normalized.includes("CONFIRMED")) return "confirmed";
+  if (normalized.includes("REJECTED")) return "rejected";
+  if (normalized.includes("PENDING")) return "pending_whatsapp";
+  if (normalized.includes("CANCELLED") || normalized.includes("CANCELED")) return "cancelled";
+  return null;
+}
+
+function orderFilterLabel(statusFilter: string | null): string {
+  if (statusFilter === "confirmed") return "Confirmed Orders";
+  if (statusFilter === "rejected") return "Rejected Orders";
+  if (statusFilter === "pending_whatsapp") return "Pending Orders";
+  if (statusFilter === "cancelled") return "Cancelled Orders";
+  return "Your Recent Orders";
+}
+
+async function handleMyOrders(from: string, normalizedFrom: string, statusFilter: string | null = null) {
+  const orders = await getCustomerOrders(normalizedFrom, 20, statusFilter);
   if (orders.length === 0) {
     await sendWhatsAppTextMessage({
       to: from,
       message: waMessage(
-        waTitle("No Orders Yet"),
-        "You have no orders yet.",
-        "Place an order from the marketplace, then send MY ORDERS again.",
+        waTitle(statusFilter ? "No Matching Orders" : "No Orders Yet"),
+        statusFilter
+          ? `You have no ${orderFilterLabel(statusFilter).toLowerCase()}.`
+          : "You have no orders yet.",
+        statusFilter
+          ? "Try: MY ORDERS for all orders."
+          : "Place an order from the marketplace, then send MY ORDERS again.",
       ),
     });
     return;
@@ -219,11 +250,14 @@ async function handleMyOrders(from: string, normalizedFrom: string) {
   await sendPaginatedList({
     to: from,
     role: "customer",
-    title: "Your Recent Orders",
+    title: orderFilterLabel(statusFilter),
     lines,
     pageSize: 5,
+    paginateWhenAtLeast: 9,
     emptyMessage: waMessage(waTitle("No Orders"), "No recent orders found."),
-    hint: "Tip: Send TRACK <ORDER_REF> for full details.",
+    hint: statusFilter
+      ? "Tip: Send MY ORDERS for all orders."
+      : "Tip: Send TRACK <ORDER_REF> for full details.",
   });
 }
 
@@ -544,6 +578,7 @@ async function handleMyFollows(from: string, normalizedFrom: string) {
     title: "Your Followed Stores",
     lines,
     pageSize: 5,
+    paginateWhenAtLeast: 9,
     emptyMessage: waMessage(waTitle("No Followed Stores"), "You are not following any stores yet."),
   });
 }
@@ -608,6 +643,7 @@ async function handleSearchProducts(from: string, query: string): Promise<string
     title: `Search Results: "${trimmedQuery}"`,
     lines,
     pageSize: 5,
+    paginateWhenAtLeast: 9,
     emptyMessage: waMessage(waTitle("No Products Found"), `No results for "${trimmedQuery}".`),
     hint: "Tip: Open any listed link to view full product details.",
   });
@@ -619,10 +655,15 @@ async function handleGreeting(from: string) {
   await sendWhatsAppTextMessage({
     to: from,
     message: waMessage(
-      waTitle("Welcome to Sellee"),
+      waTitle("Hi there!"),
+      "I am your Sellee WhatsApp assistant.",
+      "I help customers track and manage orders, discover products and stores, and follow stores for updates.",
       waTitle("Customer Commands"),
       waList([
         "MY ORDERS",
+        "MY CONFIRMED ORDERS",
+        "MY REJECTED ORDERS",
+        "MY PENDING ORDERS",
         "MY STATUS",
         "TRACK <ORDER_REF>",
         "CANCEL <ORDER_REF>",
@@ -653,6 +694,9 @@ export async function handleCustomerHelp(from: string) {
       waTitle("Customer Commands"),
       waList([
         "MY ORDERS - shows your recent orders",
+        "MY CONFIRMED ORDERS - only confirmed orders",
+        "MY REJECTED ORDERS - only rejected orders",
+        "MY PENDING ORDERS - only pending orders",
         "MY STATUS - quick status summary",
         "TRACK <ORDER_REF> - view one order details",
         "CANCEL <ORDER_REF> - cancel pending order",
@@ -660,7 +704,7 @@ export async function handleCustomerHelp(from: string) {
         "FOLLOW <STORE> - get updates from a store",
         "UNFOLLOW <STORE> - stop store updates",
         "MY FOLLOWS - list followed stores",
-        "MORE - show next page for long results",
+        "MORE - next page when a result list is very long",
       ]),
     ),
   });
@@ -687,6 +731,11 @@ export async function handleCustomerCommand(
     case "MY ORDERS":
       await ensureCustomerLink(normalizedFrom);
       await handleMyOrders(from, normalizedFrom);
+      return { handled: true };
+
+    case "MY ORDERS FILTER":
+      await ensureCustomerLink(normalizedFrom);
+      await handleMyOrders(from, normalizedFrom, extractOrderStatusFilter(body));
       return { handled: true };
 
     case "MY STATUS":

@@ -9,3 +9,4 @@ This version has breaking changes — APIs, conventions, and file structure may 
 - Use Mobile-First design.
 - Use Flexbox/Grid with breakpoints (sm, md, lg).
 - Make sure text and other element dont cramp
+- Modern, Professional, Sleek and Nice design

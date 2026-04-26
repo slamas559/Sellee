@@ -3,24 +3,52 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { AccountProfileForm } from "@/components/dashboard/account-profile-form";
+import { CustomerFollowsManager } from "@/components/account/customer-follows-manager";
 import { authOptions } from "@/lib/auth";
-import { getCustomerOrders } from "@/lib/dashboard-data";
+import { getCustomerFollows, getCustomerOrders } from "@/lib/dashboard-data";
 import { formatNaira } from "@/lib/format";
 
 export const metadata: Metadata = {
   title: "Account",
 };
 
-export default async function AccountPage() {
+type AccountSearchParams = Promise<{
+  status?: string;
+  q?: string;
+}>;
+
+function formatOrderStatus(status: string): string {
+  return status.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+export default async function AccountPage({
+  searchParams,
+}: {
+  searchParams: AccountSearchParams;
+}) {
   const session = await getServerSession(authOptions);
 
   if (!session?.user?.id) {
     redirect("/login?callbackUrl=/account");
   }
 
+  const params = await searchParams;
+  const selectedStatus = (params.status ?? "all").toLowerCase();
+  const orderRefQuery = (params.q ?? "").trim().toUpperCase();
+
   const orders = await getCustomerOrders(session.user.id);
+  const follows = await getCustomerFollows(session.user.id);
   const pendingCount = orders.filter((item) => item.order.status === "pending_whatsapp").length;
   const confirmedCount = orders.filter((item) => item.order.status === "confirmed").length;
+
+  const filteredOrders = orders.filter((entry) => {
+    const statusPass = selectedStatus === "all" ? true : entry.order.status === selectedStatus;
+    const refPass = orderRefQuery
+      ? entry.order.id.slice(0, 8).toUpperCase().includes(orderRefQuery) ||
+        entry.order.id.toUpperCase().includes(orderRefQuery)
+      : true;
+    return statusPass && refPass;
+  });
 
   return (
     <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-5 px-3 py-6 sm:px-4 sm:py-8">
@@ -36,6 +64,7 @@ export default async function AccountPage() {
         </p>
       </header>
       <AccountProfileForm />
+      <CustomerFollowsManager initialFollows={follows} />
 
       <section className="space-y-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -53,13 +82,39 @@ export default async function AccountPage() {
           </div>
         </div>
 
-        {orders.length === 0 ? (
+        <form className="grid gap-2 sm:grid-cols-[180px_1fr_auto]">
+          <select
+            name="status"
+            defaultValue={selectedStatus}
+            className="rounded-md border border-slate-300 px-3 py-2 text-sm outline-none ring-emerald-200 focus:ring"
+          >
+            <option value="all">All statuses</option>
+            <option value="pending_whatsapp">Pending</option>
+            <option value="confirmed">Confirmed</option>
+            <option value="rejected">Rejected</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+          <input
+            name="q"
+            defaultValue={orderRefQuery}
+            placeholder="Track by order ref (e.g. ABCD1234)"
+            className="rounded-md border border-slate-300 px-3 py-2 text-sm outline-none ring-emerald-200 focus:ring"
+          />
+          <button
+            type="submit"
+            className="rounded-md bg-emerald-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700"
+          >
+            Filter
+          </button>
+        </form>
+
+        {filteredOrders.length === 0 ? (
           <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
-            No orders yet. Browse products and place your first WhatsApp order.
+            No matching orders found for this filter.
           </div>
         ) : (
           <div className="space-y-3">
-            {orders.map((entry) => (
+            {filteredOrders.map((entry) => (
               <article key={entry.order.id} className="rounded-xl border border-slate-200 p-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
@@ -79,7 +134,7 @@ export default async function AccountPage() {
                           : "bg-amber-100 text-amber-800"
                     }`}
                   >
-                    {entry.order.status}
+                    {formatOrderStatus(entry.order.status)}
                   </span>
                 </div>
 

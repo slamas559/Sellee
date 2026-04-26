@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 
 export type NearbyVendor = {
   id: string;
+  vendor_id?: string;
   name: string;
   slug: string;
   city: string | null;
@@ -13,6 +14,7 @@ export type NearbyVendor = {
   logo_url: string | null;
   rating_avg: number | null;
   rating_count: number;
+  follower_count?: number;
   distance_km: number | null;
   niche_names?: string[];
 };
@@ -31,7 +33,7 @@ type NearbyResponse = {
 
 function renderStars(value: number | null) {
   const count = Math.max(1, Math.round(value ?? 0));
-  return "★".repeat(count);
+  return "*".repeat(count);
 }
 
 export function NearbyVendorCard({
@@ -52,7 +54,7 @@ export function NearbyVendorCard({
     <Link
       href={`/store/${vendor.slug}`}
       className={`group relative overflow-hidden rounded-2xl border border-slate-200 bg-white transition hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-md ${
-        isGrid ? "h-full p-3 sm:p-4" : "min-w-[250px] snap-start p-4 sm:min-w-0"
+        isGrid ? "h-full p-3 sm:p-4" : "p-4"
       }`}
     >
       {vendor.logo_url ? (
@@ -71,7 +73,9 @@ export function NearbyVendorCard({
         <p className="line-clamp-1 text-sm font-semibold text-slate-900 group-hover:text-emerald-700 sm:text-base">
           {vendor.name}
         </p>
-        <p className="mt-1.5 line-clamp-2 text-xs text-slate-600 sm:mt-2 sm:line-clamp-1 sm:text-sm">{locationText}</p>
+        <p className="mt-1.5 line-clamp-2 text-xs text-slate-600 sm:mt-2 sm:line-clamp-1 sm:text-sm">
+          {locationText}
+        </p>
         {niches.length > 0 ? (
           <div className="mt-2 flex flex-wrap gap-1">
             {niches.map((niche) => (
@@ -90,13 +94,16 @@ export function NearbyVendorCard({
             {(vendor.rating_avg ?? 0).toFixed(1)} ({vendor.rating_count})
           </span>
         </p>
-        <p className="mt-3 text-xs font-medium text-emerald-700">
-          {typeof vendor.distance_km === "number"
-            ? `${vendor.distance_km.toFixed(1)} km away`
-            : hasDistance
-              ? "Distance unavailable"
-              : "Open store"}
-        </p>
+        <div className="mt-2 flex items-center justify-between gap-2 text-xs">
+          <p className="font-medium text-slate-600">Followers: {vendor.follower_count ?? 0}</p>
+          <p className="font-medium text-emerald-700">
+            {typeof vendor.distance_km === "number"
+              ? `${vendor.distance_km.toFixed(1)} km away`
+              : hasDistance
+                ? "Distance unavailable"
+                : "Open store"}
+          </p>
+        </div>
       </div>
     </Link>
   );

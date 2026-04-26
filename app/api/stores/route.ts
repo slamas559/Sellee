@@ -7,6 +7,7 @@ import { slugify } from "@/lib/format";
 import { logDevError } from "@/lib/logger";
 import { DEFAULT_STOREFRONT_CONFIG, normalizeStoreTemplate, normalizeThemePreset, normalizeStorefrontConfig } from "@/lib/storefront";
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
+import { validateWhatsAppNumber } from "@/lib/whatsapp";
 
 const storeSchema = z.object({
   name: z.string().min(2).max(80),
@@ -312,6 +313,13 @@ export async function POST(request: Request) {
     if (!parsed.success) {
       return NextResponse.json({ error: "Invalid store setup data." }, { status: 400 });
     }
+    const whatsappCheck = validateWhatsAppNumber(parsed.data.whatsapp_number);
+    if (!whatsappCheck.ok) {
+      return NextResponse.json(
+        { error: whatsappCheck.error ?? "Enter a valid WhatsApp number." },
+        { status: 400 },
+      );
+    }
 
     const supabase = createAdminSupabaseClient();
 
@@ -378,7 +386,7 @@ export async function POST(request: Request) {
         .update({
           name: parsedData.name,
           slug: uniqueSlug,
-          whatsapp_number: parsedData.whatsapp_number,
+          whatsapp_number: whatsappCheck.normalized,
           address_line1: parsedData.address_line1 || null,
           city: parsedData.city || null,
           state: parsedData.state || null,
@@ -435,7 +443,7 @@ export async function POST(request: Request) {
         vendor_id: session.user.id,
         name: parsedData.name,
         slug: uniqueSlug,
-        whatsapp_number: parsedData.whatsapp_number,
+        whatsapp_number: whatsappCheck.normalized,
         address_line1: parsedData.address_line1 || null,
         city: parsedData.city || null,
         state: parsedData.state || null,

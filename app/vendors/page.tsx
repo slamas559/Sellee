@@ -10,6 +10,7 @@ export const metadata: Metadata = {
 
 type StoreRow = {
   id: string;
+  vendor_id: string;
   name: string;
   slug: string;
   city: string | null;
@@ -18,6 +19,7 @@ type StoreRow = {
   logo_url: string | null;
   rating_avg: number | null;
   rating_count: number;
+  follower_count?: number;
 };
 
 type VendorsPageProps = {
@@ -39,7 +41,7 @@ export default async function VendorsPage({ searchParams }: VendorsPageProps) {
   const supabase = createAdminSupabaseClient();
   const { data: stores } = await supabase
     .from("stores")
-    .select("id, name, slug, city, state, country, logo_url, rating_avg, rating_count")
+    .select("id, vendor_id, name, slug, city, state, country, logo_url, rating_avg, rating_count")
     .eq("is_active", true)
     .order("created_at", { ascending: false })
     .limit(400);
@@ -64,9 +66,24 @@ export default async function VendorsPage({ searchParams }: VendorsPageProps) {
     }
   }
 
+  const followerCountByStoreId = new Map<string, number>();
+  if (storeIds.length > 0) {
+    const { data: followsData } = await supabase
+      .from("customer_store_follows")
+      .select("store_id")
+      .in("store_id", storeIds);
+    for (const row of (followsData ?? []) as Array<{ store_id: string }>) {
+      followerCountByStoreId.set(
+        row.store_id,
+        (followerCountByStoreId.get(row.store_id) ?? 0) + 1,
+      );
+    }
+  }
+
   const vendors: NearbyVendor[] = typedStores.map((store) => ({
     ...store,
     distance_km: null,
+    follower_count: followerCountByStoreId.get(store.id) ?? 0,
     niche_names: Array.from(new Set(nichesByStoreId.get(store.id) ?? [])),
   }));
 
@@ -196,12 +213,7 @@ export default async function VendorsPage({ searchParams }: VendorsPageProps) {
         ) : (
           <div className="grid grid-cols-2 gap-2 [@media(max-width:340px)]:grid-cols-1 sm:gap-3 lg:grid-cols-3 xl:grid-cols-4">
             {filteredVendors.map((vendor) => (
-              <NearbyVendorCard
-                key={vendor.id}
-                vendor={vendor}
-                hasDistance={false}
-                mode="grid"
-              />
+              <NearbyVendorCard key={vendor.id} vendor={vendor} hasDistance={false} mode="grid" />
             ))}
           </div>
         )}
