@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { getServerSession } from "next-auth";
 import { NearbyVendors } from "@/components/landing/nearby-vendors";
@@ -67,6 +68,46 @@ const FALLBACK_CATEGORIES = [
   "Beauty",
   "Home",
 ];
+
+const CATEGORY_IMAGE_SOURCES: Array<{ match: RegExp; image: string }> = [
+  {
+    match: /(grocery|food|breakfast|drink|snack|meal|restaurant|kitchen)/i,
+    image:
+      "https://images.unsplash.com/photo-1543168256-418811576931?auto=format&fit=crop&w=80&h=80&q=70",
+  },
+  {
+    match: /(fashion|cloth|clothe|wear|shoe|bag|boutique)/i,
+    image:
+      "https://images.unsplash.com/photo-1445205170230-053b83016050?auto=format&fit=crop&w=80&h=80&q=70",
+  },
+  {
+    match: /(electronic|phone|laptop|device|gadget|tech)/i,
+    image:
+      "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=80&h=80&q=70",
+  },
+  {
+    match: /(beauty|cosmetic|skincare|makeup|salon)/i,
+    image:
+      "https://images.unsplash.com/photo-1596462502278-27bfdc403348?auto=format&fit=crop&w=80&h=80&q=70",
+  },
+  {
+    match: /(home|furniture|decor|interior)/i,
+    image:
+      "https://images.unsplash.com/photo-1484101403633-562f891dc89a?auto=format&fit=crop&w=80&h=80&q=70",
+  },
+  {
+    match: /(sport|fitness|gym)/i,
+    image:
+      "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&w=80&h=80&q=70",
+  },
+];
+
+function categoryImageUrl(category: string): string {
+  return (
+    CATEGORY_IMAGE_SOURCES.find((item) => item.match.test(category))?.image ??
+    "https://images.unsplash.com/photo-1472851294608-062f824d29cc?auto=format&fit=crop&w=80&h=80&q=70"
+  );
+}
 
 async function getMarketplaceData(q?: string, category?: string) {
   const supabase = createAdminSupabaseClient();
@@ -339,12 +380,22 @@ export default async function Home({ searchParams }: HomeProps) {
               <Link
                 key={item}
                 href={href}
-                className={`shrink-0 snap-start rounded-full border px-4 py-2 text-sm font-semibold transition ${
+                className={`group inline-flex shrink-0 snap-start items-center gap-2 rounded-2xl border px-2.5 py-2 pr-3 text-sm font-semibold transition ${
                   isActive
-                    ? "border-emerald-600 bg-emerald-600 text-white"
+                    ? "border-emerald-600 bg-emerald-600 text-white shadow-sm"
                     : "border-slate-200 bg-white text-slate-700 hover:border-emerald-200 hover:bg-emerald-50"
                 }`}
               >
+                <span className={`relative h-8 w-8 overflow-hidden rounded-xl ring-1 ${isActive ? "ring-white/40" : "ring-slate-200"}`}>
+                  <Image
+                    src={categoryImageUrl(item)}
+                    alt={`${item} category`}
+                    fill
+                    className="object-cover transition group-hover:scale-105"
+                    sizes="32px"
+                    unoptimized
+                  />
+                </span>
                 {item}
               </Link>
             );

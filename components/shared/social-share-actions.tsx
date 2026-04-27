@@ -10,6 +10,7 @@ type SocialShareActionsProps = {
   compact?: boolean;
   mode?: "menu" | "inline";
   align?: "left" | "right";
+  menuPosition?: "down" | "up";
   className?: string;
   triggerClassName?: string;
   triggerLabel?: string;
@@ -75,6 +76,7 @@ export function SocialShareActions({
   compact = false,
   mode = "menu",
   align = "right",
+  menuPosition = "down",
   className,
   triggerClassName,
   triggerLabel = "Share",
@@ -158,6 +160,7 @@ export function SocialShareActions({
     ? "inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 hover:bg-slate-100"
     : "inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 hover:bg-slate-100";
   const dropdownPositionClass = align === "left" ? "left-0" : "right-0";
+  const dropdownOffsetClass = menuPosition === "up" ? "bottom-10" : "top-10";
   const openShareTarget = (href: string) => {
     openInNewTab(href);
     setIsOpen(false);
@@ -179,7 +182,7 @@ export function SocialShareActions({
           <Share2 className="h-3 w-3" />
         </button>
         {isOpen ? (
-          <div className={`absolute ${dropdownPositionClass} top-10 z-30 w-max max-w-[calc(100vw-1rem)] overflow-x-auto rounded-xl border border-slate-200 bg-white p-2 shadow-lg`}>
+          <div className={`absolute ${dropdownPositionClass} ${dropdownOffsetClass} z-30 w-max max-w-[calc(100vw-1rem)] overflow-x-auto rounded-xl border border-slate-200 bg-white p-2 shadow-lg`}>
             <div className="flex flex-nowrap items-center gap-1.5 whitespace-nowrap">
               <button type="button" onClick={() => openShareTarget(links.whatsapp)} className={iconBtnClass} title="WhatsApp">
                 <WhatsAppIcon />

@@ -145,6 +145,7 @@ export function ProductShowcaseCard({
             mode="menu"
             compact
             align="right"
+            menuPosition="up"
             url={productHref}
             title={`${product.name} - ${store.name}`}
             text={`Check out ${product.name} from ${store.name} on Sellee.`}
