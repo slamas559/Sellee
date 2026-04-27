@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useMemo, useState } from "react";
 
 type WhatsAppBotAccessProps = {
@@ -52,12 +53,13 @@ export function WhatsAppBotAccess({ botNumber }: WhatsAppBotAccessProps) {
         </div>
 
         <div className="hidden rounded-xl border border-slate-200 bg-slate-50 p-2 md:block">
-          <img
+          <Image
             src={qrCodeUrl}
             alt="QR code to open Sellee WhatsApp bot"
             width={96}
             height={96}
             className="h-24 w-24 rounded-lg"
+            unoptimized
           />
         </div>
       </div>
@@ -91,12 +93,13 @@ export function WhatsAppBotAccess({ botNumber }: WhatsAppBotAccessProps) {
           Show QR Code
         </summary>
         <div className="mt-3 inline-flex rounded-lg border border-slate-200 bg-white p-2">
-          <img
+          <Image
             src={qrCodeUrl}
             alt="QR code to open Sellee WhatsApp bot"
             width={132}
             height={132}
             className="h-[132px] w-[132px] rounded-md"
+            unoptimized
           />
         </div>
       </details>

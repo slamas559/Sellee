@@ -142,6 +142,8 @@ async function getMarketplaceResults(state: SearchState) {
   const typedStores = ((stores ?? []) as StoreLite[]);
   const storesById = new Map(typedStores.map((store) => [store.id, store]));
   const activeStoreIds = [...storesById.keys()];
+  const storeNicheNamesByStoreId = new Map<string, string[]>();
+  const storeNicheIdsByStoreId = new Map<string, string[]>();
 
   const niches = ((nichesData ?? []) as NicheLite[]);
   const nicheCategories = ((nicheCategoriesData ?? []) as NicheCategoryLite[]);
@@ -165,6 +167,26 @@ async function getMarketplaceResults(state: SearchState) {
   const selectedNicheGroup =
     groupedCategories.find((group) => group.niche_id === state.niche) ?? null;
   const categoriesInSelectedNiche = selectedNicheGroup?.categories ?? [];
+
+  if (activeStoreIds.length > 0) {
+    const { data: storeNichesData } = await supabase
+      .from("store_niches")
+      .select("store_id, niche_id, niche:niche_id(name)")
+      .in("store_id", activeStoreIds);
+
+    for (const row of (storeNichesData ??
+      []) as Array<{ store_id: string; niche_id: string; niche?: { name?: string } | null }>) {
+      const nicheIds = storeNicheIdsByStoreId.get(row.store_id) ?? [];
+      nicheIds.push(row.niche_id);
+      storeNicheIdsByStoreId.set(row.store_id, nicheIds);
+
+      const nicheName = row.niche?.name?.trim();
+      if (!nicheName) continue;
+      const nicheNames = storeNicheNamesByStoreId.get(row.store_id) ?? [];
+      nicheNames.push(nicheName);
+      storeNicheNamesByStoreId.set(row.store_id, nicheNames);
+    }
+  }
 
   if (activeStoreIds.length === 0) {
     return {
@@ -192,11 +214,6 @@ async function getMarketplaceResults(state: SearchState) {
       categories: [] as string[],
       grouped_categories: groupedCategories,
     };
-  }
-
-  if (state.q) {
-    const safeQ = state.q.replace(/,/g, " ");
-    productsQuery = productsQuery.or(`name.ilike.%${safeQ}%,description.ilike.%${safeQ}%`);
   }
 
   const { data: products } = await productsQuery;
@@ -240,6 +257,59 @@ async function getMarketplaceResults(state: SearchState) {
       return true;
     });
 
+  const qLower = state.q.trim().toLowerCase();
+  const matchedNicheIds = qLower
+    ? new Set(
+        niches
+          .filter(
+            (niche) =>
+              niche.name.toLowerCase().includes(qLower) || niche.slug.toLowerCase().includes(qLower),
+          )
+          .map((niche) => niche.id),
+      )
+    : new Set<string>();
+  const matchedCategoryNames = qLower
+    ? new Set(
+        nicheCategories
+          .filter((row) => row.name.toLowerCase().includes(qLower))
+          .map((row) => row.name.toLowerCase()),
+      )
+    : new Set<string>();
+
+  const qFiltered = qLower
+    ? filtered.filter((product) => {
+        const productName = product.name.toLowerCase();
+        const description = (product.description ?? "").toLowerCase();
+        const category = (product.category ?? "").toLowerCase();
+
+        if (
+          productName.includes(qLower) ||
+          description.includes(qLower) ||
+          category.includes(qLower)
+        ) {
+          return true;
+        }
+
+        if (category && matchedCategoryNames.has(category)) {
+          return true;
+        }
+
+        const storeNicheNames = (storeNicheNamesByStoreId.get(product.store_id) ?? []).map((name) =>
+          name.toLowerCase(),
+        );
+        if (storeNicheNames.some((name) => name.includes(qLower))) {
+          return true;
+        }
+
+        const storeNicheIds = storeNicheIdsByStoreId.get(product.store_id) ?? [];
+        if (storeNicheIds.some((id) => matchedNicheIds.has(id))) {
+          return true;
+        }
+
+        return false;
+      })
+    : filtered;
+
   filtered.sort((a, b) => {
     if (state.sort === "price_asc") return Number(a.price) - Number(b.price);
     if (state.sort === "price_desc") return Number(b.price) - Number(a.price);
@@ -253,7 +323,7 @@ async function getMarketplaceResults(state: SearchState) {
   });
 
   return {
-    products: filtered.slice(0, 72),
+    products: qFiltered.slice(0, 72),
     categories,
     grouped_categories: groupedCategories,
   };
@@ -375,7 +445,7 @@ function MarketplaceFilterForm({
           <input
             name="q"
             defaultValue={state.q}
-            placeholder="Product name..."
+            placeholder="Product, category, or niche..."
             className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none ring-emerald-300 transition focus:ring-2"
           />
         </div>

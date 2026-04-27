@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
 import type { VendorWhatsAppLinkStatus } from "@/lib/dashboard-data";
 
@@ -234,12 +235,13 @@ export function WhatsAppLinkingCard({ initialStatus }: WhatsAppLinkingCardProps)
             Scan with your phone camera to open the Sellee bot chat instantly.
           </p>
           <div className="mt-3 inline-flex rounded-xl border border-slate-200 bg-slate-50 p-2">
-            <img
+            <Image
               src={qrCodeUrl}
               alt="QR code for Sellee WhatsApp bot chat"
               width={180}
               height={180}
               className="h-[180px] w-[180px] rounded-lg"
+              unoptimized
             />
           </div>
         </div>

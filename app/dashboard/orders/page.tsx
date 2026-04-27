@@ -35,7 +35,17 @@ export default async function DashboardOrdersPage() {
   const confirmedCount = orders.filter((item) => item.order.status === "confirmed").length;
   const pendingCount = orders.filter((item) => item.order.status === "pending_whatsapp").length;
   const totalRevenue = orders.reduce(
-    (sum, item) => sum + Number(item.order.total_amount ?? 0),
+    (sum, item) =>
+      item.order.status === "confirmed"
+        ? sum + Number(item.order.total_amount ?? 0)
+        : sum,
+    0,
+  );
+  const pendingValue = orders.reduce(
+    (sum, item) =>
+      item.order.status === "pending_whatsapp"
+        ? sum + Number(item.order.total_amount ?? 0)
+        : sum,
     0,
   );
 
@@ -66,12 +76,15 @@ export default async function DashboardOrdersPage() {
         <article className="rounded-xl border border-emerald-100 bg-white p-4 shadow-sm">
           <p className="text-sm text-slate-500">Confirmed</p>
           <h2 className="mt-1 text-2xl font-black text-slate-900">{confirmedCount}</h2>
+          <p className="mt-1 text-xs text-slate-500">
+            Revenue: {formatNaira(totalRevenue)}
+          </p>
         </article>
         <article className="rounded-xl border border-amber-200 bg-amber-50 p-4 shadow-sm">
           <p className="text-sm text-amber-900/80">Pending</p>
           <h2 className="mt-1 text-2xl font-black text-amber-950">{pendingCount}</h2>
           <p className="mt-1 text-xs text-amber-900/80">
-            Revenue: {formatNaira(totalRevenue)}
+            Pending value: {formatNaira(pendingValue)}
           </p>
         </article>
       </section>

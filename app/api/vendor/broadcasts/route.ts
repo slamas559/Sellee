@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { z } from "zod";
 import { authOptions } from "@/lib/auth";
 import { logDevError } from "@/lib/logger";
+import { requireVerifiedPhone } from "@/lib/require-verified-phone";
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
 import { executeBroadcastNow, scheduleBroadcast } from "@/lib/whatsapp-bot/broadcasts";
 
@@ -52,6 +53,14 @@ export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  const guard = await requireVerifiedPhone({
+    userId: session.user.id,
+    context: "vendor_whatsapp",
+    requiredRole: "vendor",
+  });
+  if (!guard.ok) {
+    return guard.response;
   }
 
   try {
@@ -104,6 +113,14 @@ export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  const guard = await requireVerifiedPhone({
+    userId: session.user.id,
+    context: "vendor_whatsapp",
+    requiredRole: "vendor",
+  });
+  if (!guard.ok) {
+    return guard.response;
   }
 
   try {
@@ -164,4 +181,3 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unexpected broadcast create error." }, { status: 500 });
   }
 }
-

@@ -165,7 +165,7 @@ export async function handleLinkCommand(from: string, body: string) {
       waTitle("Available Commands"),
       waList([
         "LIST ORDERS - shows recent store orders",
-        "SALES TODAY - revenue + order count today",
+        "SALES TODAY - confirmed revenue + confirmed order count today",
         "LOW STOCK - products that need restock",
         "CONFIRM <ORDER_REF> - mark order as confirmed",
         "REJECT <ORDER_REF> - mark order as rejected",
@@ -324,7 +324,7 @@ export async function handleSalesToday(from: string, store: StoreForCommand) {
 
   const { data: orders, error } = await supabase
     .from("orders")
-    .select("total_amount")
+    .select("total_amount, status")
     .eq("store_id", store.id)
     .gte("created_at", todayStartIso());
 
@@ -332,17 +332,24 @@ export async function handleSalesToday(from: string, store: StoreForCommand) {
     throw new Error(error.message);
   }
 
-  const totalRevenue = (orders ?? []).reduce(
-    (sum, order) => sum + Number(order.total_amount ?? 0),
+  const confirmedOrders = (orders ?? []).filter(
+    (order) => String((order as { status?: string | null }).status ?? "") === "confirmed",
+  );
+  const totalRevenue = confirmedOrders.reduce(
+    (sum, order) => sum + Number((order as { total_amount?: number | null }).total_amount ?? 0),
     0,
   );
+  const pendingRequests = (orders ?? []).filter(
+    (order) => String((order as { status?: string | null }).status ?? "") === "pending_whatsapp",
+  ).length;
 
   await sendWhatsAppTextMessage({
     to: from,
     message: waMessage(
       waTitle(`Sales Today - ${store.name}`),
-      `Revenue: ${formatNaira(totalRevenue)}`,
-      `Orders: ${orders?.length ?? 0}`,
+      `Confirmed revenue: ${formatNaira(totalRevenue)}`,
+      `Confirmed orders: ${confirmedOrders.length}`,
+      `Pending requests: ${pendingRequests}`,
     ),
   });
 }

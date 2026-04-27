@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ProductShowcaseCard } from "@/components/marketplace/product-showcase-card";
+import { SocialShareActions } from "@/components/shared/social-share-actions";
 import { OrderButton } from "@/components/store/order-button";
 import { ProductMediaGallery } from "@/components/store/product-media-gallery";
 import { ProductReviewsSection } from "@/components/reviews/product-reviews-section";
@@ -137,6 +138,9 @@ export default async function StoreProductPage({ params }: ProductPageProps) {
       ? "overflow-hidden rounded-2xl border border-slate-700 bg-slate-900 shadow-sm"
       : "overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm";
   const storeLocation = [store.city, store.state, store.country].filter(Boolean).join(", ");
+  const appBaseUrl = (process.env.NEXTAUTH_URL || "http://localhost:3000").replace(/\/$/, "");
+  const storeUrl = `${appBaseUrl}/store/${store.slug}`;
+  const productUrl = `${appBaseUrl}/store/${store.slug}/${product.id}`;
 
   return (
     <main className={`mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-2 py-6 sm:px-4 sm:py-8 ${pageClass}`}>
@@ -172,7 +176,18 @@ export default async function StoreProductPage({ params }: ProductPageProps) {
               accent="yellow"
             />
             <div className={`rounded-xl border px-4 py-3 ${isDark ? "border-slate-700 bg-slate-800/70" : "border-slate-200 bg-slate-50"}`}>
-              <p className={`text-xs font-semibold uppercase tracking-[0.14em] ${isDark ? "text-slate-300" : "text-slate-500"}`}>Vendor</p>
+              <div className="flex items-start justify-between gap-3">
+                <p className={`text-xs font-semibold uppercase tracking-[0.14em] ${isDark ? "text-slate-300" : "text-slate-500"}`}>Vendor</p>
+                <SocialShareActions
+                  mode="menu"
+                  url={storeUrl}
+                  title={`${store.name} on Sellee`}
+                  text={`Check out ${store.name} on Sellee.`}
+                  compact
+                  align="right"
+                  triggerLabel="Share store"
+                />
+              </div>
               <p className={`text-sm ${textMutedClass}`}>{store.name}</p>
               {storeLocation ? <p className={`mt-1 text-xs ${textMutedClass}`}>{storeLocation}</p> : null}
               <div className="mt-1">
@@ -194,6 +209,22 @@ export default async function StoreProductPage({ params }: ProductPageProps) {
               <span className={isDark ? "rounded-full border border-slate-700 bg-slate-800 px-3 py-1 text-xs text-slate-300" : "rounded-full border border-slate-200 bg-white px-3 py-1 text-xs text-slate-600"}>
                 Ready for WhatsApp order
               </span>
+            </div>
+            <div className={`rounded-xl border px-4 py-3  ${isDark ? "border-slate-700 bg-slate-800/70" : "border-slate-200 bg-slate-50"}`}>
+              <div className="flex items-start justify-between gap-3">
+                <p className={`text-xs font-semibold uppercase tracking-[0.14em] ${isDark ? "text-slate-300" : "text-slate-500"}`}>
+                  Share Product
+                </p>
+                <SocialShareActions
+                  mode="menu"
+                  url={productUrl}
+                  title={`${product.name} - ${store.name}`}
+                  text={`Found this on Sellee: ${product.name} at ${store.name}.`}
+                  compact
+                  align="right"
+                  triggerLabel="Share product"
+                />
+              </div>
             </div>
           </div>
         </article>
@@ -283,3 +314,4 @@ export default async function StoreProductPage({ params }: ProductPageProps) {
     </main>
   );
 }
+

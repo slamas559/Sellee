@@ -6,6 +6,7 @@ import { getServerSession } from "next-auth";
 import { ProductCard } from "@/components/store/product-card";
 import { BannerCarousel } from "@/components/store/banner-carousel";
 import { FollowStoreButton } from "@/components/store/follow-store-button";
+import { SocialShareActions } from "@/components/shared/social-share-actions";
 import { StarRating } from "@/components/store/star-rating";
 import { VendorReviewsSection } from "@/components/reviews/vendor-reviews-section";
 import { authOptions } from "@/lib/auth";
@@ -68,6 +69,7 @@ function StoreTopBar({
   isLoggedIn,
   activeUserId,
   isFollowing,
+  storeUrl,
 }: {
   store: StoreRecord;
   primaryColor: string;
@@ -75,6 +77,7 @@ function StoreTopBar({
   isLoggedIn: boolean;
   activeUserId: string | null;
   isFollowing: boolean;
+  storeUrl: string;
 }) {
   return (
     <header className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
@@ -122,6 +125,15 @@ function StoreTopBar({
               Chat vendor
             </span>
           </Link>
+          <SocialShareActions
+            mode="menu"
+            compact
+            url={storeUrl}
+            title={`${store.name} on Sellee`}
+            text={`Check out ${store.name} on Sellee.`}
+            triggerClassName="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+            triggerLabel="Share store"
+          />
         </div>
       </div>
     </header>
@@ -227,6 +239,8 @@ export default async function StorePage({ params }: StorePageProps) {
   const config = normalizeStorefrontConfig(store.storefront_config);
   const sectionsOrder = config.sections_order;
   const primaryColor = store.theme_color ?? theme.primary;
+  const appBaseUrl = (process.env.NEXTAUTH_URL || "http://localhost:3000").replace(/\/$/, "");
+  const storeUrl = `${appBaseUrl}/store/${slug}`;
   const bannerUrls = config.banner_urls.length > 0
     ? config.banner_urls
     : (config.secondary_banner_url ? [config.secondary_banner_url] : []);
@@ -245,6 +259,7 @@ export default async function StorePage({ params }: StorePageProps) {
           isLoggedIn={Boolean(session?.user?.id)}
           activeUserId={session?.user?.id ?? null}
           isFollowing={isFollowing}
+          storeUrl={storeUrl}
         />
         <section className="-mx-4 grid gap-4 px-4 lg:grid-cols-[1.3fr_1fr] sm:mx-0 sm:px-0">
           <HeroVisual heroImageUrl={config.hero_image_url} storeName={store.name} className="h-72 sm:h-80" />
@@ -296,6 +311,7 @@ export default async function StorePage({ params }: StorePageProps) {
           isLoggedIn={Boolean(session?.user?.id)}
           activeUserId={session?.user?.id ?? null}
           isFollowing={isFollowing}
+          storeUrl={storeUrl}
         />
         <section
           className="-mx-4 grid gap-4 rounded-none p-4 sm:mx-0 sm:rounded-2xl sm:p-6 lg:grid-cols-[1.5fr_1fr]"
@@ -358,6 +374,7 @@ export default async function StorePage({ params }: StorePageProps) {
           isLoggedIn={Boolean(session?.user?.id)}
           activeUserId={session?.user?.id ?? null}
           isFollowing={isFollowing}
+          storeUrl={storeUrl}
         />
         <section className="grid gap-4 lg:grid-cols-[260px_1fr]">
           <aside className="space-y-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -421,6 +438,7 @@ export default async function StorePage({ params }: StorePageProps) {
         isLoggedIn={Boolean(session?.user?.id)}
         activeUserId={session?.user?.id ?? null}
         isFollowing={isFollowing}
+        storeUrl={storeUrl}
       />
       <section
         className="-mx-4 grid gap-4 rounded-none p-4 sm:mx-0 sm:rounded-2xl sm:p-6 lg:grid-cols-[1.2fr_1fr]"

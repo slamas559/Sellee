@@ -24,7 +24,7 @@ const VENDOR_HELP = waMessage(
     "LIST ORDERS - shows recent orders",
     "CONFIRM <ref> - confirm one order",
     "REJECT <ref> - reject one order",
-    "SALES TODAY - today's revenue summary",
+    "SALES TODAY - confirmed revenue summary for today",
     "LOW STOCK - products needing restock",
     "BROADCAST <message> - send promo now",
     "BROADCAST STATUS - campaign delivery results",

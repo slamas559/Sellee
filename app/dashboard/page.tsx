@@ -24,7 +24,8 @@ export default async function DashboardPage() {
     ? await getVendorWhatsAppLinkStatus(session.user.id)
     : { linked: null, pending_code: null };
 
-  const totalRevenue = orders.reduce(
+  const confirmedOrders = orders.filter((item) => item.order.status === "confirmed");
+  const totalRevenue = confirmedOrders.reduce(
     (sum, item) => sum + Number(item.order.total_amount ?? 0),
     0,
   );
@@ -65,7 +66,7 @@ export default async function DashboardPage() {
           <h2 className="mt-2 text-2xl font-black text-slate-900">
             {formatNaira(totalRevenue)}
           </h2>
-          <p className="mt-1 text-sm text-slate-600">All orders total.</p>
+          <p className="mt-1 text-sm text-slate-600">Confirmed orders only.</p>
         </article>
       </section>
 

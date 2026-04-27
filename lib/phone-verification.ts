@@ -45,6 +45,23 @@ function makeWaLink(botNumber: string, verifyCode: string): string {
   return `https://wa.me/${botNumber}?text=${encodeURIComponent(command)}`;
 }
 
+function mapPhoneOwnershipError(error: unknown): Error {
+  if (!(error instanceof Error)) {
+    return new Error("Phone verification failed.");
+  }
+
+  const text = error.message.toLowerCase();
+  if (
+    text.includes("idx_users_phone_unique") ||
+    text.includes("duplicate key") ||
+    text.includes("users_phone_key")
+  ) {
+    return new Error("This WhatsApp number is already linked to another account.");
+  }
+
+  return error;
+}
+
 async function upsertCustomerLink(userId: string, phone: string) {
   const supabase = createAdminSupabaseClient();
   const nowIso = new Date().toISOString();
@@ -125,6 +142,16 @@ export async function startRegistrationVerification(params: {
 
   if (existingUser?.id) {
     throw new Error("An account with this email already exists.");
+  }
+
+  const { data: existingPhoneUser } = await supabase
+    .from("users")
+    .select("id")
+    .eq("phone", phoneCheck.normalized)
+    .maybeSingle();
+
+  if (existingPhoneUser?.id) {
+    throw new Error("This WhatsApp number is already linked to another account.");
   }
 
   const { data: pending, error: pendingError } = await supabase
@@ -242,6 +269,15 @@ async function finalizePendingRegistration(
   let userId = "";
   if (existing?.id) {
     userId = String(existing.id);
+    const { data: phoneOwner } = await supabase
+      .from("users")
+      .select("id")
+      .eq("phone", pending.target_phone)
+      .neq("id", userId)
+      .maybeSingle();
+    if (phoneOwner?.id) {
+      throw new Error("This WhatsApp number is already linked to another account.");
+    }
   } else {
     const { data: created, error: createError } = await supabase
       .from("users")
@@ -326,18 +362,22 @@ export async function verifyChallengeByOtp(params: {
       throw new Error("Unauthorized challenge.");
     }
 
-    const nowIso = new Date().toISOString();
-    await supabase
-      .from("users")
-      .update({
-        phone: challenge.target_phone,
-        phone_verified_at: nowIso,
-      })
-      .eq("id", params.userId);
+    try {
+      const nowIso = new Date().toISOString();
+      await supabase
+        .from("users")
+        .update({
+          phone: challenge.target_phone,
+          phone_verified_at: nowIso,
+        })
+        .eq("id", params.userId);
 
-    await upsertCustomerLink(params.userId, challenge.target_phone);
-    await ensureVendorPhoneSync(params.userId, challenge.target_phone);
-    await markChallengeCompleted(challenge.id, "otp");
+      await upsertCustomerLink(params.userId, challenge.target_phone);
+      await ensureVendorPhoneSync(params.userId, challenge.target_phone);
+      await markChallengeCompleted(challenge.id, "otp");
+    } catch (error) {
+      throw mapPhoneOwnershipError(error);
+    }
 
     return {
       completed: true,
@@ -422,18 +462,26 @@ export async function verifyByWhatsAppCommand(params: {
       };
     }
 
-    const nowIso = new Date().toISOString();
-    await supabase
-      .from("users")
-      .update({
-        phone: challenge.target_phone,
-        phone_verified_at: nowIso,
-      })
-      .eq("id", challenge.user_id);
+    try {
+      const nowIso = new Date().toISOString();
+      await supabase
+        .from("users")
+        .update({
+          phone: challenge.target_phone,
+          phone_verified_at: nowIso,
+        })
+        .eq("id", challenge.user_id);
 
-    await upsertCustomerLink(challenge.user_id, challenge.target_phone);
-    await ensureVendorPhoneSync(challenge.user_id, challenge.target_phone);
-    await markChallengeCompleted(challenge.id, "verify_command");
+      await upsertCustomerLink(challenge.user_id, challenge.target_phone);
+      await ensureVendorPhoneSync(challenge.user_id, challenge.target_phone);
+      await markChallengeCompleted(challenge.id, "verify_command");
+    } catch (error) {
+      const mapped = mapPhoneOwnershipError(error);
+      return {
+        completed: false,
+        message: mapped.message,
+      };
+    }
 
     return {
       completed: true,
@@ -462,7 +510,15 @@ export async function verifyByWhatsAppCommand(params: {
     };
   }
 
-  await finalizePendingRegistration(pending as PendingRegistrationRow);
+  try {
+    await finalizePendingRegistration(pending as PendingRegistrationRow);
+  } catch (error) {
+    const mapped = mapPhoneOwnershipError(error);
+    return {
+      completed: false,
+      message: mapped.message,
+    };
+  }
   await markChallengeCompleted(challenge.id, "verify_command");
 
   return {
@@ -542,6 +598,17 @@ export async function startAccountPhoneChangeVerification(params: {
 
   if (String(me.phone ?? "") === phoneCheck.normalized) {
     throw new Error("This phone number is already linked to your account.");
+  }
+
+  const { data: phoneOwner } = await supabase
+    .from("users")
+    .select("id")
+    .eq("phone", phoneCheck.normalized)
+    .neq("id", params.userId)
+    .maybeSingle();
+
+  if (phoneOwner?.id) {
+    throw new Error("This WhatsApp number is already linked to another account.");
   }
 
   const verifyCode = generateCode();

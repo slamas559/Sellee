@@ -129,6 +129,13 @@ export const authOptions: NextAuthOptions = {
       }
 
       if (existingUser) {
+        if (user.name?.trim()) {
+          await supabase
+            .from("users")
+            .update({ full_name: user.name.trim() })
+            .eq("id", existingUser.id)
+            .is("full_name", null);
+        }
         return true;
       }
 

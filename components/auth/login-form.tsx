@@ -11,6 +11,7 @@ export function LoginForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const googleCallbackUrl = params.get("callbackUrl") ?? "/account?onboarding=google";
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -44,9 +45,9 @@ export function LoginForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="space-y-2">
-        <label className="text-sm font-medium" htmlFor="email">
+    <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-4">
+      <div className="auth-stagger-1 space-y-2">
+        <label className="text-sm font-medium text-slate-700" htmlFor="email">
           Email
         </label>
         <input
@@ -55,13 +56,13 @@ export function LoginForm() {
           required
           value={email}
           onChange={(event) => setEmail(event.target.value)}
-          className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm outline-none ring-sky-300 transition focus:ring-2"
+          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none ring-emerald-300 transition placeholder:text-slate-400 focus:border-emerald-400 focus:ring-2"
           placeholder="you@example.com"
         />
       </div>
 
-      <div className="space-y-2">
-        <label className="text-sm font-medium" htmlFor="password">
+      <div className="auth-stagger-2 space-y-2">
+        <label className="text-sm font-medium text-slate-700" htmlFor="password">
           Password
         </label>
         <input
@@ -71,13 +72,13 @@ export function LoginForm() {
           minLength={8}
           value={password}
           onChange={(event) => setPassword(event.target.value)}
-          className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm outline-none ring-sky-300 transition focus:ring-2"
+          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none ring-emerald-300 transition placeholder:text-slate-400 focus:border-emerald-400 focus:ring-2"
           placeholder="Minimum 8 characters"
         />
       </div>
 
       {error ? (
-        <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+        <p className="auth-stagger-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
           {error}
         </p>
       ) : null}
@@ -85,15 +86,15 @@ export function LoginForm() {
       <button
         type="submit"
         disabled={isLoading}
-        className="w-full rounded-md bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-700 disabled:opacity-60"
+        className="auth-stagger-4 w-full rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-60"
       >
         {isLoading ? "Signing in..." : "Sign in"}
       </button>
 
       <button
         type="button"
-        onClick={() => signIn("google", { callbackUrl: "/" })}
-        className="w-full rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-900 transition hover:bg-slate-50"
+        onClick={() => signIn("google", { callbackUrl: googleCallbackUrl })}
+        className="auth-stagger-5 w-full rounded-xl border border-yellow-300 bg-yellow-100/60 px-4 py-2.5 text-sm font-semibold text-slate-900 transition hover:bg-yellow-100"
       >
         Continue with Google
       </button>

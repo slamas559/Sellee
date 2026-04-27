@@ -15,6 +15,7 @@ export const metadata: Metadata = {
 type AccountSearchParams = Promise<{
   status?: string;
   q?: string;
+  onboarding?: string;
 }>;
 
 function formatOrderStatus(status: string): string {
@@ -35,6 +36,7 @@ export default async function AccountPage({
   const params = await searchParams;
   const selectedStatus = (params.status ?? "all").toLowerCase();
   const orderRefQuery = (params.q ?? "").trim().toUpperCase();
+  const showOnboardingPrompt = params.onboarding === "google";
 
   const orders = await getCustomerOrders(session.user.id);
   const follows = await getCustomerFollows(session.user.id);
@@ -62,6 +64,11 @@ export default async function AccountPage({
         <p className="mt-1 text-sm text-slate-600">
           Manage your personal details, WhatsApp ordering contact, and role settings.
         </p>
+        {showOnboardingPrompt ? (
+          <p className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+            Google sign-in successful. Complete your WhatsApp number verification below to finish account setup.
+          </p>
+        ) : null}
       </header>
       <AccountProfileForm />
       <CustomerFollowsManager initialFollows={follows} />

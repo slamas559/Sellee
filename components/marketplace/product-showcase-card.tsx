@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { KeyboardEvent, MouseEvent } from "react";
 import { useMemo, useState } from "react";
+import { SocialShareActions } from "@/components/shared/social-share-actions";
 import { StarRating } from "@/components/store/star-rating";
 import { formatNaira } from "@/lib/format";
 import type { StoreTemplate } from "@/types";
@@ -126,18 +127,31 @@ export function ProductShowcaseCard({
             : product.category || "Featured"}
         </span>
 
-        <div className="absolute right-2 top-2 flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-white/80 bg-white shadow-md sm:right-3 sm:top-3 sm:h-11 sm:w-11">
-          {store.logo_url ? (
-            <Image
-              src={store.logo_url}
-              alt={`${store.name} logo`}
-              width={44}
-              height={44}
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            <span className="text-[10px] font-semibold text-slate-500">Store</span>
-          )}
+        <div className="absolute right-2 top-2 z-20 flex flex-col items-end gap-1.5 sm:right-3 sm:top-3">
+          <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-white/80 bg-white shadow-md sm:h-11 sm:w-11">
+            {store.logo_url ? (
+              <Image
+                src={store.logo_url}
+                alt={`${store.name} logo`}
+                width={44}
+                height={44}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <span className="text-[10px] font-semibold text-slate-500">Store</span>
+            )}
+          </div>
+          <SocialShareActions
+            mode="menu"
+            compact
+            align="right"
+            url={productHref}
+            title={`${product.name} - ${store.name}`}
+            text={`Check out ${product.name} from ${store.name} on Sellee.`}
+            className="absolute top-20 z-20 sm:top-27"
+            triggerClassName="inline-flex h-7 w-7 items-center justify-center cursor-pointer rounded-full text-white shadow-md backdrop-blur-md hover:bg-white/50 sm:h-8 sm:w-8"
+            triggerLabel={`Share ${product.name}`}
+          />
         </div>
 
         {hasManyImages ? (

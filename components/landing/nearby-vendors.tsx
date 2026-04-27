@@ -45,17 +45,18 @@ export function NearbyVendorCard({
   hasDistance: boolean;
   mode?: "carousel" | "grid";
 }) {
-  const niches = (vendor.niche_names ?? []).filter(Boolean).slice(0, 3);
+  const niches = (vendor.niche_names ?? []).filter(Boolean).slice(0, mode === "grid" ? 2 : 3);
   const locationText =
     [vendor.city, vendor.state, vendor.country].filter(Boolean).join(", ") || "Location not set";
   const isGrid = mode === "grid";
+  const cardShellClass = isGrid
+    ? "h-full p-3 sm:p-4"
+    : "w-[82vw] min-w-[250px] max-w-[290px] shrink-0 snap-start p-4 sm:w-auto sm:min-w-0 sm:max-w-none";
 
   return (
     <Link
       href={`/store/${vendor.slug}`}
-      className={`group relative overflow-hidden rounded-2xl border border-slate-200 bg-white transition hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-md ${
-        isGrid ? "h-full p-3 sm:p-4" : "p-4"
-      }`}
+      className={`group relative overflow-hidden rounded-2xl border border-slate-200 bg-white transition hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-md ${cardShellClass}`}
     >
       {vendor.logo_url ? (
         <div
@@ -69,11 +70,11 @@ export function NearbyVendorCard({
         className="absolute inset-0 bg-gradient-to-b from-white/65 via-white/80 to-white/92"
       />
 
-      <div className="relative z-10">
+      <div className={`relative z-10 ${isGrid ? "flex h-full flex-col" : ""}`}>
         <p className="line-clamp-1 text-sm font-semibold text-slate-900 group-hover:text-emerald-700 sm:text-base">
           {vendor.name}
         </p>
-        <p className="mt-1.5 line-clamp-2 text-xs text-slate-600 sm:mt-2 sm:line-clamp-1 sm:text-sm">
+        <p className="mt-1.5 line-clamp-1 text-xs text-slate-600 sm:mt-2 sm:text-sm">
           {locationText}
         </p>
         {niches.length > 0 ? (
@@ -94,9 +95,11 @@ export function NearbyVendorCard({
             {(vendor.rating_avg ?? 0).toFixed(1)} ({vendor.rating_count})
           </span>
         </p>
-        <div className="mt-2 flex items-center justify-between gap-2 text-xs">
-          <p className="font-medium text-slate-600">Followers: {vendor.follower_count ?? 0}</p>
-          <p className="font-medium text-emerald-700">
+        <div className="mt-auto flex items-center justify-between gap-2 pt-2 text-xs">
+          <p className="min-w-0 truncate font-medium text-slate-600">
+            Followers: {vendor.follower_count ?? 0}
+          </p>
+          <p className="min-w-0 truncate text-right font-medium text-emerald-700">
             {typeof vendor.distance_km === "number"
               ? `${vendor.distance_km.toFixed(1)} km away`
               : hasDistance

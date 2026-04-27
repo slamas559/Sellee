@@ -6,6 +6,10 @@ create extension if not exists "pgcrypto";
 alter table public.users
   add column if not exists phone_verified_at timestamptz;
 
+create unique index if not exists idx_users_phone_unique
+  on public.users (phone)
+  where phone is not null;
+
 create table if not exists public.pending_registrations (
   id uuid primary key default gen_random_uuid(),
   full_name text not null,

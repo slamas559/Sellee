@@ -13,6 +13,10 @@ create table if not exists public.users (
   created_at timestamptz not null default now()
 );
 
+create unique index if not exists idx_users_phone_unique
+  on public.users (phone)
+  where phone is not null;
+
 create table if not exists public.stores (
   id uuid primary key default gen_random_uuid(),
   vendor_id uuid not null references public.users(id) on delete cascade,

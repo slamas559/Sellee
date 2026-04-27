@@ -37,12 +37,22 @@ export default async function DashboardAnalyticsPage() {
   });
 
   const monthlyRevenue = monthlyOrders.reduce(
-    (sum, item) => sum + Number(item.order.total_amount ?? 0),
+    (sum, item) =>
+      item.order.status === "confirmed"
+        ? sum + Number(item.order.total_amount ?? 0)
+        : sum,
     0,
   );
   const previousMonthlyRevenue = previousMonthlyOrders.reduce(
-    (sum, item) => sum + Number(item.order.total_amount ?? 0),
+    (sum, item) =>
+      item.order.status === "confirmed"
+        ? sum + Number(item.order.total_amount ?? 0)
+        : sum,
     0,
+  );
+  const confirmedMonthlyOrders = monthlyOrders.filter((item) => item.order.status === "confirmed");
+  const confirmedPreviousMonthlyOrders = previousMonthlyOrders.filter(
+    (item) => item.order.status === "confirmed",
   );
 
   const lowStock = products.filter((product) => product.stock_count <= 2).length;
@@ -63,6 +73,9 @@ export default async function DashboardAnalyticsPage() {
           <h2 className="mt-2 text-2xl font-black text-slate-900">{formatNaira(monthlyRevenue)}</h2>
           <p className="mt-1 text-xs text-slate-500">
             vs last month: {calcGrowth(monthlyRevenue, previousMonthlyRevenue)}
+          </p>
+          <p className="mt-1 text-xs text-slate-500">
+            Confirmed only ({confirmedMonthlyOrders.length} vs {confirmedPreviousMonthlyOrders.length})
           </p>
         </article>
 

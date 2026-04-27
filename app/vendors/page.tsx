@@ -211,7 +211,7 @@ export default async function VendorsPage({ searchParams }: VendorsPageProps) {
             No vendors match your current filter.
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-2 [@media(max-width:340px)]:grid-cols-1 sm:gap-3 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-3 xl:grid-cols-4">
             {filteredVendors.map((vendor) => (
               <NearbyVendorCard key={vendor.id} vendor={vendor} hasDistance={false} mode="grid" />
             ))}

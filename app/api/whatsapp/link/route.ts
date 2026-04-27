@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { logDevError } from "@/lib/logger";
+import { requireVerifiedPhone } from "@/lib/require-verified-phone";
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
 import { generateLinkCodeForVendor } from "@/lib/whatsapp-bot/vendor-commands";
 
@@ -10,6 +11,14 @@ export async function GET() {
 
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  const guard = await requireVerifiedPhone({
+    userId: session.user.id,
+    context: "vendor_whatsapp",
+    requiredRole: "vendor",
+  });
+  if (!guard.ok) {
+    return guard.response;
   }
 
   try {
@@ -67,6 +76,14 @@ export async function POST() {
 
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  const guard = await requireVerifiedPhone({
+    userId: session.user.id,
+    context: "vendor_whatsapp",
+    requiredRole: "vendor",
+  });
+  if (!guard.ok) {
+    return guard.response;
   }
 
   try {

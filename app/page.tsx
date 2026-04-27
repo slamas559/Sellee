@@ -78,20 +78,12 @@ async function getMarketplaceData(q?: string, category?: string) {
     .order("created_at", { ascending: false })
     .limit(24);
 
-  let productsQuery = supabase
+  const productsQuery = supabase
     .from("products")
     .select("id, store_id, name, description, category, price, image_url, image_urls, rating_avg, rating_count, stock_count, created_at")
     .eq("is_available", true)
     .order("created_at", { ascending: false })
-    .limit(24);
-
-  if (category) {
-    productsQuery = productsQuery.eq("category", category);
-  }
-
-  if (q) {
-    productsQuery = productsQuery.or(`name.ilike.%${q}%,description.ilike.%${q}%`);
-  }
+    .limit(500);
 
   const categoryRowsPromise = supabase
     .from("products")
@@ -100,26 +92,40 @@ async function getMarketplaceData(q?: string, category?: string) {
     .not("category", "is", null)
     .limit(100);
 
-  const [{ data: stores }, { data: products }, { data: categoryRows }] = await Promise.all([
+  const nichesPromise = supabase
+    .from("niches")
+    .select("id, name, slug")
+    .order("name", { ascending: true });
+
+  const nicheCategoriesPromise = supabase
+    .from("niche_categories")
+    .select("niche_id, name");
+
+  const [{ data: stores }, { data: products }, { data: categoryRows }, { data: niches }, { data: nicheCategories }] = await Promise.all([
     storesPromise,
     productsQuery,
     categoryRowsPromise,
+    nichesPromise,
+    nicheCategoriesPromise,
   ]);
 
   const typedStores = (stores ?? []) as StoreLite[];
-  const typedProducts = (products ?? []) as ProductLite[];
+  const allProducts = (products ?? []) as ProductLite[];
 
   const storeIds = typedStores.map((store) => store.id);
   const nichesByStoreId = new Map<string, string[]>();
+  const nicheIdsByStoreId = new Map<string, string[]>();
   if (storeIds.length > 0) {
     const { data: storeNiches } = await supabase
       .from("store_niches")
-      .select("store_id, niche:niche_id(name)")
+      .select("store_id, niche_id, niche:niche_id(name)")
       .in("store_id", storeIds);
 
-    for (const row of (storeNiches ??
-      []) as Array<{ store_id: string; niche?: { name?: string } | null }>) {
+    for (const row of (storeNiches ?? []) as Array<{ store_id: string; niche_id: string; niche?: { name?: string } | null }>) {
       const nicheName = row.niche?.name?.trim();
+      const idList = nicheIdsByStoreId.get(row.store_id) ?? [];
+      idList.push(row.niche_id);
+      nicheIdsByStoreId.set(row.store_id, idList);
       if (!nicheName) continue;
       const current = nichesByStoreId.get(row.store_id) ?? [];
       current.push(nicheName);
@@ -150,6 +156,53 @@ async function getMarketplaceData(q?: string, category?: string) {
 
   const storesById = new Map(enrichedStores.map((store) => [store.id, store]));
 
+  let filteredProducts = allProducts;
+  if (category) {
+    const categoryLower = category.toLowerCase();
+    filteredProducts = filteredProducts.filter(
+      (product) => (product.category ?? "").toLowerCase() === categoryLower,
+    );
+  }
+
+  if (q) {
+    const qLower = q.toLowerCase();
+    const nicheRows = ((niches ?? []) as Array<{ id: string; name: string; slug: string }>);
+    const nicheCategoryRows = ((nicheCategories ?? []) as Array<{ niche_id: string; name: string }>);
+    const matchedNicheIds = new Set(
+      nicheRows
+        .filter((niche) =>
+          niche.name.toLowerCase().includes(qLower) || niche.slug.toLowerCase().includes(qLower),
+        )
+        .map((niche) => niche.id),
+    );
+    const matchedCategoryNames = new Set(
+      nicheCategoryRows
+        .filter((row) => row.name.toLowerCase().includes(qLower))
+        .map((row) => row.name.toLowerCase()),
+    );
+
+    filteredProducts = filteredProducts.filter((product) => {
+      const nameText = product.name.toLowerCase();
+      const descText = (product.description ?? "").toLowerCase();
+      const categoryText = (product.category ?? "").toLowerCase();
+      const directTextMatch =
+        nameText.includes(qLower) || descText.includes(qLower) || categoryText.includes(qLower);
+      if (directTextMatch) return true;
+
+      if (categoryText && matchedCategoryNames.has(categoryText)) return true;
+
+      const storeNicheNames = (nichesByStoreId.get(product.store_id) ?? []).map((name) =>
+        name.toLowerCase(),
+      );
+      if (storeNicheNames.some((name) => name.includes(qLower))) return true;
+
+      const storeNicheIds = nicheIdsByStoreId.get(product.store_id) ?? [];
+      if (storeNicheIds.some((id) => matchedNicheIds.has(id))) return true;
+
+      return false;
+    });
+  }
+
   const categories = [
     ...new Set(
       (categoryRows ?? [])
@@ -160,7 +213,7 @@ async function getMarketplaceData(q?: string, category?: string) {
 
   return {
     stores: enrichedStores,
-    products: typedProducts,
+    products: filteredProducts.slice(0, 24),
     categories: categories.length > 0 ? categories : FALLBACK_CATEGORIES,
     storesById,
   };
@@ -196,7 +249,7 @@ export default async function Home({ searchParams }: HomeProps) {
             <input
               name="q"
               defaultValue={q ?? ""}
-              placeholder="Search products, brands, and vendors..."
+              placeholder="Search by product, category, or niche..."
               className="w-full bg-transparent px-3 py-2 text-sm text-slate-700 outline-none"
             />
             {category ? <input type="hidden" name="category" value={category} /> : null}
