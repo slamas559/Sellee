@@ -96,16 +96,18 @@ export function NearbyVendorCard({
           </span>
         </p>
         <div className="mt-auto flex items-center justify-between gap-2 pt-2 text-xs">
-          <p className="min-w-0 truncate font-medium text-slate-600">
+          <p className="min-w-0 truncate text-[9px] sm:text-[12px] font-medium text-slate-600">
             Followers: {vendor.follower_count ?? 0}
           </p>
-          <p className="min-w-0 truncate text-right font-medium text-emerald-700">
-            {typeof vendor.distance_km === "number"
-              ? `${vendor.distance_km.toFixed(1)} km away`
-              : hasDistance
-                ? "Distance unavailable"
-                : "Open store"}
-          </p>
+          {typeof vendor.distance_km === "number" ? (
+            <p className="min-w-0 truncate text-right text-[9px] sm:text-[12px] font-medium text-emerald-700">
+              {vendor.distance_km.toFixed(1)} km away
+            </p>
+          ) : hasDistance ? (
+            <p className="min-w-0 truncate text-right text-[9px] sm:text-[12px] font-medium text-emerald-700">
+              Distance unavailable
+            </p>
+          ) : null}
         </div>
       </div>
     </Link>

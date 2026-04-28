@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { formatNaira } from "@/lib/format";
 import type { ProductRecord } from "@/types";
 
@@ -46,6 +46,19 @@ export function ProductsManager({ initialProducts }: ProductsManagerProps) {
   const [message, setMessage] = useState<string | null>(null);
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [form, setForm] = useState<ProductFormState>(initialForm);
+  const [dragActive, setDragActive] = useState(false);
+  const imagePreviewUrls = useMemo(
+    () => form.images.map((file) => URL.createObjectURL(file)),
+    [form.images],
+  );
+
+  useEffect(() => {
+    return () => {
+      for (const url of imagePreviewUrls) {
+        URL.revokeObjectURL(url);
+      }
+    };
+  }, [imagePreviewUrls]);
 
   useEffect(() => {
     void loadProducts();
@@ -91,6 +104,32 @@ export function ProductsManager({ initialProducts }: ProductsManagerProps) {
   function resetForm() {
     setEditingProductId(null);
     setForm(initialForm);
+  }
+
+  function addImages(nextFiles: File[]) {
+    if (nextFiles.length === 0) return;
+    setForm((prev) => ({
+      ...prev,
+      images: [...prev.images, ...nextFiles],
+      remove_image: false,
+    }));
+  }
+
+  function removeSelectedImage(index: number) {
+    setForm((prev) => ({
+      ...prev,
+      images: prev.images.filter((_, currentIndex) => currentIndex !== index),
+    }));
+  }
+
+  function moveSelectedImageToPrimary(index: number) {
+    setForm((prev) => {
+      if (index <= 0 || index >= prev.images.length) return prev;
+      const next = [...prev.images];
+      const [target] = next.splice(index, 1);
+      next.unshift(target);
+      return { ...prev, images: next };
+    });
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -287,24 +326,83 @@ export function ProductsManager({ initialProducts }: ProductsManagerProps) {
             />
           </label>
 
-          <label className="space-y-2 text-sm">
-            <span className="font-medium text-slate-700">Product image (optional)</span>
-            <input
-              type="file"
-              accept="image/*"
-              multiple
-              onChange={(event) =>
-                setForm((prev) => ({
-                  ...prev,
-                  images: Array.from(event.target.files ?? []),
-                }))
-              }
-              className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm"
-            />
+          <div className="space-y-2 text-sm md:col-span-2">
+            <span className="font-medium text-slate-700">Product images (optional)</span>
+            <label
+              onDragOver={(event) => {
+                event.preventDefault();
+                setDragActive(true);
+              }}
+              onDragLeave={() => setDragActive(false)}
+              onDrop={(event) => {
+                event.preventDefault();
+                setDragActive(false);
+                addImages(Array.from(event.dataTransfer.files ?? []).filter((file) => file.type.startsWith("image/")));
+              }}
+              className={`flex cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed px-4 py-6 text-center transition ${
+                dragActive
+                  ? "border-emerald-400 bg-emerald-50"
+                  : "border-slate-300 bg-slate-50 hover:border-emerald-300 hover:bg-emerald-50/40"
+              }`}
+            >
+              <span className="text-sm font-semibold text-slate-800">Drag images here or click to upload</span>
+              <span className="mt-1 text-xs text-slate-500">
+                First selected image becomes cover image in cards.
+              </span>
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={(event) => addImages(Array.from(event.target.files ?? []))}
+                className="hidden"
+              />
+            </label>
             {form.images.length > 0 ? (
-              <p className="text-xs text-slate-500">{form.images.length} image(s) selected.</p>
+              <div className="space-y-2">
+                <p className="text-xs text-slate-500">{form.images.length} image(s) selected.</p>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+                  {form.images.map((file, index) => (
+                    <div key={`${file.name}-${index}`} className="rounded-lg border border-slate-200 bg-white p-2">
+                      <div className="relative h-24 overflow-hidden rounded-md bg-slate-100">
+                        <Image
+                          src={imagePreviewUrls[index] ?? ""}
+                          alt={file.name}
+                          fill
+                          className="object-cover"
+                          sizes="200px"
+                          unoptimized
+                        />
+                        {index === 0 ? (
+                          <span className="absolute left-1.5 top-1.5 rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-semibold text-white">
+                            Cover
+                          </span>
+                        ) : null}
+                      </div>
+                      <p className="mt-2 line-clamp-1 text-[11px] text-slate-600">{file.name}</p>
+                      <div className="mt-2 flex items-center gap-2">
+                        {index > 0 ? (
+                          <button
+                            type="button"
+                            onClick={() => moveSelectedImageToPrimary(index)}
+                            className="rounded-md border border-slate-300 px-2 py-1 text-[10px] font-semibold text-slate-700 hover:bg-slate-50"
+                          >
+                            Make cover
+                          </button>
+                        ) : null}
+                        <button
+                          type="button"
+                          onClick={() => removeSelectedImage(index)}
+                          className="rounded-md border border-red-300 px-2 py-1 text-[10px] font-semibold text-red-700 hover:bg-red-50"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             ) : null}
-          </label>
+          </div>
 
           <label className="flex items-center gap-2 text-sm text-slate-700">
             <input

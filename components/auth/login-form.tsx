@@ -4,6 +4,29 @@ import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 
+function GoogleIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true">
+      <path
+        d="M21.8 12.2c0-.7-.1-1.3-.2-1.9H12v3.6h5.5a4.7 4.7 0 0 1-2 3.1v2.6h3.3c1.9-1.8 3-4.4 3-7.4Z"
+        fill="#4285F4"
+      />
+      <path
+        d="M12 22c2.7 0 5-0.9 6.7-2.5l-3.3-2.6c-.9.6-2.1 1-3.4 1-2.6 0-4.9-1.8-5.7-4.2H2.9v2.7A10 10 0 0 0 12 22Z"
+        fill="#34A853"
+      />
+      <path
+        d="M6.3 13.7a6 6 0 0 1 0-3.4V7.6H2.9a10 10 0 0 0 0 8.8l3.4-2.7Z"
+        fill="#FBBC05"
+      />
+      <path
+        d="M12 6a5.4 5.4 0 0 1 3.8 1.5l2.8-2.8A9.6 9.6 0 0 0 12 2a10 10 0 0 0-9.1 5.6l3.4 2.7C7.1 7.8 9.4 6 12 6Z"
+        fill="#EA4335"
+      />
+    </svg>
+  );
+}
+
 export function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
@@ -94,8 +117,9 @@ export function LoginForm() {
       <button
         type="button"
         onClick={() => signIn("google", { callbackUrl: googleCallbackUrl })}
-        className="auth-stagger-5 w-full rounded-xl border border-yellow-300 bg-yellow-100/60 px-4 py-2.5 text-sm font-semibold text-slate-900 transition hover:bg-yellow-100"
+        className="auth-stagger-5 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-yellow-300 bg-yellow-100/60 px-4 py-2.5 text-sm font-semibold text-slate-900 transition hover:bg-yellow-100"
       >
+        <GoogleIcon />
         Continue with Google
       </button>
     </form>
