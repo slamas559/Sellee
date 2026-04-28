@@ -21,6 +21,7 @@ import type { ProductRecord, StoreRecord } from "@/types";
 
 type StorePageProps = {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ q?: string; category?: string }>;
 };
 
 export async function generateMetadata({ params }: StorePageProps): Promise<Metadata> {
@@ -40,7 +41,8 @@ function HeroVisual({
   storeName: string;
   className: string;
 }) {
-  if (!heroImageUrl) {
+  const safeHeroUrl = heroImageUrl?.trim();
+  if (!safeHeroUrl) {
     return (
       <div
         className={`flex items-center justify-center rounded-2xl border border-white/40 bg-white/20 text-sm font-semibold text-white/90 ${className}`}
@@ -52,7 +54,7 @@ function HeroVisual({
   return (
     <div className={`relative overflow-hidden rounded-2xl bg-white ${className}`}>
       <Image
-        src={heroImageUrl}
+        src={safeHeroUrl}
         alt={`${storeName} hero`}
         fill
         className="object-contain"
@@ -62,7 +64,7 @@ function HeroVisual({
   );
 }
 
-function StoreTopBar({
+function StoreHero({
   store,
   primaryColor,
   nicheNames,
@@ -70,6 +72,9 @@ function StoreTopBar({
   activeUserId,
   isFollowing,
   storeUrl,
+  heroTitle,
+  heroSubtitle,
+  template,
 }: {
   store: StoreRecord;
   primaryColor: string;
@@ -78,65 +83,110 @@ function StoreTopBar({
   activeUserId: string | null;
   isFollowing: boolean;
   storeUrl: string;
+  heroTitle: string;
+  heroSubtitle: string;
+  template: StoreRecord["store_template"];
 }) {
+  const heroImageUrl = normalizeStorefrontConfig(store.storefront_config).hero_image_url;
+  const templateMode = normalizeStoreTemplate(template);
+  const heroHeightClass =
+    templateMode === "fashion_editorial"
+      ? "h-[300px] sm:h-[380px] lg:h-[430px]"
+      : templateMode === "modern_grid"
+        ? "h-[280px] sm:h-[360px] lg:h-[410px]"
+        : "h-[290px] sm:h-[370px] lg:h-[420px]";
+  const overlayClass =
+    templateMode === "modern_grid"
+      ? "absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-900/45 to-slate-900/15"
+      : templateMode === "fashion_editorial"
+        ? "absolute inset-0 bg-gradient-to-t from-black/70 via-black/35 to-black/10"
+        : "absolute inset-0 bg-gradient-to-t from-black/65 via-black/30 to-transparent";
+  const motionClass =
+    templateMode === "fashion_editorial"
+      ? "storefront-anim-fade"
+      : templateMode === "modern_grid"
+        ? "storefront-anim-slide"
+        : templateMode === "lifestyle_showcase"
+          ? "storefront-anim-zoom"
+          : "storefront-anim-fade";
+
   return (
-    <header className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="relative h-12 w-12 overflow-hidden rounded-full border border-slate-200 bg-slate-100">
-            {store.logo_url ? (
-              <Image src={store.logo_url} alt={`${store.name} logo`} fill className="object-cover" sizes="48px" />
-            ) : (
-              <div className="flex h-full items-center justify-center text-[10px] text-slate-500">Logo</div>
-            )}
+    <section className={`relative left-1/2 right-1/2 w-screen -translate-x-1/2 overflow-hidden rounded-none border-y border-slate-200 shadow-sm ${motionClass}`}>
+      <div className={`relative ${heroHeightClass}`}>
+        {heroImageUrl ? (
+          <Image
+            src={heroImageUrl}
+            alt={`${store.name} hero`}
+            fill
+            className="object-cover"
+            sizes="100vw"
+          />
+        ) : (
+          <div className="flex h-full items-center justify-center bg-slate-200 text-sm font-semibold text-slate-600">
+            Add hero image in dashboard
           </div>
-          <div>
-            <h1 className="text-xl font-black text-slate-900 sm:text-2xl">{store.name}</h1>
-            <p className="text-xs text-slate-600 sm:text-sm">WhatsApp: {store.whatsapp_number}</p>
-            {nicheNames.length > 0 ? (
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                {nicheNames.slice(0, 4).map((niche) => (
-                  <span
-                    key={`${store.id}-${niche}`}
-                    className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-800"
-                  >
-                    {niche}
-                  </span>
-                ))}
+        )}
+        <div className={overlayClass} />
+        <div className="absolute inset-x-0 bottom-0 p-4 sm:p-6">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="max-w-2xl space-y-2">
+              <div className="flex items-center gap-3">
+                <div className="relative h-12 w-12 overflow-hidden rounded-full border border-white/50 bg-white/20 sm:h-14 sm:w-14">
+                  {store.logo_url ? (
+                    <Image src={store.logo_url} alt={`${store.name} logo`} fill className="object-cover" sizes="56px" />
+                  ) : (
+                    <div className="flex h-full items-center justify-center text-[10px] text-white">Logo</div>
+                  )}
+                </div>
+                <div>
+                  <h1 className="text-2xl font-black tracking-tight text-white sm:text-3xl lg:text-4xl">{store.name}</h1>
+                  <p className="text-xs text-white/85 sm:text-sm">{heroTitle}</p>
+                </div>
               </div>
-            ) : null}
-            <StarRating value={store.rating_avg} count={store.rating_count} accent="yellow" />
+              <p className="max-w-xl text-sm text-white/90 sm:text-base lg:text-lg">{heroSubtitle}</p>
+              {nicheNames.length > 0 ? (
+                <div className="flex flex-wrap gap-1.5">
+                  {nicheNames.slice(0, 6).map((niche) => (
+                    <span
+                      key={`${store.id}-${niche}`}
+                      className="inline-flex rounded-full border border-white/40 bg-white/20 px-2 py-0.5 text-[11px] font-semibold text-white backdrop-blur"
+                    >
+                      {niche}
+                    </span>
+                  ))}
+                </div>
+              ) : null}
+              <StarRating value={store.rating_avg} count={store.rating_count} accent="yellow" />
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <FollowStoreButton
+                storeId={store.id}
+                storeSlug={store.slug}
+                isLoggedIn={isLoggedIn}
+                isOwner={Boolean(activeUserId && activeUserId === store.vendor_id)}
+                initialFollowing={isFollowing}
+              />
+              <Link
+                href={`https://wa.me/${store.whatsapp_number}`}
+                className="rounded-full px-4 py-2 text-sm font-semibold text-white"
+                style={{ backgroundColor: primaryColor }}
+              >
+                Chat vendor
+              </Link>
+              <SocialShareActions
+                mode="menu"
+                compact
+                url={storeUrl}
+                title={`${store.name} on Sellee`}
+                text={`Check out ${store.name} on Sellee.`}
+                triggerClassName="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/60 bg-white/20 text-white backdrop-blur hover:bg-white/35"
+                triggerLabel="Share store"
+              />
+            </div>
           </div>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <FollowStoreButton
-            storeId={store.id}
-            storeSlug={store.slug}
-            isLoggedIn={isLoggedIn}
-            isOwner={Boolean(activeUserId && activeUserId === store.vendor_id)}
-            initialFollowing={isFollowing}
-          />
-          <Link
-            href={`https://wa.me/${store.whatsapp_number}`}
-            className="rounded-full px-4 py-2 text-sm font-semibold text-white"
-            style={{ backgroundColor: primaryColor }}
-          >
-            <span className="text-white">
-              Chat vendor
-            </span>
-          </Link>
-          <SocialShareActions
-            mode="menu"
-            compact
-            url={storeUrl}
-            title={`${store.name} on Sellee`}
-            text={`Check out ${store.name} on Sellee.`}
-            triggerClassName="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
-            triggerLabel="Share store"
-          />
         </div>
       </div>
-    </header>
+    </section>
   );
 }
 
@@ -178,8 +228,9 @@ function ProductGrid({
   );
 }
 
-export default async function StorePage({ params }: StorePageProps) {
+export default async function StorePage({ params, searchParams }: StorePageProps) {
   const { slug } = await params;
+  const query = await searchParams;
   const session = await getServerSession(authOptions);
   const supabase = createAdminSupabaseClient();
 
@@ -233,7 +284,32 @@ export default async function StorePage({ params }: StorePageProps) {
   }
 
   const availableProducts = (products ?? []) as ProductRecord[];
+  const storeCategories = Array.from(
+    new Set(
+      availableProducts
+        .map((product) => product.category?.trim() ?? "")
+        .filter(Boolean),
+    ),
+  );
+  const q = query.q?.trim().toLowerCase() ?? "";
+  const selectedCategory = query.category?.trim() ?? "";
+  const filteredProducts = availableProducts.filter((product) => {
+    if (selectedCategory && (product.category ?? "") !== selectedCategory) return false;
+    if (!q) return true;
+    const name = product.name.toLowerCase();
+    const description = (product.description ?? "").toLowerCase();
+    const category = (product.category ?? "").toLowerCase();
+    return name.includes(q) || description.includes(q) || category.includes(q);
+  });
   const template = normalizeStoreTemplate(store.store_template);
+  const bodyMotionClass =
+    template === "fashion_editorial"
+      ? "storefront-anim-fade"
+      : template === "modern_grid"
+        ? "storefront-anim-slide"
+        : template === "lifestyle_showcase"
+          ? "storefront-anim-zoom"
+          : "storefront-anim-fade";
   const themePreset = normalizeThemePreset(store.store_theme_preset);
   const theme = getThemeByPreset(themePreset);
   const config = normalizeStorefrontConfig(store.storefront_config);
@@ -249,10 +325,52 @@ export default async function StorePage({ params }: StorePageProps) {
   const mobileEdgeBannerTallClass =
     "h-56 w-screen max-w-none relative left-1/2 right-1/2 -mx-[50vw] rounded-none border-0 shadow-none sm:static sm:left-auto sm:right-auto sm:mx-0 sm:w-full sm:max-w-full sm:rounded-xl sm:border sm:border-slate-200 sm:shadow-sm";
 
+  const storefrontControls = (
+    <section className="space-y-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:p-4">
+      <form className="flex flex-wrap items-center gap-2" action={`/store/${slug}`}>
+        <input
+          name="q"
+          defaultValue={query.q ?? ""}
+          placeholder="Search this store..."
+          className="min-w-[220px] flex-1 rounded-full border border-slate-200 px-4 py-2 text-sm outline-none ring-emerald-300 focus:ring-2"
+        />
+        {selectedCategory ? <input type="hidden" name="category" value={selectedCategory} /> : null}
+        <button className="rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700">
+          Search
+        </button>
+      </form>
+      <div className="flex gap-2 overflow-x-auto pb-1">
+        <Link
+          href={`/store/${slug}${query.q ? `?q=${encodeURIComponent(query.q)}` : ""}`}
+          className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold ${
+            !selectedCategory
+              ? "border-emerald-600 bg-emerald-600 text-white"
+              : "border-slate-200 bg-white text-slate-700"
+          }`}
+        >
+          All
+        </Link>
+        {storeCategories.map((category) => (
+          <Link
+            key={category}
+            href={`/store/${slug}?category=${encodeURIComponent(category)}${query.q ? `&q=${encodeURIComponent(query.q)}` : ""}`}
+            className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold ${
+              selectedCategory === category
+                ? "border-emerald-600 bg-emerald-600 text-white"
+                : "border-slate-200 bg-white text-slate-700"
+            }`}
+          >
+            {category}
+          </Link>
+        ))}
+      </div>
+    </section>
+  );
+
   if (template === "fashion_editorial") {
     return (
-      <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 bg-white px-4 py-6 sm:px-6">
-        <StoreTopBar
+      <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 bg-white px-0 py-0 sm:px-6 sm:py-6">
+        <StoreHero
           store={store}
           primaryColor={primaryColor}
           nicheNames={nicheNames}
@@ -260,8 +378,12 @@ export default async function StorePage({ params }: StorePageProps) {
           activeUserId={session?.user?.id ?? null}
           isFollowing={isFollowing}
           storeUrl={storeUrl}
+          heroTitle={config.hero_title}
+          heroSubtitle={config.hero_subtitle}
+          template={template}
         />
-        <section className="-mx-4 grid gap-4 px-4 lg:grid-cols-[1.3fr_1fr] sm:mx-0 sm:px-0">
+        <div className={`px-3 pt-4 sm:px-0 ${bodyMotionClass}`}>{storefrontControls}</div>
+        <section className="-mx-0 grid gap-4 px-3 lg:grid-cols-[1.3fr_1fr] sm:mx-0 sm:px-0">
           <HeroVisual heroImageUrl={config.hero_image_url} storeName={store.name} className="h-72 sm:h-80" />
           <article className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Editorial Pick</p>
@@ -275,7 +397,9 @@ export default async function StorePage({ params }: StorePageProps) {
             return (
               <section key={section} className="space-y-4">
                 <h3 className="text-lg font-semibold text-slate-900">Collections</h3>
-                <ProductGrid products={availableProducts} store={store} template={template} />
+                <div className={bodyMotionClass}>
+                  <ProductGrid products={filteredProducts} store={store} template={template} />
+                </div>
               </section>
             );
           }
@@ -303,8 +427,8 @@ export default async function StorePage({ params }: StorePageProps) {
 
   if (template === "lifestyle_showcase") {
     return (
-      <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 bg-slate-50 px-4 py-6 sm:px-6">
-        <StoreTopBar
+      <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 bg-slate-50 px-0 py-0 sm:px-6 sm:py-6">
+        <StoreHero
           store={store}
           primaryColor={primaryColor}
           nicheNames={nicheNames}
@@ -312,9 +436,13 @@ export default async function StorePage({ params }: StorePageProps) {
           activeUserId={session?.user?.id ?? null}
           isFollowing={isFollowing}
           storeUrl={storeUrl}
+          heroTitle={config.hero_title}
+          heroSubtitle={config.hero_subtitle}
+          template={template}
         />
+        <div className={`px-3 pt-4 sm:px-0 ${bodyMotionClass}`}>{storefrontControls}</div>
         <section
-          className="-mx-4 grid gap-4 rounded-none p-4 sm:mx-0 sm:rounded-2xl sm:p-6 lg:grid-cols-[1.5fr_1fr]"
+          className="mx-3 grid gap-4 rounded-none p-4 sm:mx-0 sm:rounded-2xl sm:p-6 lg:grid-cols-[1.5fr_1fr]"
           style={{ backgroundColor: theme.surface }}
         >
           <article className="space-y-3 rounded-xl bg-white/80 p-4 backdrop-blur">
@@ -335,7 +463,9 @@ export default async function StorePage({ params }: StorePageProps) {
             return (
               <section key={section} className="space-y-4">
                 <h3 className="text-lg font-semibold text-slate-900">Featured Products</h3>
-                <ProductGrid products={availableProducts} store={store} template={template} />
+                <div className={bodyMotionClass}>
+                  <ProductGrid products={filteredProducts} store={store} template={template} />
+                </div>
               </section>
             );
           }
@@ -366,8 +496,8 @@ export default async function StorePage({ params }: StorePageProps) {
 
   if (template === "modern_grid") {
     return (
-      <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 bg-slate-100 px-4 py-6 sm:px-6">
-        <StoreTopBar
+      <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 bg-slate-100 px-0 py-0 sm:px-6 sm:py-6">
+        <StoreHero
           store={store}
           primaryColor={primaryColor}
           nicheNames={nicheNames}
@@ -375,8 +505,12 @@ export default async function StorePage({ params }: StorePageProps) {
           activeUserId={session?.user?.id ?? null}
           isFollowing={isFollowing}
           storeUrl={storeUrl}
+          heroTitle={config.hero_title}
+          heroSubtitle={config.hero_subtitle}
+          template={template}
         />
-        <section className="grid gap-4 lg:grid-cols-[260px_1fr]">
+        <div className={`px-3 pt-4 sm:px-0 ${bodyMotionClass}`}>{storefrontControls}</div>
+        <section className="mx-3 grid gap-4 sm:mx-0 lg:grid-cols-[260px_1fr]">
           <aside className="space-y-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
             <p className="text-sm font-semibold text-slate-800">Browse</p>
             <p className="text-xs text-slate-600">{config.promo_text}</p>
@@ -400,7 +534,9 @@ export default async function StorePage({ params }: StorePageProps) {
               if (section === "featured_products") {
                 return (
                   <div key={section}>
-                    <ProductGrid products={availableProducts} store={store} template={template} />
+                    <div className={bodyMotionClass}>
+                      <ProductGrid products={filteredProducts} store={store} template={template} />
+                    </div>
                   </div>
                 );
               }
@@ -431,7 +567,7 @@ export default async function StorePage({ params }: StorePageProps) {
   // Default: grocery promo
   return (
     <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 bg-slate-50 px-4 py-6 sm:px-6">
-      <StoreTopBar
+      <StoreHero
         store={store}
         primaryColor={primaryColor}
         nicheNames={nicheNames}
@@ -439,9 +575,13 @@ export default async function StorePage({ params }: StorePageProps) {
         activeUserId={session?.user?.id ?? null}
         isFollowing={isFollowing}
         storeUrl={storeUrl}
+        heroTitle={config.hero_title}
+        heroSubtitle={config.hero_subtitle}
+        template={template}
       />
+      <div className={`px-3 pt-4 sm:px-0 ${bodyMotionClass}`}>{storefrontControls}</div>
       <section
-        className="-mx-4 grid gap-4 rounded-none p-4 sm:mx-0 sm:rounded-2xl sm:p-6 lg:grid-cols-[1.2fr_1fr]"
+        className="mx-3 grid gap-4 rounded-none p-4 sm:mx-0 sm:rounded-2xl sm:p-6 lg:grid-cols-[1.2fr_1fr]"
         style={{ backgroundColor: theme.surface }}
       >
         <article className="space-y-3">
@@ -473,7 +613,9 @@ export default async function StorePage({ params }: StorePageProps) {
                   Back home
                 </Link>
               </div>
-              <ProductGrid products={availableProducts} store={store} template={template} />
+              <div className={bodyMotionClass}>
+                <ProductGrid products={filteredProducts} store={store} template={template} />
+              </div>
             </section>
           );
         }

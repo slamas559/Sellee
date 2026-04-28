@@ -14,6 +14,7 @@ import type { ProductRecord, StoreRecord } from "@/types";
 
 type ProductPageProps = {
   params: Promise<{ slug: string; productId: string }>;
+  searchParams: Promise<{ from?: string | string[] }>;
 };
 
 type ProductWithStore = ProductRecord & {
@@ -34,8 +35,9 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
   };
 }
 
-export default async function StoreProductPage({ params }: ProductPageProps) {
+export default async function StoreProductPage({ params, searchParams }: ProductPageProps) {
   const { slug, productId } = await params;
+  const query = await searchParams;
   const supabase = createAdminSupabaseClient();
 
   const { data: store } = await supabase
@@ -142,10 +144,20 @@ export default async function StoreProductPage({ params }: ProductPageProps) {
   const storeUrl = `${appBaseUrl}/store/${store.slug}`;
   const productUrl = `${appBaseUrl}/store/${store.slug}/${product.id}`;
 
+  const from = Array.isArray(query.from) ? query.from[0] : query.from;
+  const backTarget =
+    from === "home"
+      ? { href: "/", label: "Back to home" }
+      : from === "marketplace"
+        ? { href: "/marketplace", label: "Back to marketplace" }
+        : from === "vendors"
+          ? { href: "/vendors", label: "Back to vendors" }
+          : { href: `/store/${store.slug}`, label: "Back to store" };
+
   return (
     <main className={`mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-2 py-6 sm:px-4 sm:py-8 ${pageClass}`}>
-      <Link href={`/store/${store.slug}`} className="text-sm font-medium text-emerald-700 hover:underline">
-        Back to store
+      <Link href={backTarget.href} className="text-sm font-medium text-emerald-700 hover:underline">
+        {backTarget.label}
       </Link>
 
       <section className="grid gap-6 lg:grid-cols-[1.35fr_0.9fr]">

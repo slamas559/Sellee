@@ -281,11 +281,22 @@ async function getMarketplaceResults(state: SearchState) {
         const productName = product.name.toLowerCase();
         const description = (product.description ?? "").toLowerCase();
         const category = (product.category ?? "").toLowerCase();
+        const storeLocation = [
+          product.store.city,
+          product.store.state,
+          product.store.country,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        const storeName = product.store.name.toLowerCase();
 
         if (
           productName.includes(qLower) ||
           description.includes(qLower) ||
-          category.includes(qLower)
+          category.includes(qLower) ||
+          storeLocation.includes(qLower) ||
+          storeName.includes(qLower)
         ) {
           return true;
         }
@@ -445,9 +456,10 @@ function MarketplaceFilterForm({
           <input
             name="q"
             defaultValue={state.q}
-            placeholder="Product, category, or niche..."
+            placeholder="Search products, vendors, or locations..."
             className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none ring-emerald-300 transition focus:ring-2"
           />
+          <p className="text-xs text-slate-500">Try: product name, vendor name, niche, category, or place (e.g. Ikeja).</p>
         </div>
 
         <div className="space-y-2">

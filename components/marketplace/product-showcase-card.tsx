@@ -31,6 +31,7 @@ type ProductShowcaseCardProps = {
   };
   variant?: "home" | "marketplace" | "store";
   template?: StoreTemplate;
+  source?: "home" | "marketplace" | "store" | "vendors";
 };
 
 export function ProductShowcaseCard({
@@ -38,9 +39,11 @@ export function ProductShowcaseCard({
   store,
   variant = "marketplace",
   template = "classic",
+  source,
 }: ProductShowcaseCardProps) {
   const router = useRouter();
-  const productHref = `/store/${store.slug}/${product.id}`;
+  const navigationSource = source ?? (variant === "home" ? "home" : variant);
+  const productHref = `/store/${store.slug}/${product.id}?from=${navigationSource}`;
   const images = useMemo(() => {
     const normalized = (product.image_urls ?? []).filter(Boolean);
     if (normalized.length > 0) return normalized;
@@ -160,7 +163,7 @@ export function ProductShowcaseCard({
             <button
               type="button"
               onClick={prevSlide}
-              className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-white/80 px-2 py-0.5 text-xs font-bold text-slate-900 backdrop-blur hover:bg-white sm:left-3 sm:px-2.5 sm:py-1 sm:text-sm"
+              className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-white/80 px-1.5 py-1 text-xs font-bold text-slate-900 backdrop-blur hover:bg-white sm:left-3 sm:px-2.5 sm:py-1 sm:text-sm"
               aria-label="Previous image"
             >
               {"<"}
@@ -168,12 +171,12 @@ export function ProductShowcaseCard({
             <button
               type="button"
               onClick={nextSlide}
-              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-white/80 px-2 py-0.5 text-xs font-bold text-slate-900 backdrop-blur hover:bg-white sm:right-3 sm:px-2.5 sm:py-1 sm:text-sm"
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-white/80 px-1.5 py-1 text-xs font-bold text-slate-900 backdrop-blur hover:bg-white sm:right-3 sm:px-2.5 sm:py-1 sm:text-sm"
               aria-label="Next image"
             >
               {">"}
             </button>
-            <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 gap-1.5 rounded-full bg-black/20 px-2.5 py-1 backdrop-blur">
+            <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 gap-1.5 rounded-full bg-black/20 px-1.5 py-1 sm:px-2.5 sm:py-1 backdrop-blur">
               {images.map((_, dotIndex) => (
                 <button
                   key={dotIndex}

@@ -21,6 +21,7 @@ export function ProductCard({ product, store, template = "classic" }: ProductCar
       store={store}
       variant="home"
       template={template}
+      source="store"
     />
   );
 }
