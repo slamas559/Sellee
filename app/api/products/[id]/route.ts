@@ -50,13 +50,13 @@ async function getStoreName(storeId: string): Promise<string | null> {
 }
 
 function revalidatePublicCacheForStore(slug: string) {
-  revalidateTag(CACHE_TAGS.homeMarketplaceBase);
-  revalidateTag(CACHE_TAGS.storeNichesFollowers);
-  revalidateTag(CACHE_TAGS.marketplaceBase);
-  revalidateTag(CACHE_TAGS.marketplaceStoreNiches);
-  revalidateTag(CACHE_TAGS.marketplaceProducts);
-  revalidateTag(CACHE_TAGS.storefrontPublic);
-  revalidateTag(CACHE_TAGS.storefrontBySlug(slug));
+  revalidateTag(CACHE_TAGS.homeMarketplaceBase, "max");
+  revalidateTag(CACHE_TAGS.storeNichesFollowers, "max");
+  revalidateTag(CACHE_TAGS.marketplaceBase, "max");
+  revalidateTag(CACHE_TAGS.marketplaceStoreNiches, "max");
+  revalidateTag(CACHE_TAGS.marketplaceProducts, "max");
+  revalidateTag(CACHE_TAGS.storefrontPublic, "max");
+  revalidateTag(CACHE_TAGS.storefrontBySlug(slug), "max");
 }
 
 async function getAllowedCategoriesForStore(storeId: string): Promise<string[]> {

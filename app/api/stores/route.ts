@@ -47,13 +47,13 @@ const storeSchema = z.object({
 type ParsedStoreInput = z.infer<typeof storeSchema>;
 
 function revalidatePublicCacheForStore(slug: string) {
-  revalidateTag(CACHE_TAGS.homeMarketplaceBase);
-  revalidateTag(CACHE_TAGS.storeNichesFollowers);
-  revalidateTag(CACHE_TAGS.marketplaceBase);
-  revalidateTag(CACHE_TAGS.marketplaceStoreNiches);
-  revalidateTag(CACHE_TAGS.marketplaceProducts);
-  revalidateTag(CACHE_TAGS.storefrontPublic);
-  revalidateTag(CACHE_TAGS.storefrontBySlug(slug));
+  revalidateTag(CACHE_TAGS.homeMarketplaceBase, "max");
+  revalidateTag(CACHE_TAGS.storeNichesFollowers, "max");
+  revalidateTag(CACHE_TAGS.marketplaceBase, "max");
+  revalidateTag(CACHE_TAGS.marketplaceStoreNiches, "max");
+  revalidateTag(CACHE_TAGS.marketplaceProducts, "max");
+  revalidateTag(CACHE_TAGS.storefrontPublic, "max");
+  revalidateTag(CACHE_TAGS.storefrontBySlug(slug), "max");
 }
 
 type StoreUploadFiles = {
@@ -490,7 +490,7 @@ export async function POST(request: Request) {
       const [storeWithNiches] = await attachNichesToStores([data as StoreRow]);
       revalidatePublicCacheForStore(data.slug);
       if (existingStore?.slug && existingStore.slug !== data.slug) {
-        revalidateTag(CACHE_TAGS.storefrontBySlug(existingStore.slug));
+        revalidateTag(CACHE_TAGS.storefrontBySlug(existingStore.slug), "max");
       }
 
       const { data: promotedRows, error: roleError } = await supabase
