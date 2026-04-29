@@ -8,7 +8,6 @@ import { ProductMediaGallery } from "@/components/store/product-media-gallery";
 import { ProductReviewsSection } from "@/components/reviews/product-reviews-section";
 import { StarRating } from "@/components/store/star-rating";
 import { formatNaira } from "@/lib/format";
-import { normalizeStoreTemplate } from "@/lib/storefront";
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
 import type { ProductRecord, StoreRecord } from "@/types";
 
@@ -125,20 +124,9 @@ export default async function StoreProductPage({ params, searchParams }: Product
     .filter((item): item is ProductWithStore => item !== null)
     .slice(0, 8);
 
-  const template = normalizeStoreTemplate(store.store_template);
-  const pageClass =
-    template === "modern_grid"
-      ? "bg-slate-950"
-      : template === "fashion_editorial"
-        ? "bg-white"
-        : "bg-slate-50";
-  const isDark = template === "modern_grid";
-  const textTitleClass = isDark ? "text-white" : "text-slate-900";
-  const textMutedClass = isDark ? "text-slate-300" : "text-slate-600";
-  const articleClass =
-    template === "modern_grid"
-      ? "overflow-hidden rounded-2xl border border-slate-700 bg-slate-900 shadow-sm"
-      : "overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm";
+  const textTitleClass = "text-slate-900";
+  const textMutedClass = "text-slate-600";
+  const articleClass = "overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm";
   const storeLocation = [store.city, store.state, store.country].filter(Boolean).join(", ");
   const appBaseUrl = (process.env.NEXTAUTH_URL || "http://localhost:3000").replace(/\/$/, "");
   const storeUrl = `${appBaseUrl}/store/${store.slug}`;
@@ -155,7 +143,7 @@ export default async function StoreProductPage({ params, searchParams }: Product
           : { href: `/store/${store.slug}`, label: "Back to store" };
 
   return (
-    <main className={`mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-2 py-6 sm:px-4 sm:py-8 ${pageClass}`}>
+    <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 bg-slate-50 px-2 py-6 sm:px-4 sm:py-8">
       <Link href={backTarget.href} className="text-sm font-medium text-emerald-700 hover:underline">
         {backTarget.label}
       </Link>
@@ -171,12 +159,12 @@ export default async function StoreProductPage({ params, searchParams }: Product
           <div className="space-y-4 p-5 sm:p-6">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="space-y-2">
-                <p className={`text-xs font-semibold uppercase tracking-[0.16em] ${isDark ? "text-emerald-300" : "text-emerald-700"}`}>
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">
                   {product.category || "Featured Product"}
                 </p>
                 <h1 className={`text-2xl font-black tracking-tight sm:text-3xl ${textTitleClass}`}>{product.name}</h1>
               </div>
-              <p className={isDark ? "rounded-full bg-slate-800 px-4 py-2 text-lg font-semibold text-emerald-300" : "rounded-full bg-slate-100 px-4 py-2 text-lg font-semibold text-slate-800"}>
+              <p className="rounded-full bg-slate-100 px-4 py-2 text-lg font-semibold text-slate-800">
                 {formatNaira(Number(product.price))}
               </p>
             </div>
@@ -187,9 +175,9 @@ export default async function StoreProductPage({ params, searchParams }: Product
               size="md"
               accent="yellow"
             />
-            <div className={`rounded-xl border px-4 py-3 ${isDark ? "border-slate-700 bg-slate-800/70" : "border-slate-200 bg-slate-50"}`}>
+            <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
               <div className="flex items-start justify-between gap-3">
-                <p className={`text-xs font-semibold uppercase tracking-[0.14em] ${isDark ? "text-slate-300" : "text-slate-500"}`}>Vendor</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Vendor</p>
                 <SocialShareActions
                   mode="menu"
                   url={storeUrl}
@@ -215,16 +203,16 @@ export default async function StoreProductPage({ params, searchParams }: Product
               {product.description ?? "No description added for this product yet."}
             </p>
             <div className="flex flex-wrap items-center gap-2">
-              <span className={isDark ? "rounded-full border border-slate-700 bg-slate-800 px-3 py-1 text-xs text-slate-300" : "rounded-full border border-slate-200 bg-white px-3 py-1 text-xs text-slate-600"}>
+              <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs text-slate-600">
                 Stock: {product.stock_count}
               </span>
-              <span className={isDark ? "rounded-full border border-slate-700 bg-slate-800 px-3 py-1 text-xs text-slate-300" : "rounded-full border border-slate-200 bg-white px-3 py-1 text-xs text-slate-600"}>
+              <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs text-slate-600">
                 Ready for WhatsApp order
               </span>
             </div>
-            <div className={`rounded-xl border px-4 py-3  ${isDark ? "border-slate-700 bg-slate-800/70" : "border-slate-200 bg-slate-50"}`}>
+            <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
               <div className="flex items-start justify-between gap-3">
-                <p className={`text-xs font-semibold uppercase tracking-[0.14em] ${isDark ? "text-slate-300" : "text-slate-500"}`}>
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
                   Share Product
                 </p>
                 <SocialShareActions
@@ -287,7 +275,6 @@ export default async function StoreProductPage({ params, searchParams }: Product
                     rating_count: store.rating_count,
                   }}
                   variant="store"
-                  template={template}
                 />
               </div>
             ))}
