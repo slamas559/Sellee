@@ -345,6 +345,8 @@ export function StoreSetupForm({ initialStore }: StoreSetupFormProps) {
   const [showVendorSuccessBanner, setShowVendorSuccessBanner] = useState(false);
   const [bannerUrlInput, setBannerUrlInput] = useState("");
   const [nicheOptions, setNicheOptions] = useState<NicheOption[]>([]);
+  const [showCustomNicheInput, setShowCustomNicheInput] = useState(false);
+  const [customNicheInput, setCustomNicheInput] = useState("");
   const [isLoadingNiches, setIsLoadingNiches] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -372,6 +374,7 @@ export function StoreSetupForm({ initialStore }: StoreSetupFormProps) {
     banner_urls: initialConfig.banner_urls,
     sections_order: initialConfig.sections_order ?? DEFAULT_STOREFRONT_SECTIONS_ORDER,
     niche_ids: initialStore?.niche_ids ?? [],
+    custom_niches: initialStore?.custom_niches ?? [],
   });
 
   const shareablePath = store?.slug ? `/store/${store.slug}` : null;
@@ -392,6 +395,10 @@ export function StoreSetupForm({ initialStore }: StoreSetupFormProps) {
         .filter((niche) => form.niche_ids.includes(niche.id))
         .map((niche) => niche.name),
     [form.niche_ids, nicheOptions],
+  );
+  const selectedAllNicheNames = useMemo(
+    () => [...selectedNicheNames, ...form.custom_niches],
+    [selectedNicheNames, form.custom_niches],
   );
 
   useEffect(() => {
@@ -448,6 +455,15 @@ export function StoreSetupForm({ initialStore }: StoreSetupFormProps) {
     };
   }, [form.whatsapp_number]);
 
+  useEffect(() => {
+    if (!message && !error) return;
+    const timeout = setTimeout(() => {
+      setMessage(null);
+      setError(null);
+    }, 4500);
+    return () => clearTimeout(timeout);
+  }, [message, error]);
+
   function pushBannerUrl(url: string) {
     const normalized = url.trim();
     if (!normalized) return;
@@ -484,6 +500,16 @@ export function StoreSetupForm({ initialStore }: StoreSetupFormProps) {
         ...patch,
       },
     }));
+  }
+
+  function addCustomNiche() {
+    const name = customNicheInput.trim();
+    if (!name) return;
+    setForm((prev) => ({
+      ...prev,
+      custom_niches: Array.from(new Set([...prev.custom_niches, name])).slice(0, 8),
+    }));
+    setCustomNicheInput("");
   }
 
   function moveSectionByDrag(target: StorefrontSectionId) {
@@ -694,7 +720,7 @@ export function StoreSetupForm({ initialStore }: StoreSetupFormProps) {
       return;
     }
 
-    if (form.niche_ids.length === 0) {
+    if (form.niche_ids.length === 0 && form.custom_niches.length === 0) {
       setError("Select at least one niche for your store.");
       setIsSaving(false);
       return;
@@ -732,6 +758,7 @@ export function StoreSetupForm({ initialStore }: StoreSetupFormProps) {
       body.append("is_active", String(form.is_active));
       body.append("storefront_config", JSON.stringify(storefrontConfig));
       body.append("niche_ids", JSON.stringify(form.niche_ids));
+      body.append("custom_niches", JSON.stringify(form.custom_niches));
 
       const response = await fetch("/api/stores", {
         method: "POST",
@@ -773,6 +800,7 @@ export function StoreSetupForm({ initialStore }: StoreSetupFormProps) {
         banner_urls: nextConfig.banner_urls,
         sections_order: nextConfig.sections_order ?? DEFAULT_STOREFRONT_SECTIONS_ORDER,
         niche_ids: nextStore.niche_ids ?? [],
+        custom_niches: nextStore.custom_niches ?? form.custom_niches,
       });
 
       setMessage(
@@ -869,11 +897,12 @@ export function StoreSetupForm({ initialStore }: StoreSetupFormProps) {
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="font-medium text-slate-700">Store niches</span>
                 <span className="text-xs text-slate-500">
-                  {form.niche_ids.length > 0
-                    ? `${form.niche_ids.length} selected`
+                  {selectedAllNicheNames.length > 0
+                    ? `${selectedAllNicheNames.length} selected`
                     : "Select at least one niche"}
                 </span>
               </div>
+              <p className="text-xs text-slate-500">Can&apos;t find yours? Use Others.</p>
               <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
                 {isLoadingNiches ? (
                   <p className="text-xs text-slate-500">Loading niches...</p>
@@ -907,12 +936,61 @@ export function StoreSetupForm({ initialStore }: StoreSetupFormProps) {
                         </button>
                       );
                     })}
+                    <button
+                      type="button"
+                      onClick={() => setShowCustomNicheInput((prev) => !prev)}
+                      className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+                        showCustomNicheInput
+                          ? "border-amber-500 bg-amber-50 text-amber-700"
+                          : "border-slate-200 bg-white text-slate-700 hover:border-amber-300"
+                      }`}
+                    >
+                      Others
+                    </button>
                   </div>
                 )}
+                {showCustomNicheInput ? (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <input
+                      value={customNicheInput}
+                      onChange={(event) => setCustomNicheInput(event.target.value)}
+                      className="min-w-[220px] flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none ring-emerald-300 focus:ring-2"
+                      placeholder="Type custom niche"
+                    />
+                    <button
+                      type="button"
+                      onClick={addCustomNiche}
+                      className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50"
+                    >
+                      Add
+                    </button>
+                  </div>
+                ) : null}
+                {form.custom_niches.length > 0 ? (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {form.custom_niches.map((niche) => (
+                      <button
+                        key={niche}
+                        type="button"
+                        onClick={() =>
+                          setForm((prev) => ({
+                            ...prev,
+                            custom_niches: prev.custom_niches.filter((item) => item !== niche),
+                          }))
+                        }
+                        className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-800"
+                        title="Remove custom niche"
+                      >
+                        {niche}
+                        <span aria-hidden="true">x</span>
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
               </div>
-              {selectedNicheNames.length > 0 ? (
+              {selectedAllNicheNames.length > 0 ? (
                 <p className="text-xs text-slate-600">
-                  Selected: {selectedNicheNames.join(", ")}
+                  Selected: {selectedAllNicheNames.join(", ")}
                 </p>
               ) : null}
             </div>
@@ -1389,6 +1467,16 @@ export function StoreSetupForm({ initialStore }: StoreSetupFormProps) {
           {store?.slug ? (
             <p className="self-center text-xs text-slate-600 sm:text-sm">
               Shareable link: <span className="font-medium">{shareablePath}</span>
+            </p>
+          ) : null}
+          {error ? (
+            <p className="w-full rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-700 sm:text-sm">
+              {error}
+            </p>
+          ) : null}
+          {message ? (
+            <p className="w-full rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700 sm:text-sm">
+              {message}
             </p>
           ) : null}
         </div>

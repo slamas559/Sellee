@@ -1,9 +1,11 @@
 import { randomUUID } from "crypto";
+import { revalidateTag } from "next/cache";
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { z } from "zod";
 import { authOptions } from "@/lib/auth";
 import { logDevError } from "@/lib/logger";
+import { CACHE_TAGS } from "@/lib/public-cache";
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
 import { notifyRestockSubscribers } from "@/lib/whatsapp-bot/restock-alerts";
 
@@ -17,11 +19,11 @@ const updateSchema = z.object({
   remove_image: z.boolean().optional().default(false),
 });
 
-async function getVendorStoreId(vendorId: string): Promise<string | null> {
+async function getVendorStore(vendorId: string): Promise<{ id: string; slug: string } | null> {
   const supabase = createAdminSupabaseClient();
   const { data, error } = await supabase
     .from("stores")
-    .select("id")
+    .select("id, slug")
     .eq("vendor_id", vendorId)
     .maybeSingle();
 
@@ -29,7 +31,7 @@ async function getVendorStoreId(vendorId: string): Promise<string | null> {
     throw new Error(error.message);
   }
 
-  return data?.id ?? null;
+  return data?.id && data?.slug ? { id: data.id, slug: data.slug } : null;
 }
 
 async function getStoreName(storeId: string): Promise<string | null> {
@@ -45,6 +47,16 @@ async function getStoreName(storeId: string): Promise<string | null> {
   }
 
   return data?.name ?? null;
+}
+
+function revalidatePublicCacheForStore(slug: string) {
+  revalidateTag(CACHE_TAGS.homeMarketplaceBase);
+  revalidateTag(CACHE_TAGS.storeNichesFollowers);
+  revalidateTag(CACHE_TAGS.marketplaceBase);
+  revalidateTag(CACHE_TAGS.marketplaceStoreNiches);
+  revalidateTag(CACHE_TAGS.marketplaceProducts);
+  revalidateTag(CACHE_TAGS.storefrontPublic);
+  revalidateTag(CACHE_TAGS.storefrontBySlug(slug));
 }
 
 async function getAllowedCategoriesForStore(storeId: string): Promise<string[]> {
@@ -137,24 +149,25 @@ export async function PATCH(
       is_available: formData.get("is_available") === "true",
       remove_image: formData.get("remove_image") === "true",
     });
+    const categoryIsOther = formData.get("category_is_other") === "true";
 
     if (!parsed.success) {
       return NextResponse.json({ error: "Invalid product update data." }, { status: 400 });
     }
 
-    const storeId = await getVendorStoreId(session.user.id);
+    const store = await getVendorStore(session.user.id);
 
-    if (!storeId) {
+    if (!store) {
       return NextResponse.json({ error: "Store not found for this vendor." }, { status: 400 });
     }
 
     let allowedCategories: string[] = [];
     try {
-      allowedCategories = await getAllowedCategoriesForStore(storeId);
+      allowedCategories = await getAllowedCategoriesForStore(store.id);
     } catch (categoryError) {
       logDevError("products.update.allowed-categories", categoryError, {
         userId: session.user.id,
-        storeId,
+        storeId: store.id,
       });
     }
 
@@ -166,7 +179,7 @@ export async function PATCH(
           { status: 400 },
         );
       }
-      if (!allowedCategories.includes(normalizedCategory)) {
+      if (!allowedCategories.includes(normalizedCategory) && !categoryIsOther) {
         return NextResponse.json(
           { error: "Selected category is not allowed for your store niches." },
           { status: 400 },
@@ -180,11 +193,11 @@ export async function PATCH(
       .from("products")
       .select("id, store_id, name, stock_count, image_url, image_urls")
       .eq("id", id)
-      .eq("store_id", storeId)
+      .eq("store_id", store.id)
       .maybeSingle();
 
     if (existingProductError) {
-      logDevError("products.update.lookup", existingProductError, { id, storeId });
+      logDevError("products.update.lookup", existingProductError, { id, storeId: store.id });
       return NextResponse.json({ error: "Could not load product." }, { status: 500 });
     }
 
@@ -245,12 +258,12 @@ export async function PATCH(
         image_urls: imageUrls,
       })
       .eq("id", id)
-      .eq("store_id", storeId)
+      .eq("store_id", store.id)
       .select("id, store_id, name, description, category, price, image_url, image_urls, rating_avg, rating_count, stock_count, is_available, created_at")
       .single();
 
     if (error || !data) {
-      logDevError("products.update", error, { id, storeId });
+      logDevError("products.update", error, { id, storeId: store.id });
       return NextResponse.json({ error: "Could not update product." }, { status: 500 });
     }
 
@@ -260,9 +273,9 @@ export async function PATCH(
 
     if (becameInStock) {
       try {
-        const storeName = (await getStoreName(storeId)) ?? "your store";
+        const storeName = (await getStoreName(store.id)) ?? "your store";
         await notifyRestockSubscribers({
-          storeId,
+          storeId: store.id,
           storeName,
           productId: data.id,
           productName: data.name,
@@ -270,12 +283,14 @@ export async function PATCH(
       } catch (restockError) {
         logDevError("products.update.restock-notify", restockError, {
           id,
-          storeId,
+          storeId: store.id,
           previousStock,
           nextStock,
         });
       }
     }
+
+    revalidatePublicCacheForStore(store.slug);
 
     return NextResponse.json({ product: data, message: "Product updated successfully." });
   } catch (error) {
@@ -296,9 +311,9 @@ export async function DELETE(
 
   try {
     const { id } = await context.params;
-    const storeId = await getVendorStoreId(session.user.id);
+    const store = await getVendorStore(session.user.id);
 
-    if (!storeId) {
+    if (!store) {
       return NextResponse.json({ error: "Store not found for this vendor." }, { status: 400 });
     }
 
@@ -307,12 +322,14 @@ export async function DELETE(
       .from("products")
       .delete()
       .eq("id", id)
-      .eq("store_id", storeId);
+      .eq("store_id", store.id);
 
     if (error) {
-      logDevError("products.delete", error, { id, storeId });
+      logDevError("products.delete", error, { id, storeId: store.id });
       return NextResponse.json({ error: "Could not delete product." }, { status: 500 });
     }
+
+    revalidatePublicCacheForStore(store.slug);
 
     return NextResponse.json({ ok: true, message: "Product deleted." });
   } catch (error) {

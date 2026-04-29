@@ -16,6 +16,7 @@ import {
   normalizeStorefrontConfig,
   normalizeThemePreset,
 } from "@/lib/storefront";
+import { getStorefrontPublicDataCached } from "@/lib/public-cache";
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
 import type { ProductRecord, StoreRecord } from "@/types";
 
@@ -176,7 +177,7 @@ function ProductGrid({
   }
 
   return (
-    <div className="grid grid-cols-2 justify-items-center gap-3 [@media(max-width:320px)]:grid-cols-1 lg:grid-cols-3 xl:grid-cols-4">
+    <div className="grid grid-cols-2 justify-items-center gap-3 px-2 [@media(max-width:320px)]:grid-cols-1 sm:px-0 lg:grid-cols-3 xl:grid-cols-4">
       {products.map((product) => (
         <div key={product.id} className="w-full max-w-[320px]">
           <ProductCard
@@ -202,36 +203,13 @@ export default async function StorePage({ params, searchParams }: StorePageProps
   const session = await getServerSession(authOptions);
   const supabase = createAdminSupabaseClient();
 
-  const { data: store, error: storeError } = await supabase
-    .from("stores")
-    .select("id, vendor_id, name, slug, logo_url, whatsapp_number, store_template, store_theme_preset, storefront_config, rating_avg, rating_count, theme_color, is_active, created_at")
-    .eq("slug", slug)
-    .eq("is_active", true)
-    .maybeSingle<StoreRecord>();
-
-  if (storeError || !store) {
+  const storefrontData = await getStorefrontPublicDataCached(slug);
+  const store = storefrontData.store as StoreRecord | null;
+  if (!store) {
     notFound();
   }
-
-  const { data: products } = await supabase
-    .from("products")
-    .select("id, store_id, name, description, category, price, image_url, image_urls, rating_avg, rating_count, stock_count, is_available, created_at")
-    .eq("store_id", store.id)
-    .eq("is_available", true)
-    .order("created_at", { ascending: false });
-
-  const { data: storeNiches } = await supabase
-    .from("store_niches")
-    .select("niche:niche_id(name)")
-    .eq("store_id", store.id);
-
-  const nicheNames = Array.from(
-    new Set(
-      ((storeNiches ?? []) as Array<{ niche?: { name?: string } | null }>)
-        .map((row) => row.niche?.name?.trim() ?? "")
-        .filter(Boolean),
-    ),
-  );
+  const products = storefrontData.products;
+  const nicheNames = storefrontData.nicheNames;
 
   let isFollowing = false;
   if (session?.user?.id) {

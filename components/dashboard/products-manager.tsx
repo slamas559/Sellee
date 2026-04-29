@@ -15,6 +15,7 @@ type ProductFormState = {
   name: string;
   description: string;
   category: string;
+  custom_category: string;
   price: string;
   stock_count: string;
   is_available: boolean;
@@ -27,6 +28,7 @@ const initialForm: ProductFormState = {
   name: "",
   description: "",
   category: "",
+  custom_category: "",
   price: "",
   stock_count: "0",
   is_available: true,
@@ -88,11 +90,17 @@ export function ProductsManager({ initialProducts }: ProductsManagerProps) {
     }
   }
   function fillFormForEdit(product: ProductRecord) {
+    const rawCategory = product.category ?? "";
+    const isCustomCategory =
+      allowedCategories.length > 0 &&
+      rawCategory.trim().length > 0 &&
+      !allowedCategories.includes(rawCategory);
     setEditingProductId(product.id);
     setForm({
       name: product.name,
       description: product.description ?? "",
-      category: product.category ?? "",
+      category: isCustomCategory ? "__other__" : rawCategory,
+      custom_category: isCustomCategory ? rawCategory : "",
       price: String(product.price),
       stock_count: String(product.stock_count),
       is_available: product.is_available,
@@ -194,9 +202,19 @@ export function ProductsManager({ initialProducts }: ProductsManagerProps) {
     }
 
     const body = new FormData();
+    const normalizedCategory =
+      form.category === "__other__" ? form.custom_category.trim() : form.category.trim();
+
+    if (allowedCategories.length > 0 && !normalizedCategory) {
+      setError("Select a category or choose Others and enter your category.");
+      setIsSaving(false);
+      return;
+    }
+
     body.append("name", form.name);
     body.append("description", form.description);
-    body.append("category", form.category);
+    body.append("category", normalizedCategory);
+    body.append("category_is_other", String(form.category === "__other__"));
     body.append("price", String(priceNumber));
     body.append("stock_count", String(stockNumber));
     body.append("is_available", String(form.is_available));
@@ -317,21 +335,25 @@ export function ProductsManager({ initialProducts }: ProductsManagerProps) {
               Category {allowedCategories.length > 0 ? "" : "(optional)"}
             </span>
             {allowedCategories.length > 0 ? (
-              <select
-                required
-                value={form.category}
-                onChange={(event) =>
-                  setForm((prev) => ({ ...prev, category: event.target.value }))
-                }
-                className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 outline-none ring-emerald-300 focus:ring-2"
-              >
-                <option value="">Select a category</option>
-                {allowedCategories.map((category) => (
-                  <option key={category} value={category}>
-                    {category}
-                  </option>
-                ))}
-              </select>
+              <>
+                <select
+                  required
+                  value={form.category}
+                  onChange={(event) =>
+                    setForm((prev) => ({ ...prev, category: event.target.value }))
+                  }
+                  className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 outline-none ring-emerald-300 focus:ring-2"
+                >
+                  <option value="">Select a category</option>
+                  {allowedCategories.map((category) => (
+                    <option key={category} value={category}>
+                      {category}
+                    </option>
+                  ))}
+                  <option value="__other__">Others</option>
+                </select>
+                <p className="text-xs text-slate-500">Can&apos;t find yours? Use Others.</p>
+              </>
             ) : (
               <input
                 value={form.category}
@@ -343,6 +365,20 @@ export function ProductsManager({ initialProducts }: ProductsManagerProps) {
               />
             )}
           </label>
+          {allowedCategories.length > 0 && form.category === "__other__" ? (
+            <label className="space-y-2 text-sm">
+              <span className="font-medium text-slate-700">Custom category</span>
+              <input
+                required
+                value={form.custom_category}
+                onChange={(event) =>
+                  setForm((prev) => ({ ...prev, custom_category: event.target.value }))
+                }
+                className="w-full rounded-md border border-slate-200 px-3 py-2 outline-none ring-emerald-300 focus:ring-2"
+                placeholder="Type your category"
+              />
+            </label>
+          ) : null}
 
           <label className="space-y-2 text-sm">
             <span className="font-medium text-slate-700">Stock count</span>

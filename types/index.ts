@@ -52,6 +52,7 @@ export type StoreRecord = {
   rating_count: number;
   niche_ids?: string[];
   niche_names?: string[];
+  custom_niches?: string[];
   theme_color: string | null;
   is_active: boolean;
   created_at: string;

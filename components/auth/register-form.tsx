@@ -75,6 +75,8 @@ export function RegisterForm() {
   const [isCheckingStatus, setIsCheckingStatus] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const isBusy =
+    isSubmitting || isSendingOtp || isVerifyingOtp || isCheckingStatus;
 
   const normalizedLocalPhone = useMemo(
     () => form.phone_local.replace(/[^0-9]/g, ""),
@@ -267,6 +269,7 @@ export function RegisterForm() {
             <button
               type="button"
               onClick={() => void navigator.clipboard.writeText(challenge.command)}
+              disabled={isBusy}
               className="rounded-full border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
             >
               Copy Command
@@ -319,13 +322,15 @@ export function RegisterForm() {
         <button
           type="button"
           onClick={() => {
+            if (isBusy) return;
             setStep("register");
             setChallenge(null);
             setOtp("");
             setNotice(null);
             setError(null);
           }}
-          className="auth-stagger-4 text-xs font-semibold text-slate-600 hover:underline"
+          disabled={isBusy}
+          className="auth-stagger-4 text-xs font-semibold text-slate-600 hover:underline disabled:opacity-60"
         >
           Back to registration form
         </button>
@@ -333,7 +338,8 @@ export function RegisterForm() {
         <button
           type="button"
           onClick={() => signIn("google", { callbackUrl: "/account?onboarding=google" })}
-          className="auth-stagger-5 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-yellow-300 bg-yellow-100/60 px-4 py-2.5 text-sm font-semibold text-slate-900 transition hover:bg-yellow-100"
+          disabled={isBusy}
+          className="auth-stagger-5 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-yellow-300 bg-yellow-100/60 px-4 py-2.5 text-sm font-semibold text-slate-900 transition hover:bg-yellow-100 disabled:opacity-60"
         >
           <GoogleIcon />
           Continue with Google instead
@@ -454,7 +460,7 @@ export function RegisterForm() {
 
       <button
         type="submit"
-        disabled={isSubmitting}
+        disabled={isBusy}
         className="auth-stagger-7 w-full rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-60"
       >
         {isSubmitting ? "Starting verification..." : "Create account"}
@@ -463,7 +469,8 @@ export function RegisterForm() {
       <button
         type="button"
         onClick={() => signIn("google", { callbackUrl: "/account?onboarding=google" })}
-        className="auth-stagger-8 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-yellow-300 bg-yellow-100/60 px-4 py-2.5 text-sm font-semibold text-slate-900 transition hover:bg-yellow-100"
+        disabled={isBusy}
+        className="auth-stagger-8 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-yellow-300 bg-yellow-100/60 px-4 py-2.5 text-sm font-semibold text-slate-900 transition hover:bg-yellow-100 disabled:opacity-60"
       >
         <GoogleIcon />
         Continue with Google

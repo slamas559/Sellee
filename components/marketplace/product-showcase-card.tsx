@@ -4,8 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { KeyboardEvent, MouseEvent } from "react";
-import { useMemo, useState } from "react";
-import { SocialShareActions } from "@/components/shared/social-share-actions";
+import { useMemo, useRef, useState } from "react";
 import { StarRating } from "@/components/store/star-rating";
 import { formatNaira } from "@/lib/format";
 import type { StoreTemplate } from "@/types";
@@ -42,6 +41,7 @@ export function ProductShowcaseCard({
   source,
 }: ProductShowcaseCardProps) {
   const router = useRouter();
+  const didPrefetchRef = useRef(false);
   const navigationSource = source ?? (variant === "home" ? "home" : variant);
   const productHref = `/store/${store.slug}/${product.id}?from=${navigationSource}`;
   const images = useMemo(() => {
@@ -99,12 +99,21 @@ export function ProductShowcaseCard({
     router.push(productHref);
   }
 
+  function prefetchProduct() {
+    if (didPrefetchRef.current) return;
+    didPrefetchRef.current = true;
+    router.prefetch(productHref);
+  }
+
   return (
     <article
       role="link"
       tabIndex={0}
       onClick={handleCardClick}
       onKeyDown={handleCardKeyDown}
+      onMouseEnter={prefetchProduct}
+      onFocus={prefetchProduct}
+      onTouchStart={prefetchProduct}
       className={`group cursor-pointer overflow-hidden rounded-xl border p-1 sm:rounded-[1.75rem] sm:p-3 transition hover:-translate-y-1 ${cardClass}`}
     >
       <div className="relative overflow-hidden rounded-xl sm:rounded-[1.25rem] bg-slate-100">
@@ -183,10 +192,10 @@ export function ProductShowcaseCard({
 
       <div className={contentWrapClass}>
         <div className="flex items-start justify-between gap-2">
-          <p className={`line-clamp-1 text-xs font-semibold uppercase tracking-[0.16em] ${metaClass}`}>
+          <p className={`line-clamp-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${metaClass}`}>
             {store.name}
           </p>
-          <SocialShareActions
+          {/* <SocialShareActions
             mode="menu"
             compact
             align="right"
@@ -195,9 +204,9 @@ export function ProductShowcaseCard({
             title={`${product.name} - ${store.name}`}
             text={`Check out ${product.name} from ${store.name} on Sellee.`}
             className="relative z-20 shrink-0"
-            triggerClassName="inline-flex h-7 w-7 items-center justify-center cursor-pointer rounded-full border border-slate-300/80 bg-white/90 text-slate-700 shadow-sm backdrop-blur hover:bg-white sm:h-8 sm:w-8"
+            triggerClassName="inline-flex h-6 w-6 items-center justify-center cursor-pointer rounded-full border border-slate-300/80 bg-white/90 text-slate-700 shadow-sm backdrop-blur hover:bg-white sm:h-8 sm:w-8"
             triggerLabel={`Share ${product.name}`}
-          />
+          /> */}
         </div>
         <h3
           className={`line-clamp-2 font-black tracking-tight leading-tight ${titleClass} ${headlineClass}`}

@@ -1,10 +1,12 @@
 import { randomUUID } from "crypto";
+import { revalidateTag } from "next/cache";
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { z } from "zod";
 import { authOptions } from "@/lib/auth";
 import { slugify } from "@/lib/format";
 import { logDevError } from "@/lib/logger";
+import { CACHE_TAGS } from "@/lib/public-cache";
 import { DEFAULT_STOREFRONT_CONFIG, normalizeStoreTemplate, normalizeThemePreset, normalizeStorefrontConfig } from "@/lib/storefront";
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
 import { validateWhatsAppNumber } from "@/lib/whatsapp";
@@ -38,10 +40,21 @@ const storeSchema = z.object({
   theme_color: z.string().regex(/^#([A-Fa-f0-9]{6})$/),
   logo_url: z.string().url().optional().or(z.literal("")),
   niche_ids: z.array(z.string().uuid()).max(8).optional().default([]),
+  custom_niches: z.array(z.string().min(2).max(80)).max(8).optional().default([]),
   is_active: z.boolean().optional().default(true),
 });
 
 type ParsedStoreInput = z.infer<typeof storeSchema>;
+
+function revalidatePublicCacheForStore(slug: string) {
+  revalidateTag(CACHE_TAGS.homeMarketplaceBase);
+  revalidateTag(CACHE_TAGS.storeNichesFollowers);
+  revalidateTag(CACHE_TAGS.marketplaceBase);
+  revalidateTag(CACHE_TAGS.marketplaceStoreNiches);
+  revalidateTag(CACHE_TAGS.marketplaceProducts);
+  revalidateTag(CACHE_TAGS.storefrontPublic);
+  revalidateTag(CACHE_TAGS.storefrontBySlug(slug));
+}
 
 type StoreUploadFiles = {
   logoFile: File | null;
@@ -123,6 +136,16 @@ async function parseStoreRequest(request: Request): Promise<{
         try {
           const parsedNiches = JSON.parse(raw);
           return Array.isArray(parsedNiches) ? parsedNiches : [];
+        } catch {
+          return [];
+        }
+      })(),
+      custom_niches: (() => {
+        const raw = toOptionalString(formData.get("custom_niches"));
+        if (!raw) return [];
+        try {
+          const parsedCustom = JSON.parse(raw);
+          return Array.isArray(parsedCustom) ? parsedCustom : [];
         } catch {
           return [];
         }
@@ -214,9 +237,56 @@ async function validateNicheIds(nicheIds: string[]): Promise<string[]> {
   return ((data ?? []) as Array<{ id: string }>).map((row) => row.id);
 }
 
-async function saveStoreNiches(storeId: string, nicheIds: string[]) {
+async function ensureNicheIdsByNames(names: string[]): Promise<string[]> {
+  const uniqueNames = Array.from(
+    new Set(names.map((name) => name.trim()).filter((name) => name.length >= 2)),
+  );
+  if (uniqueNames.length === 0) return [];
+
+  const supabase = createAdminSupabaseClient();
+  const { data: existing, error: existingError } = await supabase
+    .from("niches")
+    .select("id, name")
+    .in("name", uniqueNames);
+
+  if (existingError) {
+    throw new Error(existingError.message);
+  }
+
+  const existingRows = (existing ?? []) as Array<{ id: string; name: string }>;
+  const existingByName = new Map(existingRows.map((row) => [row.name.toLowerCase(), row.id]));
+  const missing = uniqueNames.filter((name) => !existingByName.has(name.toLowerCase()));
+
+  if (missing.length > 0) {
+    const rows = missing.map((name) => ({
+      name,
+      slug: slugify(name),
+    }));
+    const { error: insertError } = await supabase
+      .from("niches")
+      .upsert(rows, { onConflict: "slug" });
+    if (insertError) {
+      throw new Error(insertError.message);
+    }
+  }
+
+  const { data: allRows, error: allRowsError } = await supabase
+    .from("niches")
+    .select("id, name")
+    .in("name", uniqueNames);
+
+  if (allRowsError) {
+    throw new Error(allRowsError.message);
+  }
+
+  return ((allRows ?? []) as Array<{ id: string }>).map((row) => row.id);
+}
+
+async function saveStoreNiches(storeId: string, nicheIds: string[], customNiches: string[]) {
   const supabase = createAdminSupabaseClient();
   const validIds = await validateNicheIds(Array.from(new Set(nicheIds)));
+  const customIds = await ensureNicheIdsByNames(customNiches);
+  const mergedIds = Array.from(new Set([...validIds, ...customIds])).slice(0, 8);
 
   const { error: deleteError } = await supabase
     .from("store_niches")
@@ -227,13 +297,13 @@ async function saveStoreNiches(storeId: string, nicheIds: string[]) {
     throw new Error(deleteError.message);
   }
 
-  if (validIds.length === 0) {
+  if (mergedIds.length === 0) {
     return;
   }
 
   const { error: insertError } = await supabase
     .from("store_niches")
-    .insert(validIds.map((nicheId) => ({ store_id: storeId, niche_id: nicheId })));
+    .insert(mergedIds.map((nicheId) => ({ store_id: storeId, niche_id: nicheId })));
 
   if (insertError) {
     throw new Error(insertError.message);
@@ -325,7 +395,7 @@ export async function POST(request: Request) {
 
     const { data: existingStore, error: existingStoreError } = await supabase
       .from("stores")
-      .select("id, logo_url, storefront_config")
+      .select("id, slug, logo_url, storefront_config")
       .eq("vendor_id", session.user.id)
       .maybeSingle();
 
@@ -411,13 +481,17 @@ export async function POST(request: Request) {
       }
 
       try {
-        await saveStoreNiches(data.id, parsedData.niche_ids ?? []);
+        await saveStoreNiches(data.id, parsedData.niche_ids ?? [], parsedData.custom_niches ?? []);
       } catch (nicheError) {
         logDevError("stores.update.niches", nicheError, { storeId: data.id, userId: session.user.id });
         return NextResponse.json({ error: "Store updated, but niches could not be saved." }, { status: 500 });
       }
 
       const [storeWithNiches] = await attachNichesToStores([data as StoreRow]);
+      revalidatePublicCacheForStore(data.slug);
+      if (existingStore?.slug && existingStore.slug !== data.slug) {
+        revalidateTag(CACHE_TAGS.storefrontBySlug(existingStore.slug));
+      }
 
       const { data: promotedRows, error: roleError } = await supabase
         .from("users")
@@ -467,13 +541,14 @@ export async function POST(request: Request) {
     }
 
     try {
-      await saveStoreNiches(data.id, parsedData.niche_ids ?? []);
+      await saveStoreNiches(data.id, parsedData.niche_ids ?? [], parsedData.custom_niches ?? []);
     } catch (nicheError) {
       logDevError("stores.create.niches", nicheError, { storeId: data.id, userId: session.user.id });
       return NextResponse.json({ error: "Store created, but niches could not be saved." }, { status: 500 });
     }
 
     const [storeWithNiches] = await attachNichesToStores([data as StoreRow]);
+    revalidatePublicCacheForStore(data.slug);
 
     const { data: promotedRows, error: roleError } = await supabase
       .from("users")

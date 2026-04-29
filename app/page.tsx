@@ -8,7 +8,10 @@ import { WhatsAppBotAccess } from "@/components/landing/whatsapp-bot-access";
 import { UserMenu } from "@/components/layout/user-menu";
 import { ProductShowcaseCard } from "@/components/marketplace/product-showcase-card";
 import { authOptions } from "@/lib/auth";
-import { createAdminSupabaseClient } from "@/lib/supabase-admin";
+import {
+  getHomeMarketplaceBaseDataCached,
+  getStoreNichesAndFollowersCached,
+} from "@/lib/public-cache";
 
 export const metadata: Metadata = {
   title: "Home",
@@ -111,59 +114,19 @@ function categoryImageUrl(category: string): string {
 }
 
 async function getMarketplaceData(q?: string, category?: string) {
-  const supabase = createAdminSupabaseClient();
+  const { stores, products, categoryRows, niches, nicheCategories } =
+    await getHomeMarketplaceBaseDataCached();
 
-  const storesPromise = supabase
-    .from("stores")
-    .select("id, vendor_id, name, slug, city, state, country, logo_url, rating_avg, rating_count, theme_color")
-    .eq("is_active", true)
-    .order("created_at", { ascending: false })
-    .limit(24);
-
-  const productsQuery = supabase
-    .from("products")
-    .select("id, store_id, name, description, category, price, image_url, image_urls, rating_avg, rating_count, stock_count, created_at")
-    .eq("is_available", true)
-    .order("created_at", { ascending: false })
-    .limit(500);
-
-  const categoryRowsPromise = supabase
-    .from("products")
-    .select("category")
-    .eq("is_available", true)
-    .not("category", "is", null)
-    .limit(100);
-
-  const nichesPromise = supabase
-    .from("niches")
-    .select("id, name, slug")
-    .order("name", { ascending: true });
-
-  const nicheCategoriesPromise = supabase
-    .from("niche_categories")
-    .select("niche_id, name");
-
-  const [{ data: stores }, { data: products }, { data: categoryRows }, { data: niches }, { data: nicheCategories }] = await Promise.all([
-    storesPromise,
-    productsQuery,
-    categoryRowsPromise,
-    nichesPromise,
-    nicheCategoriesPromise,
-  ]);
-
-  const typedStores = (stores ?? []) as StoreLite[];
-  const allProducts = (products ?? []) as ProductLite[];
+  const typedStores = stores as StoreLite[];
+  const allProducts = products as ProductLite[];
 
   const storeIds = typedStores.map((store) => store.id);
   const nichesByStoreId = new Map<string, string[]>();
   const nicheIdsByStoreId = new Map<string, string[]>();
+  const followerCountByStoreId = new Map<string, number>();
   if (storeIds.length > 0) {
-    const { data: storeNiches } = await supabase
-      .from("store_niches")
-      .select("store_id, niche_id, niche:niche_id(name)")
-      .in("store_id", storeIds);
-
-    for (const row of (storeNiches ?? []) as Array<{ store_id: string; niche_id: string; niche?: { name?: string } | null }>) {
+    const { storeNiches, follows } = await getStoreNichesAndFollowersCached(storeIds);
+    for (const row of storeNiches) {
       const nicheName = row.niche?.name?.trim();
       const idList = nicheIdsByStoreId.get(row.store_id) ?? [];
       idList.push(row.niche_id);
@@ -173,20 +136,9 @@ async function getMarketplaceData(q?: string, category?: string) {
       current.push(nicheName);
       nichesByStoreId.set(row.store_id, current);
     }
-  }
 
-  const followerCountByStoreId = new Map<string, number>();
-  if (storeIds.length > 0) {
-    const { data: followsData } = await supabase
-      .from("customer_store_follows")
-      .select("store_id")
-      .in("store_id", storeIds);
-
-    for (const row of (followsData ?? []) as Array<{ store_id: string }>) {
-      followerCountByStoreId.set(
-        row.store_id,
-        (followerCountByStoreId.get(row.store_id) ?? 0) + 1,
-      );
+    for (const row of follows) {
+      followerCountByStoreId.set(row.store_id, (followerCountByStoreId.get(row.store_id) ?? 0) + 1);
     }
   }
 

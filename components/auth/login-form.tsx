@@ -117,7 +117,8 @@ export function LoginForm() {
       <button
         type="button"
         onClick={() => signIn("google", { callbackUrl: googleCallbackUrl })}
-        className="auth-stagger-5 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-yellow-300 bg-yellow-100/60 px-4 py-2.5 text-sm font-semibold text-slate-900 transition hover:bg-yellow-100"
+        disabled={isLoading}
+        className="auth-stagger-5 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-yellow-300 bg-yellow-100/60 px-4 py-2.5 text-sm font-semibold text-slate-900 transition hover:bg-yellow-100 disabled:opacity-60"
       >
         <GoogleIcon />
         Continue with Google

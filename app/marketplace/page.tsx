@@ -5,7 +5,11 @@ import { ProductShowcaseCard } from "@/components/marketplace/product-showcase-c
 import { LocationFilterButton } from "@/components/marketplace/location-filter-button";
 import { formatNaira } from "@/lib/format";
 import { haversineDistanceKm } from "@/lib/geo";
-import { createAdminSupabaseClient } from "@/lib/supabase-admin";
+import {
+  getMarketplaceBaseDataCached,
+  getMarketplaceProductsByStoreIdsCached,
+  getMarketplaceStoreNichesCached,
+} from "@/lib/public-cache";
 
 export const metadata: Metadata = {
   title: "Marketplace",
@@ -122,33 +126,17 @@ function parseSearchState(raw: Awaited<MarketplacePageProps["searchParams"]>): S
 }
 
 async function getMarketplaceResults(state: SearchState) {
-  const supabase = createAdminSupabaseClient();
-  const [{ data: stores }, { data: nichesData }, { data: nicheCategoriesData }] =
-    await Promise.all([
-      supabase
-        .from("stores")
-        .select(
-          "id, name, slug, city, state, country, logo_url, rating_avg, rating_count, latitude, longitude",
-        )
-        .eq("is_active", true)
-        .limit(500),
-      supabase.from("niches").select("id, slug, name").order("name", { ascending: true }),
-      supabase
-        .from("niche_categories")
-        .select("niche_id, name")
-        .order("name", { ascending: true }),
-    ]);
-
-  const typedStores = ((stores ?? []) as StoreLite[]);
+  const { stores, niches, nicheCategories } = await getMarketplaceBaseDataCached();
+  const typedStores = stores as StoreLite[];
   const storesById = new Map(typedStores.map((store) => [store.id, store]));
   const activeStoreIds = [...storesById.keys()];
   const storeNicheNamesByStoreId = new Map<string, string[]>();
   const storeNicheIdsByStoreId = new Map<string, string[]>();
 
-  const niches = ((nichesData ?? []) as NicheLite[]);
-  const nicheCategories = ((nicheCategoriesData ?? []) as NicheCategoryLite[]);
+  const typedNiches = niches as NicheLite[];
+  const typedNicheCategories = nicheCategories as NicheCategoryLite[];
   const categoriesByNicheId = new Map<string, string[]>();
-  for (const row of nicheCategories) {
+  for (const row of typedNicheCategories) {
     const categoryName = row.name?.trim();
     if (!categoryName) continue;
     const current = categoriesByNicheId.get(row.niche_id) ?? [];
@@ -156,7 +144,7 @@ async function getMarketplaceResults(state: SearchState) {
     categoriesByNicheId.set(row.niche_id, current);
   }
 
-  const groupedCategories: CategoryGroup[] = niches.map((niche) => ({
+  const groupedCategories: CategoryGroup[] = typedNiches.map((niche) => ({
     niche_id: niche.id,
     niche_name: niche.name,
     categories: Array.from(new Set(categoriesByNicheId.get(niche.id) ?? [])).sort((a, b) =>
@@ -169,13 +157,8 @@ async function getMarketplaceResults(state: SearchState) {
   const categoriesInSelectedNiche = selectedNicheGroup?.categories ?? [];
 
   if (activeStoreIds.length > 0) {
-    const { data: storeNichesData } = await supabase
-      .from("store_niches")
-      .select("store_id, niche_id, niche:niche_id(name)")
-      .in("store_id", activeStoreIds);
-
-    for (const row of (storeNichesData ??
-      []) as Array<{ store_id: string; niche_id: string; niche?: { name?: string } | null }>) {
+    const storeNichesData = await getMarketplaceStoreNichesCached(activeStoreIds);
+    for (const row of storeNichesData) {
       const nicheIds = storeNicheIdsByStoreId.get(row.store_id) ?? [];
       nicheIds.push(row.niche_id);
       storeNicheIdsByStoreId.set(row.store_id, nicheIds);
@@ -196,27 +179,18 @@ async function getMarketplaceResults(state: SearchState) {
     };
   }
 
-  let productsQuery = supabase
-    .from("products")
-    .select("id, store_id, name, description, category, price, image_url, image_urls, rating_avg, rating_count, stock_count, created_at")
-    .eq("is_available", true)
-    .in("store_id", activeStoreIds)
-    .order("created_at", { ascending: false })
-    .limit(1200);
-
-  if (state.category) {
-    productsQuery = productsQuery.eq("category", state.category);
-  } else if (state.niche && categoriesInSelectedNiche.length > 0) {
-    productsQuery = productsQuery.in("category", categoriesInSelectedNiche);
-  } else if (state.niche && categoriesInSelectedNiche.length === 0) {
+  if (state.niche && categoriesInSelectedNiche.length === 0) {
     return {
       products: [] as Array<ProductLite & { distance_km: number | null; store: StoreLite }>,
       categories: [] as string[],
       grouped_categories: groupedCategories,
     };
   }
-
-  const { data: products } = await productsQuery;
+  const products = await getMarketplaceProductsByStoreIdsCached(
+    activeStoreIds,
+    state.category,
+    state.niche ? categoriesInSelectedNiche : [],
+  );
   const categories = Array.from(new Set((
     state.niche && selectedNicheGroup ? selectedNicheGroup.categories : groupedCategories.flatMap((group) => group.categories)
   ).filter(Boolean)));
@@ -260,7 +234,7 @@ async function getMarketplaceResults(state: SearchState) {
   const qLower = state.q.trim().toLowerCase();
   const matchedNicheIds = qLower
     ? new Set(
-        niches
+        typedNiches
           .filter(
             (niche) =>
               niche.name.toLowerCase().includes(qLower) || niche.slug.toLowerCase().includes(qLower),
@@ -270,7 +244,7 @@ async function getMarketplaceResults(state: SearchState) {
     : new Set<string>();
   const matchedCategoryNames = qLower
     ? new Set(
-        nicheCategories
+        typedNicheCategories
           .filter((row) => row.name.toLowerCase().includes(qLower))
           .map((row) => row.name.toLowerCase()),
       )

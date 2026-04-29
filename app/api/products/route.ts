@@ -1,10 +1,12 @@
 import { randomUUID } from "crypto";
+import { revalidateTag } from "next/cache";
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { z } from "zod";
 import { authOptions } from "@/lib/auth";
 import { formatNaira } from "@/lib/format";
 import { logDevError } from "@/lib/logger";
+import { CACHE_TAGS } from "@/lib/public-cache";
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
 
 const productSchema = z.object({
@@ -16,11 +18,11 @@ const productSchema = z.object({
   is_available: z.boolean().default(true),
 });
 
-async function getVendorStoreId(vendorId: string): Promise<string | null> {
+async function getVendorStore(vendorId: string): Promise<{ id: string; slug: string } | null> {
   const supabase = createAdminSupabaseClient();
   const { data, error } = await supabase
     .from("stores")
-    .select("id")
+    .select("id, slug")
     .eq("vendor_id", vendorId)
     .maybeSingle();
 
@@ -28,7 +30,17 @@ async function getVendorStoreId(vendorId: string): Promise<string | null> {
     throw new Error(error.message);
   }
 
-  return data?.id ?? null;
+  return data?.id && data?.slug ? { id: data.id, slug: data.slug } : null;
+}
+
+function revalidatePublicCacheForStore(slug: string) {
+  revalidateTag(CACHE_TAGS.homeMarketplaceBase);
+  revalidateTag(CACHE_TAGS.storeNichesFollowers);
+  revalidateTag(CACHE_TAGS.marketplaceBase);
+  revalidateTag(CACHE_TAGS.marketplaceStoreNiches);
+  revalidateTag(CACHE_TAGS.marketplaceProducts);
+  revalidateTag(CACHE_TAGS.storefrontPublic);
+  revalidateTag(CACHE_TAGS.storefrontBySlug(slug));
 }
 
 async function getAllowedCategoriesForStore(storeId: string): Promise<string[]> {
@@ -106,9 +118,9 @@ export async function GET() {
   }
 
   try {
-    const storeId = await getVendorStoreId(session.user.id);
+    const store = await getVendorStore(session.user.id);
 
-    if (!storeId) {
+    if (!store) {
       return NextResponse.json({ products: [], allowed_categories: [] });
     }
 
@@ -116,21 +128,21 @@ export async function GET() {
     const { data, error } = await supabase
       .from("products")
       .select("id, store_id, name, description, category, price, image_url, image_urls, rating_avg, rating_count, stock_count, is_available, created_at")
-      .eq("store_id", storeId)
+      .eq("store_id", store.id)
       .order("created_at", { ascending: false });
 
     if (error) {
-      logDevError("products.get", error, { userId: session.user.id, storeId });
+      logDevError("products.get", error, { userId: session.user.id, storeId: store.id });
       return NextResponse.json({ error: "Could not load products." }, { status: 500 });
     }
 
     let allowedCategories: string[] = [];
     try {
-      allowedCategories = await getAllowedCategoriesForStore(storeId);
+      allowedCategories = await getAllowedCategoriesForStore(store.id);
     } catch (categoryError) {
       logDevError("products.get.allowed-categories", categoryError, {
         userId: session.user.id,
-        storeId,
+        storeId: store.id,
       });
     }
 
@@ -159,14 +171,15 @@ export async function POST(request: Request) {
       stock_count: Number(formData.get("stock_count")),
       is_available: formData.get("is_available") === "true",
     });
+    const categoryIsOther = formData.get("category_is_other") === "true";
 
     if (!parsed.success) {
       return NextResponse.json({ error: "Invalid product data." }, { status: 400 });
     }
 
-    const storeId = await getVendorStoreId(session.user.id);
+    const store = await getVendorStore(session.user.id);
 
-    if (!storeId) {
+    if (!store) {
       return NextResponse.json(
         { error: "Create your store first before adding products." },
         { status: 400 },
@@ -175,11 +188,11 @@ export async function POST(request: Request) {
 
     let allowedCategories: string[] = [];
     try {
-      allowedCategories = await getAllowedCategoriesForStore(storeId);
+      allowedCategories = await getAllowedCategoriesForStore(store.id);
     } catch (categoryError) {
       logDevError("products.create.allowed-categories", categoryError, {
         userId: session.user.id,
-        storeId,
+        storeId: store.id,
       });
     }
 
@@ -191,7 +204,7 @@ export async function POST(request: Request) {
           { status: 400 },
         );
       }
-      if (!allowedCategories.includes(normalizedCategory)) {
+      if (!allowedCategories.includes(normalizedCategory) && !categoryIsOther) {
         return NextResponse.json(
           { error: "Selected category is not allowed for your store niches." },
           { status: 400 },
@@ -216,7 +229,7 @@ export async function POST(request: Request) {
     const { data, error } = await supabase
       .from("products")
       .insert({
-        store_id: storeId,
+        store_id: store.id,
         name: parsed.data.name,
         description: parsed.data.description || null,
         category: normalizedCategory || null,
@@ -230,9 +243,11 @@ export async function POST(request: Request) {
       .single();
 
     if (error || !data) {
-      logDevError("products.create", error, { userId: session.user.id, storeId });
+      logDevError("products.create", error, { userId: session.user.id, storeId: store.id });
       return NextResponse.json({ error: "Could not create product." }, { status: 500 });
     }
+
+    revalidatePublicCacheForStore(store.slug);
 
     return NextResponse.json({ product: data, message: `${data.name} (${formatNaira(Number(data.price))}) added.` });
   } catch (error) {

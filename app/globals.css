@@ -19,6 +19,11 @@
   box-sizing: border-box;
 }
 
+html {
+  scroll-behavior: smooth;
+  text-rendering: optimizeLegibility;
+}
+
 body {
   margin: 0;
   background:
@@ -28,6 +33,10 @@ body {
     #ffffff;
   color: var(--foreground);
   font-family: var(--font-geist-sans), sans-serif;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-overflow-scrolling: touch;
 }
 
 a {
