@@ -32,38 +32,6 @@ export async function generateMetadata({ params }: StorePageProps): Promise<Meta
   };
 }
 
-function HeroVisual({
-  heroImageUrl,
-  storeName,
-  className,
-}: {
-  heroImageUrl: string;
-  storeName: string;
-  className: string;
-}) {
-  const safeHeroUrl = heroImageUrl?.trim();
-  if (!safeHeroUrl) {
-    return (
-      <div
-        className={`flex items-center justify-center rounded-2xl border border-white/40 bg-white/20 text-sm font-semibold text-white/90 ${className}`}
-      >
-        Add hero image in dashboard
-      </div>
-    );
-  }
-  return (
-    <div className={`relative overflow-hidden rounded-2xl bg-white ${className}`}>
-      <Image
-        src={safeHeroUrl}
-        alt={`${storeName} hero`}
-        fill
-        className="object-contain"
-        sizes="(max-width: 1024px) 100vw, 60vw"
-      />
-    </div>
-  );
-}
-
 function StoreHero({
   store,
   primaryColor,
@@ -111,7 +79,7 @@ function StoreHero({
           : "storefront-anim-fade";
 
   return (
-    <section className={`relative left-1/2 right-1/2 w-screen -translate-x-1/2 overflow-hidden rounded-none border-y border-slate-200 shadow-sm ${motionClass}`}>
+    <section className={`relative left-1/2 w-screen max-w-[100vw] -translate-x-1/2 overflow-hidden rounded-none border-y border-slate-200 shadow-sm ${motionClass}`}>
       <div className={`relative ${heroHeightClass}`}>
         {heroImageUrl ? (
           <Image
@@ -326,16 +294,16 @@ export default async function StorePage({ params, searchParams }: StorePageProps
     "h-56 w-screen max-w-none relative left-1/2 right-1/2 -mx-[50vw] rounded-none border-0 shadow-none sm:static sm:left-auto sm:right-auto sm:mx-0 sm:w-full sm:max-w-full sm:rounded-xl sm:border sm:border-slate-200 sm:shadow-sm";
 
   const storefrontControls = (
-    <section className="space-y-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:p-4">
-      <form className="flex flex-wrap items-center gap-2" action={`/store/${slug}`}>
+    <section className="space-y-2 rounded-2xl border border-slate-200 bg-white p-2.5 shadow-sm sm:space-y-3 sm:p-4">
+      <form className="flex flex-nowrap items-center gap-2" action={`/store/${slug}`}>
         <input
           name="q"
           defaultValue={query.q ?? ""}
           placeholder="Search this store..."
-          className="min-w-[220px] flex-1 rounded-full border border-slate-200 px-4 py-2 text-sm outline-none ring-emerald-300 focus:ring-2"
+          className="min-w-0 flex-1 rounded-full border border-slate-200 px-3 py-2 text-sm outline-none ring-emerald-300 focus:ring-2 sm:px-4"
         />
         {selectedCategory ? <input type="hidden" name="category" value={selectedCategory} /> : null}
-        <button className="rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700">
+        <button className="shrink-0 rounded-full bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700 sm:px-4">
           Search
         </button>
       </form>
@@ -369,7 +337,7 @@ export default async function StorePage({ params, searchParams }: StorePageProps
 
   if (template === "fashion_editorial") {
     return (
-      <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 bg-white px-0 py-0 sm:px-6 sm:py-6">
+      <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 bg-white px-0 py-0 sm:px-6 sm:pb-6 sm:pt-0">
         <StoreHero
           store={store}
           primaryColor={primaryColor}
@@ -382,16 +350,7 @@ export default async function StorePage({ params, searchParams }: StorePageProps
           heroSubtitle={config.hero_subtitle}
           template={template}
         />
-        <div className={`px-3 pt-4 sm:px-0 ${bodyMotionClass}`}>{storefrontControls}</div>
-        <section className="-mx-0 grid gap-4 px-3 lg:grid-cols-[1.3fr_1fr] sm:mx-0 sm:px-0">
-          <HeroVisual heroImageUrl={config.hero_image_url} storeName={store.name} className="h-72 sm:h-80" />
-          <article className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Editorial Pick</p>
-            <h2 className="mt-2 text-3xl font-black tracking-tight text-slate-900">{config.hero_title}</h2>
-            <p className="mt-3 text-sm text-slate-600">{config.hero_subtitle}</p>
-            <p className="mt-4 text-sm font-semibold" style={{ color: primaryColor }}>{config.promo_text}</p>
-          </article>
-        </section>
+        <div className={`px-2 pt-2 sm:px-0 sm:pt-4 ${bodyMotionClass}`}>{storefrontControls}</div>
         {sectionsOrder.map((section) => {
           if (section === "featured_products") {
             return (
@@ -405,7 +364,7 @@ export default async function StorePage({ params, searchParams }: StorePageProps
           }
           if (section === "promo_strip") {
             return (
-              <section key={section} className="-mx-4 space-y-3 rounded-none border border-slate-200 bg-slate-50 p-4 sm:mx-0 sm:rounded-xl">
+              <section key={section} className="mx-0 space-y-3 rounded-none border border-slate-200 bg-slate-50 p-4 sm:rounded-xl lg:hidden">
                 <p className="text-sm font-semibold text-slate-700">{config.promo_text}</p>
                 <BannerCarousel banners={bannerUrls} storeName={store.name} className={mobileEdgeBannerClass} />
               </section>
@@ -427,7 +386,7 @@ export default async function StorePage({ params, searchParams }: StorePageProps
 
   if (template === "lifestyle_showcase") {
     return (
-      <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 bg-slate-50 px-0 py-0 sm:px-6 sm:py-6">
+      <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 bg-slate-50 px-0 py-0 sm:px-6 sm:pb-6 sm:pt-0">
         <StoreHero
           store={store}
           primaryColor={primaryColor}
@@ -440,24 +399,7 @@ export default async function StorePage({ params, searchParams }: StorePageProps
           heroSubtitle={config.hero_subtitle}
           template={template}
         />
-        <div className={`px-3 pt-4 sm:px-0 ${bodyMotionClass}`}>{storefrontControls}</div>
-        <section
-          className="mx-3 grid gap-4 rounded-none p-4 sm:mx-0 sm:rounded-2xl sm:p-6 lg:grid-cols-[1.5fr_1fr]"
-          style={{ backgroundColor: theme.surface }}
-        >
-          <article className="space-y-3 rounded-xl bg-white/80 p-4 backdrop-blur">
-            <h2 className="text-3xl font-black tracking-tight text-slate-900 sm:text-4xl">{config.hero_title}</h2>
-            <p className="max-w-xl text-sm text-slate-700 sm:text-base">{config.hero_subtitle}</p>
-            <button
-              type="button"
-              className="rounded-full px-4 py-2 text-sm font-semibold text-white"
-              style={{ backgroundColor: primaryColor }}
-            >
-              {config.hero_cta_text}
-            </button>
-          </article>
-          <HeroVisual heroImageUrl={config.hero_image_url} storeName={store.name} className="h-72 sm:h-80" />
-        </section>
+        <div className={`px-2 pt-2 sm:px-0 sm:pt-4 ${bodyMotionClass}`}>{storefrontControls}</div>
         {sectionsOrder.map((section) => {
           if (section === "featured_products") {
             return (
@@ -471,7 +413,7 @@ export default async function StorePage({ params, searchParams }: StorePageProps
           }
           if (section === "promo_strip") {
             return (
-              <section key={section} className="-mx-4 grid gap-4 px-4 sm:mx-0 sm:px-0 lg:grid-cols-[1fr_320px]">
+              <section key={section} className="mx-0 grid gap-4 px-0 lg:hidden">
                 <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
                   <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Promo</p>
                   <p className="mt-2 text-sm text-slate-700">{config.promo_text}</p>
@@ -496,7 +438,7 @@ export default async function StorePage({ params, searchParams }: StorePageProps
 
   if (template === "modern_grid") {
     return (
-      <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 bg-slate-100 px-0 py-0 sm:px-6 sm:py-6">
+      <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 bg-slate-100 px-0 py-0 sm:px-6 sm:pb-6 sm:pt-0">
         <StoreHero
           store={store}
           primaryColor={primaryColor}
@@ -509,8 +451,8 @@ export default async function StorePage({ params, searchParams }: StorePageProps
           heroSubtitle={config.hero_subtitle}
           template={template}
         />
-        <div className={`px-3 pt-4 sm:px-0 ${bodyMotionClass}`}>{storefrontControls}</div>
-        <section className="mx-3 grid gap-4 sm:mx-0 lg:grid-cols-[260px_1fr]">
+        <div className={`px-2 pt-2 sm:px-0 sm:pt-4 ${bodyMotionClass}`}>{storefrontControls}</div>
+        <section className="mx-2 grid gap-4 sm:mx-0 lg:grid-cols-[260px_1fr]">
           <aside className="space-y-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
             <p className="text-sm font-semibold text-slate-800">Browse</p>
             <p className="text-xs text-slate-600">{config.promo_text}</p>
@@ -523,13 +465,6 @@ export default async function StorePage({ params, searchParams }: StorePageProps
             </div>
           </aside>
           <div className="space-y-4">
-            <section
-              className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5"
-              style={{ borderTopColor: primaryColor, borderTopWidth: 4 }}
-            >
-              <h2 className="text-2xl font-black tracking-tight text-slate-900">{config.hero_title}</h2>
-              <p className="mt-1 text-sm text-slate-600">{config.hero_subtitle}</p>
-            </section>
             {sectionsOrder.map((section) => {
               if (section === "featured_products") {
                 return (
@@ -542,7 +477,7 @@ export default async function StorePage({ params, searchParams }: StorePageProps
               }
               if (section === "promo_strip") {
                 return (
-                  <section key={section} className="-mx-4 space-y-3 rounded-none border border-slate-200 bg-white p-4 shadow-sm sm:mx-0 sm:rounded-xl">
+                  <section key={section} className="mx-0 space-y-3 rounded-none border border-slate-200 bg-white p-4 shadow-sm sm:rounded-xl lg:hidden">
                     <p className="text-sm text-slate-700">{config.promo_text}</p>
                     <BannerCarousel banners={bannerUrls} storeName={store.name} className={mobileEdgeBannerClass} />
                   </section>
@@ -566,7 +501,7 @@ export default async function StorePage({ params, searchParams }: StorePageProps
 
   // Default: grocery promo
   return (
-    <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 bg-slate-50 px-4 py-6 sm:px-6">
+    <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 bg-slate-50 px-0 py-0 sm:px-6 sm:pb-6 sm:pt-0">
       <StoreHero
         store={store}
         primaryColor={primaryColor}
@@ -579,29 +514,7 @@ export default async function StorePage({ params, searchParams }: StorePageProps
         heroSubtitle={config.hero_subtitle}
         template={template}
       />
-      <div className={`px-3 pt-4 sm:px-0 ${bodyMotionClass}`}>{storefrontControls}</div>
-      <section
-        className="mx-3 grid gap-4 rounded-none p-4 sm:mx-0 sm:rounded-2xl sm:p-6 lg:grid-cols-[1.2fr_1fr]"
-        style={{ backgroundColor: theme.surface }}
-      >
-        <article className="space-y-3">
-          <p className="inline-flex rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-700">
-            {config.promo_text}
-          </p>
-          <h2 className="text-3xl font-black tracking-tight text-slate-900 sm:text-4xl">
-            {config.hero_title}
-          </h2>
-          <p className="max-w-xl text-sm text-slate-700 sm:text-base">{config.hero_subtitle}</p>
-          <button
-            type="button"
-            className="rounded-full px-4 py-2 text-sm font-semibold text-white"
-            style={{ backgroundColor: primaryColor }}
-          >
-            {config.hero_cta_text}
-          </button>
-        </article>
-        <HeroVisual heroImageUrl={config.hero_image_url} storeName={store.name} className="h-72 sm:h-80" />
-      </section>
+      <div className={`px-2 pt-2 sm:px-0 sm:pt-4 ${bodyMotionClass}`}>{storefrontControls}</div>
 
       {sectionsOrder.map((section) => {
         if (section === "featured_products") {
@@ -621,7 +534,7 @@ export default async function StorePage({ params, searchParams }: StorePageProps
         }
         if (section === "promo_strip") {
           return (
-            <section key={section} className="-mx-4 space-y-3 rounded-none border border-slate-200 bg-white p-4 shadow-sm sm:mx-0 sm:rounded-xl">
+            <section key={section} className="mx-0 space-y-3 rounded-none border border-slate-200 bg-white p-4 shadow-sm sm:rounded-xl lg:hidden">
               <p className="text-sm font-semibold text-slate-800">{config.promo_text}</p>
               <BannerCarousel banners={bannerUrls} storeName={store.name} className={mobileEdgeBannerClass} />
             </section>

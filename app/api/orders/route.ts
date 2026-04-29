@@ -5,6 +5,8 @@ import { authOptions } from "@/lib/auth";
 import { logDevError } from "@/lib/logger";
 import { requireVerifiedPhone } from "@/lib/require-verified-phone";
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
+import { sendWhatsAppTextMessage } from "@/lib/whatsapp-cloud";
+import { waMessage, waTitle } from "@/lib/whatsapp-bot/message-format";
 
 const createOrderSchema = z.object({
   store_id: z.string().uuid(),
@@ -52,7 +54,7 @@ export async function POST(request: Request) {
 
     const { data: store, error: storeError } = await supabase
       .from("stores")
-      .select("id, name, is_active")
+      .select("id, name, whatsapp_number, is_active")
       .eq("id", parsed.data.store_id)
       .eq("is_active", true)
       .maybeSingle();
@@ -123,6 +125,28 @@ export async function POST(request: Request) {
       await supabase.from("orders").delete().eq("id", order.id);
 
       return NextResponse.json({ error: "Could not create order item." }, { status: 500 });
+    }
+
+    const orderRef = String(order.id).slice(0, 8).toUpperCase();
+    const vendorPhone = String((store as { whatsapp_number?: string | null }).whatsapp_number ?? "").trim();
+    if (vendorPhone) {
+      try {
+        await sendWhatsAppTextMessage({
+          to: vendorPhone,
+          message: waMessage(
+            waTitle("New Order Received"),
+            `Ref: #${orderRef}`,
+            `Product: ${product.name}`,
+            `Qty: ${quantity}`,
+            `Total: ${totalAmount.toLocaleString("en-NG", { style: "currency", currency: "NGN", maximumFractionDigits: 0 })}`,
+            `Customer: ${customerName}`,
+            `Customer WhatsApp: ${customerWhatsapp}`,
+            "Reply with CONFIRM <ORDER_REF> or REJECT <ORDER_REF>.",
+          ),
+        });
+      } catch (notifyError) {
+        logDevError("orders.vendor-notify", notifyError, { orderId: order.id, vendorPhone });
+      }
     }
 
     return NextResponse.json({

@@ -111,6 +111,24 @@ async function getStoresMap(storeIds: string[]): Promise<Map<string, StoreLite>>
   );
 }
 
+async function getProductByOrderId(orderIds: string[]): Promise<Map<string, string>> {
+  const supabase = createAdminSupabaseClient();
+  if (orderIds.length === 0) return new Map();
+  const { data, error } = await supabase
+    .from("order_items")
+    .select("order_id, product:product_id(name)")
+    .in("order_id", orderIds);
+  if (error) throw new Error(error.message);
+  const map = new Map<string, string>();
+  for (const row of (data ?? []) as Array<{ order_id: string; product?: { name?: string } | null }>) {
+    const orderId = String(row.order_id);
+    if (map.has(orderId)) continue;
+    const name = String(row.product?.name ?? "").trim();
+    if (name) map.set(orderId, name);
+  }
+  return map;
+}
+
 async function findCustomerOrderByReference(customerPhone: string, rawRef: string) {
   const supabase = createAdminSupabaseClient();
   const ref = rawRef.toLowerCase();
@@ -242,9 +260,11 @@ async function handleMyOrders(from: string, normalizedFrom: string, statusFilter
   }
 
   const storesMap = await getStoresMap(Array.from(new Set(orders.map((order) => order.store_id))));
+  const productByOrderId = await getProductByOrderId(orders.map((order) => order.id));
   const lines = orders.map((order) => {
     const storeName = storesMap.get(order.store_id)?.name ?? "Store";
-    return `#${shortRef(order.id)} | ${formatBotStatus(order.status)} | ${formatNaira(Number(order.total_amount))} | ${storeName}`;
+    const product = productByOrderId.get(order.id) ?? "Product";
+    return `#${shortRef(order.id)} (${product}) | ${formatBotStatus(order.status)} | ${formatNaira(Number(order.total_amount))} | ${storeName}`;
   });
 
   await sendPaginatedList({
@@ -277,6 +297,7 @@ async function handleMyStatus(from: string, normalizedFrom: string) {
   const activeStatuses = new Set(["pending_whatsapp", "confirmed", "processing", "shipped"]);
   const active = orders.filter((order) => activeStatuses.has(String(order.status)));
   const latest = orders.slice(0, 5);
+  const productByOrderId = await getProductByOrderId(latest.map((order) => order.id));
 
   const statusCounter = new Map<string, number>();
   for (const order of latest) {
@@ -289,7 +310,7 @@ async function handleMyStatus(from: string, normalizedFrom: string) {
     .join(" | ");
 
   const latestLines = latest.map(
-    (order) => `#${shortRef(order.id)} - ${formatBotStatus(order.status)} - ${formatNaira(Number(order.total_amount))}`,
+    (order) => `#${shortRef(order.id)} (${productByOrderId.get(order.id) ?? "Product"}) - ${formatBotStatus(order.status)} - ${formatNaira(Number(order.total_amount))}`,
   );
 
   await sendWhatsAppTextMessage({
@@ -332,12 +353,15 @@ async function handleTrack(from: string, normalizedFrom: string, body: string): 
   }
 
   const storesMap = await getStoresMap([order.store_id]);
+  const productByOrderId = await getProductByOrderId([order.id]);
   const storeName = storesMap.get(order.store_id)?.name ?? "Store";
+  const productName = productByOrderId.get(order.id) ?? "Product";
 
   await sendWhatsAppTextMessage({
     to: from,
     message: waMessage(
       waTitle(`Order #${shortRef(order.id)}`),
+      `Product: ${productName}`,
       `Store: ${storeName}`,
       `Status: ${formatBotStatus(order.status)}`,
       `Total: ${formatNaira(Number(order.total_amount))}`,
@@ -397,20 +421,22 @@ async function handleCancel(from: string, normalizedFrom: string, body: string):
   }
 
   const storesMap = await getStoresMap([order.store_id]);
+  const productByOrderId = await getProductByOrderId([order.id]);
+  const productName = productByOrderId.get(order.id) ?? "Product";
   const store = storesMap.get(order.store_id);
 
   await sendWhatsAppTextMessage({
     to: from,
     message: waMessage(
       waTitle("Order Cancelled"),
-      `Order #${shortRef(order.id)} was cancelled successfully.`,
+      `Order #${shortRef(order.id)} (${productName}) was cancelled successfully.`,
     ),
   });
 
   if (store?.whatsapp_number) {
     await sendWhatsAppTextMessage({
       to: store.whatsapp_number,
-      message: `Customer cancelled order #${shortRef(order.id)}.`,
+      message: `Customer cancelled order #${shortRef(order.id)} (${productName}).`,
     });
   }
   return order.store_id;

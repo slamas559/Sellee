@@ -4,6 +4,8 @@ import { z } from "zod";
 import { authOptions } from "@/lib/auth";
 import { requireVerifiedPhone } from "@/lib/require-verified-phone";
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
+import { sendWhatsAppTextMessage } from "@/lib/whatsapp-cloud";
+import { waMessage, waTitle } from "@/lib/whatsapp-bot/message-format";
 
 const statusSchema = z.object({
   status: z.enum(["confirmed", "rejected"]),
@@ -52,7 +54,7 @@ export async function PATCH(
 
   const { data: order, error: orderError } = await supabase
     .from("orders")
-    .select("id,store_id,status")
+    .select("id,store_id,status,customer_whatsapp")
     .eq("id", orderId)
     .eq("store_id", store.id)
     .maybeSingle();
@@ -78,6 +80,33 @@ export async function PATCH(
 
   if (updateError || !updated) {
     return NextResponse.json({ error: "Could not update order status." }, { status: 500 });
+  }
+
+  const { data: item } = await supabase
+    .from("order_items")
+    .select("product:product_id(name)")
+    .eq("order_id", orderId)
+    .limit(1)
+    .maybeSingle();
+
+  const productName =
+    ((item as { product?: { name?: string } | null } | null)?.product?.name ?? "").trim() ||
+    "your product";
+  const ref = String(orderId).slice(0, 8).toUpperCase();
+  const customerPhone = String(order.customer_whatsapp ?? "").trim();
+  if (customerPhone && customerPhone !== "unknown") {
+    const line =
+      parsed.data.status === "confirmed"
+        ? `Your order #${ref} (${productName}) was confirmed.`
+        : `Your order #${ref} (${productName}) was rejected.`;
+    try {
+      await sendWhatsAppTextMessage({
+        to: customerPhone,
+        message: waMessage(waTitle("Order Update"), line),
+      });
+    } catch {
+      // non-blocking customer notification
+    }
   }
 
   return NextResponse.json({ success: true, order: updated });

@@ -250,11 +250,21 @@ export async function handleConfirmReject(
   }
 
   const shortRef = String(order.id).slice(0, 8).toUpperCase();
+  const { data: orderItem } = await supabase
+    .from("order_items")
+    .select("product:product_id(name)")
+    .eq("order_id", order.id)
+    .limit(1)
+    .maybeSingle();
+  const productName =
+    ((orderItem as { product?: { name?: string } | null } | null)?.product?.name ?? "").trim() ||
+    "Product";
 
   await sendWhatsAppTextMessage({
     to: from,
     message: waMessage(
       waTitle(`Order #${shortRef} Updated`),
+      `Product: ${productName}`,
       `New status: ${formatBotStatus(nextStatus)}`,
     ),
   });
@@ -264,8 +274,8 @@ export async function handleConfirmReject(
   if (customerPhone && customerPhone !== "unknown") {
     const customerMessage =
       command === "CONFIRM"
-        ? `Your order #${shortRef} has been confirmed by ${store.name}. We will keep you updated.`
-        : `Your order #${shortRef} was rejected by ${store.name}. Please message the vendor for details.`;
+        ? `Your order #${shortRef} (${productName}) has been confirmed by ${store.name}. We will keep you updated.`
+        : `Your order #${shortRef} (${productName}) was rejected by ${store.name}. Please message the vendor for details.`;
 
     await sendWhatsAppTextMessage({
       to: customerPhone,
@@ -302,9 +312,22 @@ export async function handleListOrders(from: string, store: StoreForCommand) {
     return;
   }
 
+  const orderIds = orders.map((order) => String(order.id));
+  const { data: itemRows } = await supabase
+    .from("order_items")
+    .select("order_id, product:product_id(name)")
+    .in("order_id", orderIds);
+  const productByOrderId = new Map<string, string>();
+  for (const row of (itemRows ?? []) as Array<{ order_id: string; product?: { name?: string } | null }>) {
+    if (productByOrderId.has(String(row.order_id))) continue;
+    const name = String(row.product?.name ?? "").trim();
+    if (name) productByOrderId.set(String(row.order_id), name);
+  }
+
   const lines = orders.map((order) => {
     const shortRef = String(order.id).slice(0, 8).toUpperCase();
-    return `#${shortRef} | ${formatBotStatus(order.status)} | ${formatNaira(Number(order.total_amount))}`;
+    const product = productByOrderId.get(String(order.id)) ?? "Product";
+    return `#${shortRef} (${product}) | ${formatBotStatus(order.status)} | ${formatNaira(Number(order.total_amount))}`;
   });
 
   await sendPaginatedList({

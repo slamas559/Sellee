@@ -100,9 +100,17 @@ export default async function DashboardOrdersPage() {
               <article key={order.id} className="rounded-lg border border-slate-200 p-4">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
-                    <p className="text-sm font-semibold text-slate-900">
-                      Order #{order.id.slice(0, 8).toUpperCase()}
-                    </p>
+                    {(() => {
+                      const firstProduct = items[0]?.product_name?.trim() || "Product";
+                      const moreCount = Math.max(items.length - 1, 0);
+                      const productLabel =
+                        moreCount > 0 ? `${firstProduct} +${moreCount} more` : firstProduct;
+                      return (
+                        <p className="text-sm font-semibold text-slate-900">
+                          #{order.id.slice(0, 8).toUpperCase()} ({productLabel})
+                        </p>
+                      );
+                    })()}
                     <p className="text-xs text-slate-500">
                       {new Date(order.created_at).toLocaleString()}
                     </p>
