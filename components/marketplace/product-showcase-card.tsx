@@ -144,18 +144,6 @@ export function ProductShowcaseCard({
               <span className="text-[10px] font-semibold text-slate-500">Store</span>
             )}
           </div>
-          <SocialShareActions
-            mode="menu"
-            compact
-            align="right"
-            menuPosition="up"
-            url={productHref}
-            title={`${product.name} - ${store.name}`}
-            text={`Check out ${product.name} from ${store.name} on Sellee.`}
-            className="absolute top-20 z-20 sm:top-27"
-            triggerClassName="inline-flex h-7 w-7 items-center justify-center cursor-pointer rounded-full text-white shadow-md backdrop-blur-md hover:bg-white/50 sm:h-8 sm:w-8"
-            triggerLabel={`Share ${product.name}`}
-          />
         </div>
 
         {hasManyImages ? (
@@ -194,9 +182,23 @@ export function ProductShowcaseCard({
       </div>
 
       <div className={contentWrapClass}>
-        <p className={`line-clamp-1 text-xs font-semibold uppercase tracking-[0.16em] ${metaClass}`}>
-          {store.name}
-        </p>
+        <div className="flex items-start justify-between gap-2">
+          <p className={`line-clamp-1 text-xs font-semibold uppercase tracking-[0.16em] ${metaClass}`}>
+            {store.name}
+          </p>
+          <SocialShareActions
+            mode="menu"
+            compact
+            align="right"
+            menuPosition="up"
+            url={productHref}
+            title={`${product.name} - ${store.name}`}
+            text={`Check out ${product.name} from ${store.name} on Sellee.`}
+            className="relative z-20 shrink-0"
+            triggerClassName="inline-flex h-7 w-7 items-center justify-center cursor-pointer rounded-full border border-slate-300/80 bg-white/90 text-slate-700 shadow-sm backdrop-blur hover:bg-white sm:h-8 sm:w-8"
+            triggerLabel={`Share ${product.name}`}
+          />
+        </div>
         <h3
           className={`line-clamp-2 font-black tracking-tight leading-tight ${titleClass} ${headlineClass}`}
         >
