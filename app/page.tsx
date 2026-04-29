@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { getServerSession } from "next-auth";
+import logoText from "@/app/logos/image-text-logo.png";
 import { NearbyVendors } from "@/components/landing/nearby-vendors";
 import { WhatsAppBotAccess } from "@/components/landing/whatsapp-bot-access";
 import { UserMenu } from "@/components/layout/user-menu";
@@ -283,7 +284,12 @@ export default async function Home({ searchParams }: HomeProps) {
 
         <div className="flex flex-wrap items-center gap-3 px-3 py-4 sm:gap-4 sm:px-6">
           <Link href="/" className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-4 py-2">
-            <span className="text-xl font-black tracking-tight text-emerald-700">Sellee</span>
+            <Image
+              src={logoText}
+              alt="Sellee logo"
+              className="h-7 w-auto sm:h-8"
+              priority
+            />
           </Link>
 
           <form action="/" className="flex min-w-0 flex-1 basis-[620px] items-center gap-2 rounded-full border border-slate-200 bg-white p-2">

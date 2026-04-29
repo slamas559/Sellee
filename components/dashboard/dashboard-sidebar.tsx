@@ -1,7 +1,9 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import logoText from "@/app/logos/image-text-logo.png";
 import { SignOutButton } from "@/components/auth/sign-out-button";
 
 type DashboardSidebarProps = {
@@ -33,9 +35,9 @@ export function DashboardSidebar({ name, email }: DashboardSidebarProps) {
     <aside className="hidden w-72 rounded-2xl border border-emerald-100 bg-white p-5 shadow-sm lg:sticky lg:top-6 lg:block lg:h-[calc(100vh-3rem)] lg:max-h-[calc(100vh-3rem)] lg:self-start">
       <div className="flex h-full flex-col">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
-            Sellee
-          </p>
+          <Link href="/" className="inline-flex items-center">
+            <Image src={logoText} alt="Sellee" className="h-9 w-auto" />
+          </Link>
           <h2 className="mt-1 text-lg font-semibold text-slate-900">Vendor Console</h2>
           <p className="mt-1 text-sm font-medium text-slate-700">{name ?? "Vendor"}</p>
           <p className="mt-1 break-all text-xs text-slate-500">{email ?? ""}</p>

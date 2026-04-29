@@ -201,9 +201,25 @@ export async function PATCH(
     }
 
     let imageUrl: string | null = existingProduct.image_url;
-    let imageUrls: string[] = Array.isArray(existingProduct.image_urls)
+    const existingImageUrls: string[] = Array.isArray(existingProduct.image_urls)
       ? existingProduct.image_urls.filter((item): item is string => typeof item === "string")
       : [];
+    let imageUrls: string[] = [...existingImageUrls];
+
+    const keepImageUrlsRaw = formData.get("keep_image_urls");
+    if (typeof keepImageUrlsRaw === "string" && keepImageUrlsRaw.trim()) {
+      try {
+        const parsedKeep = JSON.parse(keepImageUrlsRaw) as unknown;
+        if (Array.isArray(parsedKeep)) {
+          const requested = parsedKeep.filter(
+            (value): value is string => typeof value === "string" && value.trim().length > 0,
+          );
+          imageUrls = requested.filter((url) => existingImageUrls.includes(url));
+        }
+      } catch {
+        // Ignore malformed keep list and default to existing image order.
+      }
+    }
 
     if (parsed.data.remove_image) {
       imageUrl = null;
@@ -211,9 +227,10 @@ export async function PATCH(
     }
 
     if (imageFiles.length > 0) {
-      imageUrls = await uploadProductImages(session.user.id, imageFiles);
-      imageUrl = imageUrls[0] ?? null;
+      const uploadedImageUrls = await uploadProductImages(session.user.id, imageFiles);
+      imageUrls = [...imageUrls, ...uploadedImageUrls];
     }
+    imageUrl = imageUrls[0] ?? null;
 
     const { data, error } = await supabase
       .from("products")

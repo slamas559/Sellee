@@ -19,6 +19,7 @@ type ProductFormState = {
   stock_count: string;
   is_available: boolean;
   images: File[];
+  existing_image_urls: string[];
   remove_image: boolean;
 };
 
@@ -30,6 +31,7 @@ const initialForm: ProductFormState = {
   stock_count: "0",
   is_available: true,
   images: [],
+  existing_image_urls: [],
   remove_image: false,
 };
 
@@ -95,6 +97,12 @@ export function ProductsManager({ initialProducts }: ProductsManagerProps) {
       stock_count: String(product.stock_count),
       is_available: product.is_available,
       images: [],
+      existing_image_urls:
+        (product.image_urls?.filter((url): url is string => Boolean(url?.trim())) ?? []).length > 0
+          ? (product.image_urls?.filter((url): url is string => Boolean(url?.trim())) ?? [])
+          : product.image_url
+            ? [product.image_url]
+            : [],
       remove_image: false,
     });
     setMessage(null);
@@ -129,6 +137,26 @@ export function ProductsManager({ initialProducts }: ProductsManagerProps) {
       const [target] = next.splice(index, 1);
       next.unshift(target);
       return { ...prev, images: next };
+    });
+  }
+
+  function removeExistingImage(index: number) {
+    setForm((prev) => ({
+      ...prev,
+      existing_image_urls: prev.existing_image_urls.filter(
+        (_, currentIndex) => currentIndex !== index,
+      ),
+      remove_image: false,
+    }));
+  }
+
+  function moveExistingImageToPrimary(index: number) {
+    setForm((prev) => {
+      if (index <= 0 || index >= prev.existing_image_urls.length) return prev;
+      const next = [...prev.existing_image_urls];
+      const [target] = next.splice(index, 1);
+      next.unshift(target);
+      return { ...prev, existing_image_urls: next };
     });
   }
 
@@ -173,6 +201,7 @@ export function ProductsManager({ initialProducts }: ProductsManagerProps) {
     body.append("stock_count", String(stockNumber));
     body.append("is_available", String(form.is_available));
     body.append("remove_image", String(form.remove_image));
+    body.append("keep_image_urls", JSON.stringify(form.existing_image_urls));
 
     for (const image of form.images) {
       body.append("images", image);
@@ -242,6 +271,9 @@ export function ProductsManager({ initialProducts }: ProductsManagerProps) {
         <h2 className="mt-1 text-xl font-semibold text-slate-900">
           {editingProductId ? "Edit product" : "Add product"}
         </h2>
+        <p className="mt-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
+          You can upload multiple product images. The first image is used as the cover image on cards.
+        </p>
 
         <form onSubmit={handleSubmit} className="mt-5 grid gap-4 md:grid-cols-2">
           <label className="space-y-2 text-sm">
@@ -327,7 +359,50 @@ export function ProductsManager({ initialProducts }: ProductsManagerProps) {
           </label>
 
           <div className="space-y-2 text-sm md:col-span-2">
-            <span className="font-medium text-slate-700">Product images (optional)</span>
+            <span className="font-medium text-slate-700">Product images</span>
+            {editingProductId && form.existing_image_urls.length > 0 ? (
+              <div className="space-y-2">
+                <p className="text-xs text-slate-500">Current images</p>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+                  {form.existing_image_urls.map((url, index) => (
+                    <div key={`${url}-${index}`} className="rounded-lg border border-slate-200 bg-white p-2">
+                      <div className="relative h-24 overflow-hidden rounded-md bg-slate-100">
+                        <Image
+                          src={url}
+                          alt={`Existing product image ${index + 1}`}
+                          fill
+                          className="object-cover"
+                          sizes="200px"
+                        />
+                        {index === 0 ? (
+                          <span className="absolute left-1.5 top-1.5 rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-semibold text-white">
+                            Cover
+                          </span>
+                        ) : null}
+                      </div>
+                      <div className="mt-2 flex items-center gap-2">
+                        {index > 0 ? (
+                          <button
+                            type="button"
+                            onClick={() => moveExistingImageToPrimary(index)}
+                            className="rounded-md border border-slate-300 px-2 py-1 text-[10px] font-semibold text-slate-700 hover:bg-slate-50"
+                          >
+                            Make cover
+                          </button>
+                        ) : null}
+                        <button
+                          type="button"
+                          onClick={() => removeExistingImage(index)}
+                          className="rounded-md border border-red-300 px-2 py-1 text-[10px] font-semibold text-red-700 hover:bg-red-50"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
             <label
               onDragOver={(event) => {
                 event.preventDefault();

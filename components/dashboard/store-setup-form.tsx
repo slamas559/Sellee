@@ -37,6 +37,12 @@ type NicheOption = {
   }>;
 };
 
+type MeResponse = {
+  user?: {
+    phone?: string | null;
+  };
+};
+
 const INITIAL_UPLOAD_STATE: UploadState = {
   isUploading: false,
   progress: 0,
@@ -416,6 +422,31 @@ export function StoreSetupForm({ initialStore }: StoreSetupFormProps) {
       ignore = true;
     };
   }, []);
+
+  useEffect(() => {
+    let ignore = false;
+
+    async function loadAccountPhone() {
+      if (form.whatsapp_number.trim()) {
+        return;
+      }
+      try {
+        const response = await fetch("/api/me", { cache: "no-store" });
+        const payload = (await response.json()) as MeResponse;
+        if (!response.ok || ignore) return;
+        const phone = payload.user?.phone?.trim();
+        if (!phone) return;
+        setForm((prev) => (prev.whatsapp_number.trim() ? prev : { ...prev, whatsapp_number: phone }));
+      } catch {
+        // Keep silent; store save validation will guide vendor if phone is still missing.
+      }
+    }
+
+    void loadAccountPhone();
+    return () => {
+      ignore = true;
+    };
+  }, [form.whatsapp_number]);
 
   function pushBannerUrl(url: string) {
     const normalized = url.trim();
@@ -825,16 +856,15 @@ export function StoreSetupForm({ initialStore }: StoreSetupFormProps) {
                 placeholder="Sellee Home Essentials"
               />
             </label>
-            <label className="space-y-2 text-sm">
+            <div className="space-y-2 text-sm">
               <span className="font-medium text-slate-700">WhatsApp number</span>
-              <input
-                required
-                value={form.whatsapp_number}
-                onChange={(event) => updateFormField("whatsapp_number", event.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none ring-emerald-300 focus:ring-2"
-                placeholder="2348012345678"
-              />
-            </label>
+              <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-slate-700">
+                {form.whatsapp_number || "Not set yet in your account"}
+              </div>
+              <p className="text-xs text-slate-500">
+                Pulled from your account automatically. Update it in Account settings when needed.
+              </p>
+            </div>
             <div className="space-y-2 text-sm md:col-span-2">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="font-medium text-slate-700">Store niches</span>

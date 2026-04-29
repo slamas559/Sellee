@@ -1,8 +1,10 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useMemo, useState } from "react";
+import logoText from "@/app/logos/image-text-logo.png";
 import { SignOutButton } from "@/components/auth/sign-out-button";
 
 type DashboardMobileNavProps = {
@@ -71,8 +73,10 @@ export function DashboardMobileNav({ name, email }: DashboardMobileNavProps) {
     <>
       <div className="fixed inset-x-0 top-0 z-40 border-b border-slate-200/80 bg-white/95 backdrop-blur lg:hidden">
         <div className="mx-auto flex h-14 w-full max-w-7xl items-center justify-between px-4">
+          <Link href="/" className="inline-flex items-center">
+            <Image src={logoText} alt="Sellee" className="h-6 w-auto" />
+          </Link>
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-700">Sellee</p>
             <p className="text-sm font-semibold text-slate-900">{currentLabel}</p>
           </div>
           <button
@@ -101,7 +105,9 @@ export function DashboardMobileNav({ name, email }: DashboardMobileNavProps) {
           <aside className="absolute left-0 top-0 h-full w-[86%] max-w-[320px] overflow-y-auto border-r border-slate-200 bg-white p-5 shadow-2xl">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Sellee</p>
+                <Link href="/" onClick={() => setOpen(false)} className="inline-flex items-center">
+                  <Image src={logoText} alt="Sellee" className="h-6 w-auto" />
+                </Link>
                 <h2 className="mt-1 text-lg font-semibold text-slate-900">Vendor Console</h2>
                 <p className="mt-1 text-sm font-medium text-slate-700">{name ?? "Vendor"}</p>
                 <p className="mt-1 break-all text-xs text-slate-500">{email ?? ""}</p>
