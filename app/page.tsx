@@ -12,6 +12,8 @@ import {
   getHomeMarketplaceBaseDataCached,
   getStoreNichesAndFollowersCached,
 } from "@/lib/public-cache";
+import { Search, SearchIcon } from "lucide-react";
+import SiteHeader from "@/components/layout/site-header";
 
 export const metadata: Metadata = {
   title: "Home",
@@ -245,40 +247,7 @@ export default async function Home({ searchParams }: HomeProps) {
 
   return (
     <main className="mx-auto flex w-full max-w-[1200px] flex-1 flex-col gap-5 px-2 py-4 sm:px-3 sm:py-6 lg:gap-9 lg:py-7">
-      <header className="rounded-3xl border border-emerald-100 bg-white shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-3 py-3 text-xs text-slate-600 sm:px-6">
-          <p>Sellee Marketplace</p>
-          <UserMenu isLoggedIn={isLoggedIn} isVendor={isVendor} />
-        </div>
-
-        <div className="flex flex-wrap items-center gap-3 px-3 py-4 sm:gap-4 sm:px-6">
-          <Link href="/" className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-4 py-2">
-            <Image
-              src={logoText}
-              alt="Sellee logo"
-              className="h-7 w-auto sm:h-8"
-              priority
-            />
-          </Link>
-
-          <form action="/" className="flex min-w-0 flex-1 basis-[620px] items-center gap-2 rounded-full border border-slate-200 bg-white p-2">
-            <input
-              name="q"
-              defaultValue={q ?? ""}
-              placeholder="Search by product, category, or niche..."
-              className="w-full bg-transparent px-3 py-2 text-sm text-slate-700 outline-none"
-            />
-            {category ? <input type="hidden" name="category" value={category} /> : null}
-            <button
-              type="submit"
-              className="shrink-0 rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 sm:px-5"
-            >
-              Search
-            </button>
-          </form>
-        </div>
-      </header>
-
+      <SiteHeader searchParams={searchParams}/>
       <section className="relative overflow-hidden rounded-3xl border border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-amber-100 p-4 sm:p-8">
         <div className="absolute -right-16 -top-20 h-56 w-56 rounded-full bg-emerald-300/50 blur-3xl" />
         <div className="absolute -bottom-20 -left-10 h-44 w-44 rounded-full bg-amber-300/55 blur-3xl" />
@@ -311,14 +280,7 @@ export default async function Home({ searchParams }: HomeProps) {
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2">
-            <div className="rounded-2xl border border-emerald-200 bg-emerald-50/80 p-4 shadow-sm">
-              <p className="text-sm text-slate-600">Active Vendors</p>
-              <p className="mt-1 text-3xl font-black text-slate-900">{stores.length}</p>
-            </div>
-            <div className="rounded-2xl border border-amber-200 bg-amber-50/85 p-4 shadow-sm">
-              <p className="text-sm text-slate-600">Listed Products</p>
-              <p className="mt-1 text-3xl font-black text-slate-900">{products.length}</p>
-            </div>
+            
             <div className="sm:col-span-2 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
               <p className="text-sm text-slate-600">Featured Search</p>
               <p className="mt-1 text-base font-semibold text-emerald-700">
@@ -340,7 +302,7 @@ export default async function Home({ searchParams }: HomeProps) {
             </Link>
           ) : (
             <Link href="/marketplace" className="text-sm font-medium text-emerald-700 hover:underline">
-              Open full marketplace
+              Browse marketplace
             </Link>
           )}
         </div>

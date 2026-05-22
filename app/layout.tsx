@@ -15,6 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://sellee.store"),
   title: {
     default: "Sellee",
     template: "Sellee | %s",
