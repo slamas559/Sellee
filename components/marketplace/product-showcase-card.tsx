@@ -247,7 +247,7 @@ export function ProductShowcaseCard({
               strokeLinejoin="round"
               className="h-4 w-4"
               aria-hidden="true"
-            >
+            >       
               <circle cx="9" cy="20" r="1.5" />
               <circle cx="17" cy="20" r="1.5" />
               <path d="M3 4h2l2.2 10.5a1 1 0 0 0 1 .8h8.9a1 1 0 0 0 1-.8L20 7H7" />

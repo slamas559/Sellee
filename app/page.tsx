@@ -15,6 +15,23 @@ import {
 
 export const metadata: Metadata = {
   title: "Home",
+  description: "Discover trusted local vendors and products in one place. Browse categories, compare stores, and order directly through WhatsApp-powered workflows.",
+  openGraph: {
+    title: 'Home - Sellee Marketplace',
+    description: 'Discover trusted local vendors and products in one place. Browse categories, compare stores, and order directly through WhatsApp-powered workflows.',
+    url: 'https://sellee.store',
+    siteName: 'sellee.store',
+    images: [
+      {
+        url: 'opengraph-image.png', // Must be an absolute URL
+        width: 1200,
+        height: 630,
+        alt: 'Preview image for Sellee Marketplace',
+      },
+    ],
+    locale: 'en_US',
+    type: 'website',
+  },
 };
 
 type HomeProps = {

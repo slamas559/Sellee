@@ -12,7 +12,7 @@ import { createAdminSupabaseClient } from "@/lib/supabase-admin";
 import type { ProductRecord, StoreRecord } from "@/types";
 
 type ProductPageProps = {
-  params: Promise<{ slug: string; productId: string }>;
+  params: Promise<{ slug: string; productId: string; }>;
   searchParams: Promise<{ from?: string | string[] }>;
 };
 
@@ -28,9 +28,20 @@ type ProductWithStore = ProductRecord & {
 
 export async function generateMetadata({ params }: ProductPageProps): Promise<Metadata> {
   const { slug } = await params;
+  const { productId } = await params;
+
   const label = slug.replace(/[-_]+/g, " ").trim() || "Product";
+  const supabase = createAdminSupabaseClient();
+
+  const { data: product } = await supabase
+    .from("products")
+    .select("name, description")
+    .eq("id", productId)
+    .maybeSingle();
+
   return {
-    title: `Product - ${label}`,
+    title: `Product - ${product?.name} - ${label}`,
+    description: `${product?.description}`,
   };
 }
 
