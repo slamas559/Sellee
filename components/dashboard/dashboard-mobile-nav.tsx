@@ -110,7 +110,6 @@ export function DashboardMobileNav({ name, email }: DashboardMobileNavProps) {
                 </Link>
                 <h2 className="mt-1 text-lg font-semibold text-slate-900">Vendor Console</h2>
                 <p className="mt-1 text-sm font-medium text-slate-700">{name ?? "Vendor"}</p>
-                <p className="mt-1 break-all text-xs text-slate-500">{email ?? ""}</p>
               </div>
               <button
                 type="button"

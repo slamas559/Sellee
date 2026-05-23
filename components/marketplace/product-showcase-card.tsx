@@ -6,12 +6,13 @@ import { useRouter } from "next/navigation";
 import type { KeyboardEvent, MouseEvent } from "react";
 import { useMemo, useRef, useState } from "react";
 import { StarRating } from "@/components/store/star-rating";
-import { formatNaira } from "@/lib/format";
+import { formatNaira, formatProductPathSegment } from "@/lib/format";
 import type { StoreTemplate } from "@/types";
 
 type ProductShowcaseCardProps = {
   product: {
     id: string;
+    slug?: string;
     name: string;
     description: string | null;
     category: string | null;
@@ -43,7 +44,7 @@ export function ProductShowcaseCard({
   const router = useRouter();
   const didPrefetchRef = useRef(false);
   const navigationSource = source ?? (variant === "home" ? "home" : variant);
-  const productHref = `/store/${store.slug}/${product.id}?from=${navigationSource}`;
+  const productHref = `/store/${store.slug}/${formatProductPathSegment(product)}?from=${navigationSource}`;
   const images = useMemo(() => {
     const normalized = (product.image_urls ?? []).filter(Boolean);
     if (normalized.length > 0) return normalized;

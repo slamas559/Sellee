@@ -30,6 +30,7 @@ export type PublicStoreLite = {
 export type PublicProductLite = {
   id: string;
   store_id: string;
+  slug?: string;
   name: string;
   description: string | null;
   category: string | null;
@@ -72,7 +73,7 @@ const getHomeMarketplaceBaseDataInternal = async () => {
         .limit(24),
       supabase
         .from("products")
-        .select("id, store_id, name, description, category, price, image_url, image_urls, rating_avg, rating_count, stock_count, created_at")
+        .select("id, store_id, slug, name, description, category, price, image_url, image_urls, rating_avg, rating_count, stock_count, created_at")
         .eq("is_available", true)
         .order("created_at", { ascending: false })
         .limit(500),
@@ -187,7 +188,7 @@ const getMarketplaceProductsByStoreIdsInternal = async (
 
   let query = supabase
     .from("products")
-    .select("id, store_id, name, description, category, price, image_url, image_urls, rating_avg, rating_count, stock_count, created_at")
+    .select("id, store_id, slug, name, description, category, price, image_url, image_urls, rating_avg, rating_count, stock_count, created_at")
     .eq("is_available", true)
     .in("store_id", storeIds)
     .order("created_at", { ascending: false })
@@ -226,7 +227,7 @@ const getStorefrontPublicDataInternal = async (slug: string) => {
   const [{ data: products }, { data: storeNiches }] = await Promise.all([
     supabase
       .from("products")
-      .select("id, store_id, name, description, category, price, image_url, image_urls, rating_avg, rating_count, stock_count, is_available, created_at")
+      .select("id, store_id, slug, name, description, category, price, image_url, image_urls, rating_avg, rating_count, stock_count, is_available, created_at")
       .eq("store_id", store.id)
       .eq("is_available", true)
       .order("created_at", { ascending: false }),

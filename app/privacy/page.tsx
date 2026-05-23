@@ -1,15 +1,46 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 
-export const metadata = {
+export const metadata: Metadata = {
   title: "Privacy Policy",
-  description: "Sellee privacy policy",
+  description:
+    "Read Sellee's privacy policy for how account, store, product, order, and WhatsApp automation data is collected and processed.",
+  alternates: {
+    canonical: "/privacy",
+  },
+  openGraph: {
+    title: "Privacy Policy | Sellee",
+    description:
+      "How Sellee collects, uses, and protects account, order, and WhatsApp workflow data.",
+    url: "https://sellee.store/privacy",
+    type: "article",
+  },
+  twitter: {
+    card: "summary",
+    title: "Privacy Policy | Sellee",
+    description:
+      "How Sellee collects, uses, and protects account, order, and WhatsApp workflow data.",
+  },
 };
 
 const effectiveDate = "April 20, 2026";
 
 export default function PrivacyPage() {
+  const privacyJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    name: "Privacy Policy",
+    url: "https://sellee.store/privacy",
+    description:
+      "Sellee privacy policy for account, store, order, and WhatsApp automation data handling.",
+  };
+
   return (
     <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 px-4 py-10 sm:px-6">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(privacyJsonLd) }}
+      />
       <header className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
         <p className="text-sm font-medium text-sky-700">Sellee Legal</p>
         <h1 className="mt-1 text-3xl font-semibold text-slate-900">Privacy Policy</h1>

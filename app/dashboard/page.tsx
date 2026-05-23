@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -36,8 +37,28 @@ export default async function DashboardPage() {
     ? normalizeStoreTemplate(store.store_template).replace(/_/g, " ")
     : null;
 
+  
+  if (!session?.user) {
+    redirect("/login");
+  }
+
+  if (session.user.role !== "vendor") {
+    redirect("/");
+  }
+
   return (
     <>
+      <header className="rounded-2xl border border-emerald-100 bg-gradient-to-r from-white via-emerald-50 to-amber-50 p-5 shadow-sm sm:p-6">
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">
+            Dashboard
+          </p>
+          <h1 className="mt-1 text-2xl font-black tracking-tight text-slate-900">
+            Welcome back, {session.user.name ?? session.user.email?.split("@")[0] ?? "Vendor"}
+          </h1>
+          <p className="mt-1 text-sm text-slate-600">
+            Manage your storefront, products, and WhatsApp operations from one place.
+          </p>
+      </header>
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <article className="rounded-xl border border-emerald-100 bg-white p-5 shadow-sm">
           <p className="text-sm text-slate-500">Store Status</p>

@@ -61,6 +61,7 @@ export type StoreRecord = {
 export type ProductRecord = {
   id: string;
   store_id: string;
+  slug?: string;
   name: string;
   description: string | null;
   category: string | null;

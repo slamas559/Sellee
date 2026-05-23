@@ -1,15 +1,46 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 
-export const metadata = {
+export const metadata: Metadata = {
   title: "Terms of Service",
-  description: "Sellee terms of service",
+  description:
+    "Review Sellee's terms of service for storefront management, marketplace usage, and WhatsApp-assisted commerce workflows.",
+  alternates: {
+    canonical: "/terms",
+  },
+  openGraph: {
+    title: "Terms of Service | Sellee",
+    description:
+      "Terms governing Sellee marketplace usage, vendor responsibilities, and WhatsApp-assisted workflows.",
+    url: "https://sellee.store/terms",
+    type: "article",
+  },
+  twitter: {
+    card: "summary",
+    title: "Terms of Service | Sellee",
+    description:
+      "Terms governing Sellee marketplace usage, vendor responsibilities, and WhatsApp-assisted workflows.",
+  },
 };
 
 const effectiveDate = "April 20, 2026";
 
 export default function TermsPage() {
+  const termsJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    name: "Terms of Service",
+    url: "https://sellee.store/terms",
+    description:
+      "Sellee terms covering storefront, marketplace, and WhatsApp-assisted order workflows.",
+  };
+
   return (
     <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 px-4 py-10 sm:px-6">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(termsJsonLd) }}
+      />
       <header className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
         <p className="text-sm font-medium text-sky-700">Sellee Legal</p>
         <h1 className="mt-1 text-3xl font-semibold text-slate-900">Terms of Service</h1>

@@ -1,19 +1,19 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { ProductShowcaseCard } from "@/components/marketplace/product-showcase-card";
 import { SocialShareActions } from "@/components/shared/social-share-actions";
 import { OrderButton } from "@/components/store/order-button";
 import { ProductMediaGallery } from "@/components/store/product-media-gallery";
 import { ProductReviewsSection } from "@/components/reviews/product-reviews-section";
 import { StarRating } from "@/components/store/star-rating";
-import { formatNaira } from "@/lib/format";
+import { formatNaira, formatProductPathSegment, parseProductPathSegment } from "@/lib/format";
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
 import type { ProductRecord, StoreRecord } from "@/types";
-import { ArrowBigLeft, ArrowLeftIcon } from "lucide-react";
+import { ArrowLeftIcon } from "lucide-react";
 
 type ProductPageProps = {
-  params: Promise<{ slug: string; productId: string; }>;
+  params: Promise<{ slug: string; productSlug: string }>;
   searchParams: Promise<{ from?: string | string[] }>;
 };
 
@@ -29,29 +29,80 @@ type ProductWithStore = ProductRecord & {
 
 export async function generateMetadata({ params }: ProductPageProps): Promise<Metadata> {
   const { slug } = await params;
-  const { productId } = await params;
+  const { productSlug } = await params;
   const supabase = createAdminSupabaseClient();
+  const parsedPath = parseProductPathSegment(productSlug);
 
-
-  const { data: product } = await supabase
+  let query = supabase
     .from("products")
-    .select("name, description")
-    .eq("id", productId)
-    .maybeSingle();
+    .select("id, name, description, image_url, category, is_available, slug, stores!inner(slug, is_active, name)")
+    .eq("stores.slug", slug)
+    .eq("stores.is_active", true);
 
-  const label = slug.replace(/[-_]+/g, " ").trim() || "Product";
-  const desc = product?.description.replace(/\s+/g, " ").trim() || "Check out this product on Sellee.";
-  
+  if (parsedPath.id) {
+    query = query.eq("id", parsedPath.id);
+  } else if (parsedPath.isUuidOnly) {
+    query = query.eq("id", productSlug);
+  } else {
+    query = query.eq("slug", productSlug);
+  }
+  let { data: product } = await query.maybeSingle();
+
+  if (!product && parsedPath.slugPart) {
+    const { data: fallbackBySlug } = await supabase
+      .from("products")
+      .select("id, name, description, image_url, category, is_available, slug, stores!inner(slug, is_active, name)")
+      .eq("stores.slug", slug)
+      .eq("stores.is_active", true)
+      .eq("slug", parsedPath.slugPart)
+      .maybeSingle();
+    product = fallbackBySlug ?? null;
+  }
+
+  const label =
+    (product as { stores?: { name?: string } })?.stores?.name ||
+    slug.replace(/[-_]+/g, " ").trim() ||
+    "Store";
+  const desc =
+    product?.description?.replace(/\s+/g, " ").trim() ||
+    `Check out this product from ${label} on Sellee.`;
+  const image = product?.image_url || "https://sellee.store/opengraph-image.png";
+  const canonicalRef = product
+    ? formatProductPathSegment({
+        id: String((product as { id: string }).id),
+        slug: (product as { slug?: string | null }).slug,
+        name: product.name,
+      })
+    : productSlug;
+  const canonical = `/store/${slug}/${canonicalRef}`;
+
   return {
-    title: `${product?.name} ${desc} - ${label}`,
-    description: `${product?.description}`,
+    title: `${product?.name || "Product"} | ${label}`,
+    description: desc,
+    alternates: {
+      canonical,
+    },
+    openGraph: {
+      title: `${product?.name || "Product"} | ${label} | Sellee`,
+      description: desc,
+      url: `https://sellee.store${canonical}`,
+      type: "website",
+      images: [{ url: image }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${product?.name || "Product"} | ${label} | Sellee`,
+      description: desc,
+      images: [image],
+    },
   };
 }
 
 export default async function StoreProductPage({ params, searchParams }: ProductPageProps) {
-  const { slug, productId } = await params;
+  const { slug, productSlug } = await params;
   const query = await searchParams;
   const supabase = createAdminSupabaseClient();
+  const parsedPath = parseProductPathSegment(productSlug);
 
   const { data: store } = await supabase
     .from("stores")
@@ -64,21 +115,46 @@ export default async function StoreProductPage({ params, searchParams }: Product
     notFound();
   }
 
-  const { data: product } = await supabase
+  let productQuery = supabase
     .from("products")
-    .select("id, store_id, name, description, category, price, image_url, image_urls, rating_avg, rating_count, stock_count, is_available, created_at")
-    .eq("id", productId)
-    .eq("store_id", store.id)
-    .eq("is_available", true)
-    .maybeSingle<ProductRecord>();
+    .select("id, store_id, slug, name, description, category, price, image_url, image_urls, rating_avg, rating_count, stock_count, is_available, created_at")
+    .eq("store_id", store.id);
+  if (parsedPath.id) {
+    productQuery = productQuery.eq("id", parsedPath.id);
+  } else if (parsedPath.isUuidOnly) {
+    productQuery = productQuery.eq("id", productSlug);
+  } else {
+    productQuery = productQuery.eq("slug", productSlug);
+  }
+  let { data: product } = await productQuery.maybeSingle<ProductRecord>();
+
+  if (!product && parsedPath.slugPart) {
+    const { data: fallbackBySlug } = await supabase
+      .from("products")
+      .select("id, store_id, slug, name, description, category, price, image_url, image_urls, rating_avg, rating_count, stock_count, is_available, created_at")
+      .eq("store_id", store.id)
+      .eq("slug", parsedPath.slugPart)
+      .maybeSingle<ProductRecord>();
+    product = fallbackBySlug ?? null;
+  }
 
   if (!product) {
     notFound();
   }
+  const canonicalProductRef = formatProductPathSegment({
+    id: product.id,
+    slug: product.slug,
+    name: product.name,
+  });
+  if (productSlug !== canonicalProductRef) {
+    const from = Array.isArray(query.from) ? query.from[0] : query.from;
+    const fromQuery = from ? `?from=${encodeURIComponent(from)}` : "";
+    redirect(`/store/${slug}/${canonicalProductRef}${fromQuery}`);
+  }
 
   const vendorProductsPromise = supabase
     .from("products")
-    .select("id, store_id, name, description, category, price, image_url, image_urls, rating_avg, rating_count, stock_count, is_available, created_at")
+    .select("id, store_id, slug, name, description, category, price, image_url, image_urls, rating_avg, rating_count, stock_count, is_available, created_at")
     .eq("store_id", store.id)
     .eq("is_available", true)
     .neq("id", product.id)
@@ -88,7 +164,7 @@ export default async function StoreProductPage({ params, searchParams }: Product
   const relatedProductsPromise = product.category
     ? supabase
         .from("products")
-        .select("id, store_id, name, description, category, price, image_url, image_urls, rating_avg, rating_count, stock_count, is_available, created_at")
+        .select("id, store_id, slug, name, description, category, price, image_url, image_urls, rating_avg, rating_count, stock_count, is_available, created_at")
         .eq("category", product.category)
         .eq("is_available", true)
         .neq("id", product.id)
@@ -144,7 +220,39 @@ export default async function StoreProductPage({ params, searchParams }: Product
   const storeLocation = [store.city, store.state, store.country].filter(Boolean).join(", ");
   const appBaseUrl = (process.env.NEXTAUTH_URL || "http://localhost:3000").replace(/\/$/, "");
   const storeUrl = `${appBaseUrl}/store/${store.slug}`;
-  const productUrl = `${appBaseUrl}/store/${store.slug}/${product.id}`;
+  const productPathRef = formatProductPathSegment({
+    id: product.id,
+    slug: product.slug,
+    name: product.name,
+  });
+  const productUrl = `${appBaseUrl}/store/${store.slug}/${productPathRef}`;
+  const productJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: product.name,
+    description: product.description || undefined,
+    image: [product.image_url, ...(product.image_urls ?? [])].filter(Boolean),
+    category: product.category || undefined,
+    brand: {
+      "@type": "Brand",
+      name: store.name,
+    },
+    offers: {
+      "@type": "Offer",
+      url: productUrl,
+      priceCurrency: "NGN",
+      price: Number(product.price),
+      availability: product.stock_count > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+    },
+    aggregateRating:
+      typeof product.rating_avg === "number" && product.rating_count > 0
+        ? {
+            "@type": "AggregateRating",
+            ratingValue: product.rating_avg,
+            reviewCount: product.rating_count,
+          }
+        : undefined,
+  };
 
   const from = Array.isArray(query.from) ? query.from[0] : query.from;
   const backTarget =
@@ -158,6 +266,10 @@ export default async function StoreProductPage({ params, searchParams }: Product
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 bg-slate-50 px-2 py-6 sm:px-4 sm:py-8">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }}
+      />
       <Link href={backTarget.href} className="text-sm font-medium text-emerald-700 hover:underline">
         <ArrowLeftIcon/>
       </Link>
@@ -327,4 +439,3 @@ export default async function StoreProductPage({ params, searchParams }: Product
     </main>
   );
 }
-

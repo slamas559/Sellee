@@ -107,7 +107,7 @@ export function SiteFooter() {
           type="button"
           aria-label="Back to top"
           onClick={scrollToTop}
-          className="fixed bottom-5 right-4 z-50 inline-flex h-10 w-10 items-center justify-center rounded-full border border-emerald-200 bg-white text-emerald-700 shadow-lg transition hover:bg-emerald-50 sm:bottom-6 sm:right-6"
+          className="fixed bottom-13 right-4 z-50 inline-flex h-10 w-10 items-center justify-center rounded-full border border-emerald-200 bg-white text-emerald-700 shadow-lg transition hover:bg-emerald-50 sm:bottom-6 sm:right-6"
         >
           <svg
             viewBox="0 0 24 24"

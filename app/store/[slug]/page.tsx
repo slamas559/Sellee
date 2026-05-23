@@ -27,9 +27,40 @@ type StorePageProps = {
 
 export async function generateMetadata({ params }: StorePageProps): Promise<Metadata> {
   const { slug } = await params;
-  const label = slug.replace(/[-_]+/g, " ").trim() || "Store";
+  const supabase = createAdminSupabaseClient();
+  const { data: store } = await supabase
+    .from("stores")
+    .select("name, slug, is_active, storefront_config, logo_url, city, state, country")
+    .eq("slug", slug)
+    .eq("is_active", true)
+    .maybeSingle();
+  const label = store?.name || slug.replace(/[-_]+/g, " ").trim() || "Store";
+  const config = normalizeStorefrontConfig(store?.storefront_config);
+  const description =
+    config.hero_subtitle ||
+    `Browse products from ${label} on Sellee and order through WhatsApp-powered workflows.`;
+  const imageUrl = config.hero_image_url || store?.logo_url || "https://sellee.store/opengraph-image.png";
+  const canonical = `/store/${slug}`;
+
   return {
-    title: `Store - ${label}`,
+    title: `${label} Store`,
+    description,
+    alternates: {
+      canonical,
+    },
+    openGraph: {
+      title: `${label} Store | Sellee`,
+      description,
+      url: `https://sellee.store${canonical}`,
+      type: "website",
+      images: [{ url: imageUrl }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${label} Store | Sellee`,
+      description,
+      images: [imageUrl],
+    },
   };
 }
 
@@ -270,6 +301,28 @@ export default async function StorePage({ params, searchParams }: StorePageProps
     "h-44 w-screen max-w-none relative left-1/2 right-1/2 -mx-[50vw] rounded-none border-0 shadow-none sm:static sm:left-auto sm:right-auto sm:mx-0 sm:h-52 sm:w-full sm:max-w-full sm:rounded-xl sm:border sm:border-slate-200 sm:shadow-sm";
   const mobileEdgeBannerTallClass =
     "h-56 w-screen max-w-none relative left-1/2 right-1/2 -mx-[50vw] rounded-none border-0 shadow-none sm:static sm:left-auto sm:right-auto sm:mx-0 sm:w-full sm:max-w-full sm:rounded-xl sm:border sm:border-slate-200 sm:shadow-sm";
+  const storeJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Store",
+    name: store.name,
+    url: storeUrl,
+    image: config.hero_image_url || store.logo_url || undefined,
+    telephone: store.whatsapp_number || undefined,
+    address: {
+      "@type": "PostalAddress",
+      addressLocality: store.city || undefined,
+      addressRegion: store.state || undefined,
+      addressCountry: store.country || undefined,
+    },
+    aggregateRating:
+      typeof store.rating_avg === "number" && store.rating_count > 0
+        ? {
+            "@type": "AggregateRating",
+            ratingValue: store.rating_avg,
+            reviewCount: store.rating_count,
+          }
+        : undefined,
+  };
 
   const storefrontControls = (
     <section className="space-y-2 rounded-2xl border border-slate-200 bg-white p-2.5 shadow-sm sm:space-y-3 sm:p-4">
@@ -315,6 +368,11 @@ export default async function StorePage({ params, searchParams }: StorePageProps
 
   if (template === "fashion_editorial") {
     return (
+      <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(storeJsonLd) }}
+      />
       <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 bg-white px-0 py-0 sm:px-6 sm:pb-6 sm:pt-0">
         <StoreHero
           store={store}
@@ -359,11 +417,17 @@ export default async function StorePage({ params, searchParams }: StorePageProps
           );
         })}
       </main>
+      </>
     );
   }
 
   if (template === "lifestyle_showcase") {
     return (
+      <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(storeJsonLd) }}
+      />
       <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 bg-slate-50 px-0 py-0 sm:px-6 sm:pb-6 sm:pt-0">
         <StoreHero
           store={store}
@@ -411,11 +475,17 @@ export default async function StorePage({ params, searchParams }: StorePageProps
           );
         })}
       </main>
+      </>
     );
   }
 
   if (template === "modern_grid") {
     return (
+      <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(storeJsonLd) }}
+      />
       <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 bg-slate-100 px-0 py-0 sm:px-6 sm:pb-6 sm:pt-0">
         <StoreHero
           store={store}
@@ -474,11 +544,17 @@ export default async function StorePage({ params, searchParams }: StorePageProps
           </div>
         </section>
       </main>
+      </>
     );
   }
 
   // Default: grocery promo
   return (
+    <>
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(storeJsonLd) }}
+    />
     <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 bg-slate-50 px-0 py-0 sm:px-6 sm:pb-6 sm:pt-0">
       <StoreHero
         store={store}
@@ -529,5 +605,6 @@ export default async function StorePage({ params, searchParams }: StorePageProps
         );
       })}
     </main>
+    </>
   );
 }

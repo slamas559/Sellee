@@ -25,7 +25,7 @@ export default async function SiteHeader({ searchParams }: HomeProps) {
     const isVendor = session?.user?.role === "vendor";
 
     return (
-        <header className="sticky top-0 z-50 rounded-3xl border p-2 border-emerald-100 bg-white shadow-sm">
+      <header className="sticky top-0 z-50 w-full rounded-3xl border p-2 border-emerald-100 bg-white shadow-sm">
         <div className="flex flex-wrap justify-between items-center gap-3 p-2 sm:gap-4 sm:px-6">
           <Link href="/" className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-4 py-2">
             <Image

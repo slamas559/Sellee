@@ -20,7 +20,29 @@ export const metadata: Metadata = {
     default: "Sellee",
     template: "Sellee | %s",
   },
-  description: "WhatsApp-powered store platform",
+  description:
+    "Sellee is a local marketplace with WhatsApp-powered selling workflows for vendors and customers.",
+  alternates: {
+    canonical: "/",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+  openGraph: {
+    title: "Sellee",
+    description:
+      "Discover nearby vendors, compare products, and manage orders with WhatsApp-powered workflows.",
+    url: "https://sellee.store",
+    siteName: "Sellee",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Sellee",
+    description:
+      "Discover nearby vendors, compare products, and manage orders with WhatsApp-powered workflows.",
+  },
   icons: {
     icon: [
       { url: "/icon.png", type: "image/png", sizes: "32x32" },

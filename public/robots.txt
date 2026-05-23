@@ -1,6 +1,0 @@
-User-agent: *
-Disallow:
-
-Sitemap: https://sellee.store/sitemap.xml
-
-# If you want to block private or admin paths, add Disallow rules above.

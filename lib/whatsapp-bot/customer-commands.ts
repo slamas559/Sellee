@@ -1,4 +1,4 @@
-import { formatNaira, slugify } from "@/lib/format";
+import { formatNaira, formatProductPathSegment, slugify } from "@/lib/format";
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
 import { normalizeWhatsAppNumber } from "@/lib/whatsapp";
 import { sendWhatsAppTextMessage } from "@/lib/whatsapp-cloud";
@@ -31,6 +31,7 @@ type OrderLite = {
 
 type ProductSearchRow = {
   id: string;
+  slug?: string;
   store_id: string;
   name: string;
   price: number;
@@ -626,7 +627,7 @@ async function handleSearchProducts(from: string, query: string): Promise<string
 
   const { data, error } = await supabase
     .from("products")
-    .select("id, store_id, name, price, category, stock_count, is_available")
+    .select("id, slug, store_id, name, price, category, stock_count, is_available")
     .or(`name.ilike.%${trimmedQuery}%,description.ilike.%${trimmedQuery}%,category.ilike.%${trimmedQuery}%`)
     .eq("is_available", true)
     .gt("stock_count", 0)
@@ -658,7 +659,11 @@ async function handleSearchProducts(from: string, query: string): Promise<string
     const store = storesMap.get(product.store_id);
     const storeName = store?.name ?? "Store";
     const productUrl = store?.slug
-      ? `${baseUrl}/store/${store.slug}/${product.id}`
+      ? `${baseUrl}/store/${store.slug}/${formatProductPathSegment({
+          id: product.id,
+          slug: product.slug,
+          name: product.name,
+        })}`
       : `${baseUrl}/marketplace`;
     return `${index + 1}. ${product.name} - ${formatNaira(Number(product.price))} - ${storeName}\n${productUrl}`;
   });

@@ -17,22 +17,34 @@ import SiteHeader from "@/components/layout/site-header";
 
 export const metadata: Metadata = {
   title: "Home",
-  description: "Discover trusted local vendors and products in one place. Browse categories, compare stores, and order directly through WhatsApp-powered workflows.",
+  description:
+    "Discover trusted local vendors and products in one place. Browse categories, compare stores, and order directly through WhatsApp-powered workflows.",
+  alternates: {
+    canonical: "/",
+  },
   openGraph: {
-    title: 'Home - Sellee Marketplace',
-    description: 'Discover trusted local vendors and products in one place. Browse categories, compare stores, and order directly through WhatsApp-powered workflows.',
-    url: 'https://sellee.store',
-    siteName: 'sellee.store',
+    title: "Home - Sellee Marketplace",
+    description:
+      "Discover trusted local vendors and products in one place. Browse categories, compare stores, and order directly through WhatsApp-powered workflows.",
+    url: "https://sellee.store",
+    siteName: "Sellee",
     images: [
       {
-        url: 'opengraph-image.png', // Must be an absolute URL
+        url: "https://sellee.store/opengraph-image.png",
         width: 1200,
         height: 630,
-        alt: 'Preview image for Sellee Marketplace',
+        alt: "Preview image for Sellee Marketplace",
       },
     ],
-    locale: 'en_US',
-    type: 'website',
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Home - Sellee Marketplace",
+    description:
+      "Discover trusted local vendors and products in one place. Browse categories, compare stores, and order directly through WhatsApp-powered workflows.",
+    images: ["https://sellee.store/opengraph-image.png"],
   },
 };
 
@@ -244,9 +256,35 @@ export default async function Home({ searchParams }: HomeProps) {
   const botNumber = process.env.NEXT_PUBLIC_WHATSAPP_BOT_NUMBER?.trim() ?? "";
   const heroPrimaryHref = !isLoggedIn ? "/login" : isVendor ? "/dashboard" : "/become-vendor";
   const heroPrimaryLabel = !isLoggedIn ? "Login to start" : isVendor ? "Open Dashboard" : "Become a Vendor";
+  const websiteJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: "Sellee",
+    url: "https://sellee.store",
+    potentialAction: {
+      "@type": "SearchAction",
+      target: "https://sellee.store/marketplace?q={search_term_string}",
+      "query-input": "required name=search_term_string",
+    },
+  };
+  const organizationJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: "Sellee",
+    url: "https://sellee.store",
+    logo: "https://sellee.store/icon.png",
+  };
 
   return (
     <main className="mx-auto flex w-full max-w-[1200px] flex-1 flex-col gap-5 px-2 py-4 sm:px-3 sm:py-6 lg:gap-9 lg:py-7">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
+      />
       <SiteHeader searchParams={searchParams}/>
       <section className="relative overflow-hidden rounded-3xl border border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-amber-100 p-4 sm:p-8">
         <div className="absolute -right-16 -top-20 h-56 w-56 rounded-full bg-emerald-300/50 blur-3xl" />

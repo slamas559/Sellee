@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { z } from "zod";
 import { authOptions } from "@/lib/auth";
+import { slugify } from "@/lib/format";
 import { logDevError } from "@/lib/logger";
 import { CACHE_TAGS } from "@/lib/public-cache";
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
@@ -126,6 +127,42 @@ async function uploadProductImages(vendorId: string, files: File[]): Promise<str
   return urls;
 }
 
+async function buildUniqueProductSlug(
+  storeId: string,
+  productName: string,
+  excludeProductId?: string,
+) {
+  const supabase = createAdminSupabaseClient();
+  const baseSlug = slugify(productName) || "product";
+
+  let query = supabase
+    .from("products")
+    .select("id, slug")
+    .eq("store_id", storeId)
+    .ilike("slug", `${baseSlug}%`);
+
+  if (excludeProductId) {
+    query = query.neq("id", excludeProductId);
+  }
+
+  const { data, error } = await query;
+  if (error) throw new Error(error.message);
+
+  const occupied = new Set(
+    ((data ?? []) as Array<{ slug?: string | null }>)
+      .map((row) => (row.slug ?? "").trim())
+      .filter(Boolean),
+  );
+
+  if (!occupied.has(baseSlug)) return baseSlug;
+
+  let counter = 2;
+  while (occupied.has(`${baseSlug}-${counter}`)) {
+    counter += 1;
+  }
+  return `${baseSlug}-${counter}`;
+}
+
 export async function PATCH(
   request: Request,
   context: { params: Promise<{ id: string }> },
@@ -191,7 +228,7 @@ export async function PATCH(
 
     const { data: existingProduct, error: existingProductError } = await supabase
       .from("products")
-      .select("id, store_id, name, stock_count, image_url, image_urls")
+      .select("id, store_id, slug, name, stock_count, image_url, image_urls")
       .eq("id", id)
       .eq("store_id", store.id)
       .maybeSingle();
@@ -245,9 +282,12 @@ export async function PATCH(
     }
     imageUrl = imageUrls[0] ?? null;
 
+    const productSlug = await buildUniqueProductSlug(store.id, parsed.data.name, id);
+
     const { data, error } = await supabase
       .from("products")
       .update({
+        slug: productSlug,
         name: parsed.data.name,
         description: parsed.data.description || null,
         category: normalizedCategory || null,
@@ -259,7 +299,7 @@ export async function PATCH(
       })
       .eq("id", id)
       .eq("store_id", store.id)
-      .select("id, store_id, name, description, category, price, image_url, image_urls, rating_avg, rating_count, stock_count, is_available, created_at")
+      .select("id, store_id, slug, name, description, category, price, image_url, image_urls, rating_avg, rating_count, stock_count, is_available, created_at")
       .single();
 
     if (error || !data) {

@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { z } from "zod";
 import { authOptions } from "@/lib/auth";
-import { formatNaira } from "@/lib/format";
+import { formatNaira, slugify } from "@/lib/format";
 import { logDevError } from "@/lib/logger";
 import { CACHE_TAGS } from "@/lib/public-cache";
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
@@ -110,6 +110,42 @@ async function uploadProductImages(vendorId: string, files: File[]): Promise<str
   return urls;
 }
 
+async function buildUniqueProductSlug(
+  storeId: string,
+  productName: string,
+  excludeProductId?: string,
+) {
+  const supabase = createAdminSupabaseClient();
+  const baseSlug = slugify(productName) || "product";
+
+  let query = supabase
+    .from("products")
+    .select("id, slug")
+    .eq("store_id", storeId)
+    .ilike("slug", `${baseSlug}%`);
+
+  if (excludeProductId) {
+    query = query.neq("id", excludeProductId);
+  }
+
+  const { data, error } = await query;
+  if (error) throw new Error(error.message);
+
+  const occupied = new Set(
+    ((data ?? []) as Array<{ slug?: string | null }>)
+      .map((row) => (row.slug ?? "").trim())
+      .filter(Boolean),
+  );
+
+  if (!occupied.has(baseSlug)) return baseSlug;
+
+  let counter = 2;
+  while (occupied.has(`${baseSlug}-${counter}`)) {
+    counter += 1;
+  }
+  return `${baseSlug}-${counter}`;
+}
+
 export async function GET() {
   const session = await getServerSession(authOptions);
 
@@ -127,7 +163,7 @@ export async function GET() {
     const supabase = createAdminSupabaseClient();
     const { data, error } = await supabase
       .from("products")
-      .select("id, store_id, name, description, category, price, image_url, image_urls, rating_avg, rating_count, stock_count, is_available, created_at")
+      .select("id, store_id, slug, name, description, category, price, image_url, image_urls, rating_avg, rating_count, stock_count, is_available, created_at")
       .eq("store_id", store.id)
       .order("created_at", { ascending: false });
 
@@ -226,10 +262,13 @@ export async function POST(request: Request) {
 
     const supabase = createAdminSupabaseClient();
 
+    const productSlug = await buildUniqueProductSlug(store.id, parsed.data.name);
+
     const { data, error } = await supabase
       .from("products")
       .insert({
         store_id: store.id,
+        slug: productSlug,
         name: parsed.data.name,
         description: parsed.data.description || null,
         category: normalizedCategory || null,
@@ -239,7 +278,7 @@ export async function POST(request: Request) {
         stock_count: parsed.data.stock_count,
         is_available: parsed.data.is_available,
       })
-      .select("id, store_id, name, description, category, price, image_url, image_urls, rating_avg, rating_count, stock_count, is_available, created_at")
+      .select("id, store_id, slug, name, description, category, price, image_url, image_urls, rating_avg, rating_count, stock_count, is_available, created_at")
       .single();
 
     if (error || !data) {
