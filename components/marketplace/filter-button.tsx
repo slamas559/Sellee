@@ -11,9 +11,9 @@ type FilterButtonProps = {
 
 export function FilterButton({state, categories, grouped_categories, hasLocationFilter, activeFilters}: FilterButtonProps) {
   return (
-    <details className="sticky top-20 z-50 rounded-3xl bg-transparent p-4 lg:hidden">
+    <details className="sticky top-30 z-50 rounded-3xl bg-transparent lg:hidden">
         <summary className="flex cursor-pointer justify-center items-center list-none items-center justify-between gap-3 text-sm font-semibold text-slate-800">
-          <span className="inline-flex items-center rounded-3xl border shadow-sm border-emerald-200/80 px-4 py-2 bg-white/95 gap-1.5">
+          <span className="inline-flex items-center rounded-3xl border shadow-sm border-emerald-200/80 px-4 py-2 bg-white/30 backdrop-blur-sm gap-1.5">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4 text-emerald-700" aria-hidden="true">
               <path d="M3 5h18" />
               <path d="M6 12h12" />
@@ -22,7 +22,7 @@ export function FilterButton({state, categories, grouped_categories, hasLocation
             Filters
           </span>
         </summary>
-        <div className="mt-4 border-t bg-white/95 border-slate-100 pt-4">
+        <div className="mt-4 border-t bg-white/95 border-slate-100 p-4 pt-4">
           <MarketplaceFilterForm
             state={state}
             categories={categories}

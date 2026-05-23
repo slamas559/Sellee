@@ -10,6 +10,7 @@ import { StarRating } from "@/components/store/star-rating";
 import { formatNaira } from "@/lib/format";
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
 import type { ProductRecord, StoreRecord } from "@/types";
+import { ArrowBigLeft, ArrowLeftIcon } from "lucide-react";
 
 type ProductPageProps = {
   params: Promise<{ slug: string; productId: string; }>;
@@ -29,9 +30,8 @@ type ProductWithStore = ProductRecord & {
 export async function generateMetadata({ params }: ProductPageProps): Promise<Metadata> {
   const { slug } = await params;
   const { productId } = await params;
-
-  const label = slug.replace(/[-_]+/g, " ").trim() || "Product";
   const supabase = createAdminSupabaseClient();
+
 
   const { data: product } = await supabase
     .from("products")
@@ -39,8 +39,11 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
     .eq("id", productId)
     .maybeSingle();
 
+  const label = slug.replace(/[-_]+/g, " ").trim() || "Product";
+  const desc = product?.description.replace(/\s+/g, " ").trim() || "Check out this product on Sellee.";
+  
   return {
-    title: `Product - ${product?.name} - ${label}`,
+    title: `${product?.name} ${desc} - ${label}`,
     description: `${product?.description}`,
   };
 }
@@ -156,7 +159,7 @@ export default async function StoreProductPage({ params, searchParams }: Product
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 bg-slate-50 px-2 py-6 sm:px-4 sm:py-8">
       <Link href={backTarget.href} className="text-sm font-medium text-emerald-700 hover:underline">
-        {backTarget.label}
+        <ArrowLeftIcon/>
       </Link>
 
       <section className="grid gap-6 lg:grid-cols-[1.35fr_0.9fr]">
