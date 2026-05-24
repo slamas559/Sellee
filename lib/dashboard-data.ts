@@ -169,11 +169,15 @@ export async function getVendorOrders(vendorId: string): Promise<VendorOrderView
   for (const row of orderItems ?? []) {
     const orderId = String((row as { order_id: string }).order_id);
     const current = itemsByOrderId.get(orderId) ?? [];
-    const productName =
-      ((row as { product?: { name?: string } | Array<{ name?: string }> }).product &&
-      Array.isArray((row as { product?: unknown }).product)
-        ? (row as { product: Array<{ name?: string }> }).product[0]?.name
-        : (row as { product?: { name?: string } }).product?.name) ?? "Unknown product";
+    // ensure productName is a string (fallback to 'Unknown product')
+    const rawProductField = (row as { product?: unknown })?.product;
+    let _productName: string | undefined;
+    if (rawProductField && Array.isArray(rawProductField)) {
+      _productName = (rawProductField as Array<{ name?: string }>)[0]?.name;
+    } else {
+      _productName = (rawProductField as { name?: string } | undefined)?.name;
+    }
+    const productName: string = _productName ?? "Unknown product";
 
     current.push({
       product_name: productName,
@@ -319,11 +323,13 @@ export async function getCustomerOrders(
     const current = itemsByOrderId.get(orderId) ?? [];
 
     const productField = (row as { product?: unknown })?.product;
-    const productName =
-      productField && Array.isArray(productField)
-        ? (productField as Array<{ name?: string; id?: string; image_url?: string }>)[0]?.name
-        : (productField as { name?: string; id?: string; image_url?: string } | undefined)?.name ??
-          "Unknown product";
+    let _prodName: string | undefined;
+    if (productField && Array.isArray(productField)) {
+      _prodName = (productField as Array<{ name?: string }>)[0]?.name;
+    } else {
+      _prodName = (productField as { name?: string } | undefined)?.name;
+    }
+    const productName: string = _prodName ?? "Unknown product";
 
     const productId =
       productField && Array.isArray(productField)
