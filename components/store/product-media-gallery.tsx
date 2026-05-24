@@ -127,7 +127,7 @@ export function ProductMediaGallery({
       </div>
 
       {images.length > 1 ? (
-        <div className="flex gap-2 overflow-x-auto pb-1">
+        <div className="flex gap-2 overflow-x-auto p-1 pb-1">
           {images.map((image, index) => (
             <button
               key={`${image}-${index}`}

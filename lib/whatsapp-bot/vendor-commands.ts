@@ -418,6 +418,65 @@ export async function handleLowStock(from: string, store: StoreForCommand) {
   });
 }
 
+export async function handleMarkDelivered(
+  from: string,
+  body: string,
+  store: StoreForCommand
+) {
+  const ref = extractRef(body);
+  if (!ref) {
+    await sendWhatsAppTextMessage({
+      to: from,
+      message: waMessage(waTitle("Usage"), "DELIVERED <ORDER_REF>", "Example: DELIVERED ABCD1234"),
+    });
+    return;
+  }
+
+  const order = await findOrderByReference(store.id, ref);
+  if (!order) {
+    await sendWhatsAppTextMessage({
+      to: from,
+      message: waMessage(waTitle("Order Not Found"), `No order matched: ${ref}`),
+    });
+    return;
+  }
+
+  const supabase = createAdminSupabaseClient();
+  await supabase
+    .from("orders")
+    .update({ status: "delivered" })
+    .eq("id", order.id)
+    .eq("store_id", store.id);
+
+  const shortRef = String(order.id).slice(0, 8).toUpperCase();
+  const customerPhone = String(order.customer_whatsapp ?? "");
+
+  await sendWhatsAppTextMessage({
+    to: from,
+    message: waMessage(waTitle("Order Marked Delivered"), `Order #${shortRef} marked as delivered.`),
+  });
+
+  // Notify customer + trigger review prompt
+  if (customerPhone && customerPhone !== "unknown") {
+    await sendWhatsAppTextMessage({
+      to: customerPhone,
+      message: waMessage(
+        waTitle(`Your order #${shortRef} has been delivered!`),
+        `From ${store.name}. We hope you love it.`,
+      ),
+    });
+
+    // Import and trigger review prompt
+    const { promptCustomerReview } = await import("@/lib/whatsapp-bot/reviews");
+    await promptCustomerReview({
+      orderId: String(order.id),
+      storeId: store.id,
+      storeName: store.name,
+      customerPhone,
+    });
+  }
+}
+
 export async function handleBroadcast(from: string, body: string, store: StoreForCommand) {
   const message = extractBroadcastMessage(body);
 

@@ -5,6 +5,7 @@ import { handleMorePagination } from "@/lib/whatsapp-bot/pagination";
 import { extractRef, type BotCommand, inferCommand } from "@/lib/whatsapp-bot/parse";
 import { resolveVendorStoreByPhone } from "@/lib/whatsapp-bot/repository";
 import { handleCustomerCommand } from "@/lib/whatsapp-bot/customer-commands";
+import { getPendingReview, handleReviewReply } from "@/lib/whatsapp-bot/reviews";
 import {
   handleBroadcast,
   handleBroadcastStatus,
@@ -14,6 +15,7 @@ import {
   handleLowStock,
   handleScheduleBroadcast,
   handleSalesToday,
+  handleMarkDelivered,
 } from "@/lib/whatsapp-bot/vendor-commands";
 import { sendWhatsAppTextMessage } from "@/lib/whatsapp-cloud";
 import type { WebhookDebugResult } from "@/lib/whatsapp-bot/types";
@@ -99,6 +101,14 @@ export async function routeIncomingText(from: string, body: string): Promise<Web
     body: body.slice(0, 120),
   });
 
+  const pendingReview = await getPendingReview(from);
+  if (pendingReview) {
+    const handled = await handleReviewReply(from, body, pendingReview);
+    if (handled) {
+      return result(from, body, "REVIEW_REPLY", "customer", pendingReview.store_id);
+    }
+  }
+    
   if (command === "AMBIGUOUS") {
     await sendWhatsAppTextMessage({
       to: from,
@@ -208,6 +218,10 @@ export async function routeIncomingText(from: string, body: string): Promise<Web
 
       case "SCHEDULE BROADCAST":
         await handleScheduleBroadcast(from, toCanonicalVendorBody(command, body), store);
+        return result(from, body, command, "vendor", store.id);
+
+      case "MARK DELIVERED":
+        await handleMarkDelivered(from, body, store);
         return result(from, body, command, "vendor", store.id);
 
       case "HELP":

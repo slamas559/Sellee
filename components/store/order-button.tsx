@@ -156,7 +156,7 @@ export function OrderButton({
           </Link>
         </div>
       ) : (
-        <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
+        <div className="space-y-3 hidden rounded-xl border border-slate-200 bg-slate-50 p-3">
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Account</p>
           <div className="space-y-1 text-sm">
             <p className="font-medium text-slate-800">

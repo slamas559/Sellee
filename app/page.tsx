@@ -16,14 +16,14 @@ import { Search, SearchIcon } from "lucide-react";
 import SiteHeader from "@/components/layout/site-header";
 
 export const metadata: Metadata = {
-  title: "Home",
+  title: "Sellee | Discover Local Vendors and Products and Order via WhatsApp",
   description:
     "Discover trusted local vendors and products in one place. Browse categories, compare stores, and order directly through WhatsApp-powered workflows.",
   alternates: {
     canonical: "/",
   },
   openGraph: {
-    title: "Home - Sellee Marketplace",
+    title: "Sellee | Discover Local Vendors and Products and Order via WhatsApp",
     description:
       "Discover trusted local vendors and products in one place. Browse categories, compare stores, and order directly through WhatsApp-powered workflows.",
     url: "https://sellee.store",
@@ -41,7 +41,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Home - Sellee Marketplace",
+    title: "Sellee | Discover Local Vendors and Products and Order via WhatsApp",
     description:
       "Discover trusted local vendors and products in one place. Browse categories, compare stores, and order directly through WhatsApp-powered workflows.",
     images: ["https://sellee.store/opengraph-image.png"],

@@ -330,6 +330,7 @@ export type BotCommand =
   | "MY FOLLOWS"
   | "TOP STORES"
   | "OPEN STORE"
+  | "MARK DELIVERED"
   | "REVIEW";
 
 export function inferCommand(body: string): BotCommand {
@@ -518,6 +519,12 @@ export function inferCommand(body: string): BotCommand {
     stripped.startsWith("SHOW STORE ") ||
     stripped.startsWith("OPEN STORE ")
   ) return "OPEN STORE";
+
+  if (
+    stripped.startsWith("DELIVERED ") ||
+    stripped.startsWith("MARK DELIVERED ") ||
+    stripped.startsWith("ORDER DELIVERED ")
+  ) return "MARK DELIVERED";
 
   if (
     stripped === "HELP" ||

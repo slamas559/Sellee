@@ -282,6 +282,9 @@ export default async function StoreProductPage({ params, searchParams }: Product
             imageUrls={product.image_urls}
           />
 
+        </article>
+
+        <div className="lg:sticky lg:top-6 lg:self-start">
           <div className="space-y-4 p-5 sm:p-6">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="space-y-2">
@@ -353,9 +356,6 @@ export default async function StoreProductPage({ params, searchParams }: Product
               </div>
             </div>
           </div>
-        </article>
-
-        <div className="lg:sticky lg:top-6 lg:self-start">
           <OrderButton
             storeId={store.id}
             productId={product.id}
