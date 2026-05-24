@@ -80,7 +80,9 @@ export type CustomerOrderView = {
     slug: string;
   } | null;
   items: Array<{
+    product_id?: string;
     product_name: string;
+    image_url?: string | null;
     quantity: number;
     unit_price: number;
   }>;
@@ -226,7 +228,10 @@ export async function getVendorWhatsAppLinkStatus(
   };
 }
 
-export async function getCustomerOrders(userId: string): Promise<CustomerOrderView[]> {
+export async function getCustomerOrders(
+  userId: string,
+  opts?: { limit?: number; offset?: number },
+): Promise<CustomerOrderView[]> {
   const supabase = createAdminSupabaseClient();
 
   const { data: user } = await supabase
@@ -239,12 +244,17 @@ export async function getCustomerOrders(userId: string): Promise<CustomerOrderVi
     return [];
   }
 
+  const limit = opts?.limit ?? 20;
+  const offset = opts?.offset ?? 0;
+  const from = offset;
+  const to = offset + limit - 1;
+
   const byUserQuery = supabase
     .from("orders")
     .select("id, store_id, customer_name, customer_whatsapp, status, total_amount, payment_method, created_at")
     .eq("customer_user_id", userId)
     .order("created_at", { ascending: false })
-    .limit(80);
+    .range(from, to);
 
   const byPhoneQuery = user.phone
     ? supabase
@@ -253,7 +263,7 @@ export async function getCustomerOrders(userId: string): Promise<CustomerOrderVi
         .is("customer_user_id", null)
         .eq("customer_whatsapp", String(user.phone))
         .order("created_at", { ascending: false })
-        .limit(80)
+        .range(from, to)
     : Promise.resolve({ data: [] as OrderRecord[] });
 
   const [{ data: byUserOrders }, { data: byPhoneOrders }] = await Promise.all([
@@ -291,7 +301,7 @@ export async function getCustomerOrders(userId: string): Promise<CustomerOrderVi
       .in("id", storeIds),
     supabase
       .from("order_items")
-      .select("order_id, quantity, unit_price, product:product_id(name)")
+      .select("order_id, quantity, unit_price, product:product_id(id,name,image_url)")
       .in("order_id", orderIds),
   ]);
 
@@ -308,14 +318,27 @@ export async function getCustomerOrders(userId: string): Promise<CustomerOrderVi
     const orderId = String((row as { order_id: string }).order_id);
     const current = itemsByOrderId.get(orderId) ?? [];
 
+    const productField = (row as { product?: unknown })?.product;
     const productName =
-      ((row as { product?: { name?: string } | Array<{ name?: string }> }).product &&
-      Array.isArray((row as { product?: unknown }).product)
-        ? (row as { product: Array<{ name?: string }> }).product[0]?.name
-        : (row as { product?: { name?: string } }).product?.name) ?? "Unknown product";
+      productField && Array.isArray(productField)
+        ? (productField as Array<{ name?: string; id?: string; image_url?: string }>)[0]?.name
+        : (productField as { name?: string; id?: string; image_url?: string } | undefined)?.name ??
+          "Unknown product";
+
+    const productId =
+      productField && Array.isArray(productField)
+        ? (productField as Array<{ id?: string }>)[0]?.id
+        : (productField as { id?: string } | undefined)?.id;
+
+    const imageUrl =
+      productField && Array.isArray(productField)
+        ? (productField as Array<{ image_url?: string }>)[0]?.image_url
+        : (productField as { image_url?: string } | undefined)?.image_url ?? null;
 
     current.push({
+      product_id: productId,
       product_name: productName,
+      image_url: imageUrl,
       quantity: Number((row as { quantity: number }).quantity),
       unit_price: Number((row as { unit_price: number }).unit_price),
     });

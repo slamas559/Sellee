@@ -13,7 +13,6 @@ import {
   getStoreNichesAndFollowersCached,
 } from "@/lib/public-cache";
 import { Search, SearchIcon } from "lucide-react";
-import SiteHeader from "@/components/layout/site-header";
 
 export const metadata: Metadata = {
   title: "Sellee | Discover Local Vendors and Products and Order via WhatsApp",
@@ -285,7 +284,7 @@ export default async function Home({ searchParams }: HomeProps) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
       />
-      <SiteHeader searchParams={searchParams}/>
+      
       <section className="relative overflow-hidden rounded-3xl border border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-amber-100 p-4 sm:p-8">
         <div className="absolute -right-16 -top-20 h-56 w-56 rounded-full bg-emerald-300/50 blur-3xl" />
         <div className="absolute -bottom-20 -left-10 h-44 w-44 rounded-full bg-amber-300/55 blur-3xl" />

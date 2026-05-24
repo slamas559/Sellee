@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { ProductShowcaseCard } from "@/components/marketplace/product-showcase-card";
 import { SocialShareActions } from "@/components/shared/social-share-actions";
 import { OrderButton } from "@/components/store/order-button";
+import WishlistButton from "@/components/store/wishlist-button";
 import { ProductMediaGallery } from "@/components/store/product-media-gallery";
 import { ProductReviewsSection } from "@/components/reviews/product-reviews-section";
 import { StarRating } from "@/components/store/star-rating";
@@ -216,7 +217,7 @@ export default async function StoreProductPage({ params, searchParams }: Product
 
   const textTitleClass = "text-slate-900";
   const textMutedClass = "text-slate-600";
-  const articleClass = "overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm";
+  const articleClass = "overflow-hidden rounded-1xl border border-slate-200 bg-white shadow-sm";
   const storeLocation = [store.city, store.state, store.country].filter(Boolean).join(", ");
   const appBaseUrl = (process.env.NEXTAUTH_URL || "http://localhost:3000").replace(/\/$/, "");
   const storeUrl = `${appBaseUrl}/store/${store.slug}`;
@@ -270,10 +271,6 @@ export default async function StoreProductPage({ params, searchParams }: Product
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }}
       />
-      <Link href={backTarget.href} className="text-sm font-medium text-emerald-700 hover:underline">
-        <ArrowLeftIcon/>
-      </Link>
-
       <section className="grid gap-6 lg:grid-cols-[1.35fr_0.9fr]">
         <article className={articleClass}>
           <ProductMediaGallery
@@ -281,7 +278,7 @@ export default async function StoreProductPage({ params, searchParams }: Product
             imageUrl={product.image_url}
             imageUrls={product.image_urls}
           />
-
+          
         </article>
 
         <div className="lg:sticky lg:top-6 lg:self-start">
@@ -297,7 +294,10 @@ export default async function StoreProductPage({ params, searchParams }: Product
                 {formatNaira(Number(product.price))}
               </p>
             </div>
-
+            {/* Wishlist button */}
+            <div className="shrink-0">
+              <WishlistButton productId={product.id} />
+            </div>
             <StarRating
               value={product.rating_avg}
               count={product.rating_count}
@@ -356,14 +356,16 @@ export default async function StoreProductPage({ params, searchParams }: Product
               </div>
             </div>
           </div>
-          <OrderButton
-            storeId={store.id}
-            productId={product.id}
-            productName={product.name}
-            productPrice={Number(product.price)}
-            storeName={store.name}
-            whatsappNumber={store.whatsapp_number}
-          />
+          <div className="flex items-center gap-3">
+            <OrderButton
+              storeId={store.id}
+              productId={product.id}
+              productName={product.name}
+              productPrice={Number(product.price)}
+              storeName={store.name}
+              whatsappNumber={store.whatsapp_number}
+            />
+          </div>
         </div>
       </section>
 

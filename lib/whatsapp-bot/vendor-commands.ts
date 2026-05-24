@@ -169,6 +169,7 @@ export async function handleLinkCommand(from: string, body: string) {
         "LOW STOCK - products that need restock",
         "CONFIRM <ORDER_REF> - mark order as confirmed",
         "REJECT <ORDER_REF> - mark order as rejected",
+        "DELIVERED <ORDER_REF> - mark order as delivered",
         "BROADCAST <message> - send promo to followers",
         "BROADCAST STATUS - recent campaign results",
         "SCHEDULE BROADCAST <date time> | <message> - send later",

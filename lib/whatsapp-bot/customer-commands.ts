@@ -710,6 +710,7 @@ async function handleGreeting(from: string) {
         "LOW STOCK",
         "CONFIRM <ORDER_REF>",
         "REJECT <ORDER_REF>",
+        "DELIVERED <ORDER_REF>",
         "BROADCAST <message>",
         "BROADCAST STATUS",
       ]),

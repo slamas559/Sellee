@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/app/providers";
 import { ConditionalFooter } from "@/components/layout/conditional-footer";
+import SiteHeader from "@/components/layout/site-header";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -56,8 +57,10 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
+  searchParams,
 }: Readonly<{
   children: React.ReactNode;
+  searchParams?: Record<string, unknown>;
 }>) {
   return (
     <html
@@ -67,7 +70,10 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col">
         <Providers>
           <div className="flex min-h-full flex-col">
-            <div className="flex-1">{children}</div>
+            <div className="flex-1">
+              <SiteHeader searchParams={Promise.resolve(searchParams ?? {})} />
+              {children}
+            </div>
             <ConditionalFooter />
           </div>
         </Providers>

@@ -72,7 +72,7 @@ export function ProductMediaGallery({
   return (
     <div className="space-y-3">
       <div
-        className="relative h-72 w-full overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 sm:h-96"
+        className="relative h-72 w-full overflow-hidden rounded-1xl border border-slate-200 bg-slate-100 sm:h-96"
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}

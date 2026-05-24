@@ -10,7 +10,7 @@ import {
   getMarketplaceProductsByStoreIdsCached,
   getMarketplaceStoreNichesCached,
 } from "@/lib/public-cache";
-import SiteHeader from "@/components/layout/site-header";
+ 
 import { FilterButton } from "@/components/marketplace/filter-button";
 import MarketplaceFilterForm from "@/components/marketplace/marketplace-filter-form";
 
@@ -409,7 +409,6 @@ export default async function MarketplacePage({ searchParams }: MarketplacePageP
 
   return (
     <main className="mx-auto flex w-full max-w-[1200px] flex-1 flex-col gap-6 px-2 py-6 sm:px-3 lg:py-8">
-      <SiteHeader searchParams={searchParams} />
       <header className="rounded-3xl border border-emerald-100 bg-white p-5 shadow-sm sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>

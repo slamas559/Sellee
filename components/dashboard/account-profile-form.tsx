@@ -393,23 +393,6 @@ export function AccountProfileForm() {
         </>
       )}
 
-      {!loading ? (
-        <div className="mt-5 grid gap-2 border-t border-slate-100 pt-4 text-sm">
-          {role === "vendor" ? (
-            <Link href="/dashboard" className="font-semibold text-emerald-700 hover:underline">
-              Open vendor dashboard
-            </Link>
-          ) : (
-            <Link href="/become-vendor" className="font-semibold text-emerald-700 hover:underline">
-              Become a vendor
-            </Link>
-          )}
-          <Link href="/marketplace" className="text-slate-700 hover:text-emerald-700 hover:underline">
-            Browse marketplace
-          </Link>
-        </div>
-      ) : null}
-
       {message ? (
         <p className="mt-4 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
           {message}

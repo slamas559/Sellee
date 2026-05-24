@@ -25,18 +25,28 @@ export default async function SiteHeader({ searchParams }: HomeProps) {
     const isVendor = session?.user?.role === "vendor";
 
     return (
-      <header className="sticky top-0 z-50 w-full rounded-3xl border p-2 border-emerald-100 bg-white shadow-sm">
-        <div className="flex flex-wrap justify-between items-center gap-3 p-2 sm:gap-4 sm:px-6">
-          <Link href="/" className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-4 py-2">
+      <header className="sticky top-0 z-50 w-full border p-2 border-emerald-100 bg-white shadow-sm">
+        <div className="flex items-center justify-between gap-3 p-2 sm:gap-4 sm:px-6">
+          <Link href="/" className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-4 py-2 sm:hidden">
             <Image
               src={logoText}
               alt="Sellee logo"
-              className="h-7 w-auto sm:h-8"
+              className="h-7 w-auto"
               priority
             />
           </Link>
 
-          <form action="/" className="sm:flex min-w-0 hidden flex-1 basis-[150px] items-center gap-2 rounded-full border border-slate-200 bg-white p-2">
+          <div className="hidden sm:flex w-full items-center justify-center gap-3 sm:gap-4 max-w-[1100px] mx-auto">
+            <Link href="/" className="inline-flex items-center gap-2 rounded-full bg-emerald-50 sm:px-3 sm:py-1 px-4 py-2">
+              <Image
+                src={logoText}
+                alt="Sellee logo"
+                className="h-7 w-auto sm:h-8"
+                priority
+              />
+            </Link>
+
+            <form action="/" className="sm:flex min-w-0 flex-1 bg-gray-200 basis-[150px] items-center gap-2 rounded-full border border-slate-200 p-1 sm:max-w-[680px] lg:max-w-[520px]">
             <input
               name="q"
               defaultValue={q ?? ""}
@@ -48,12 +58,17 @@ export default async function SiteHeader({ searchParams }: HomeProps) {
               type="submit"
               className="shrink-0 rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 sm:px-5"
             >
-              <SearchIcon size={17}/>
+              Search
             </button>
-          </form>
-          <UserMenu isLoggedIn={isLoggedIn} isVendor={isVendor} />
+            </form>
+            <UserMenu isLoggedIn={isLoggedIn} isVendor={isVendor} />
+          </div>
+
+          <div className="sm:hidden">
+            <UserMenu isLoggedIn={isLoggedIn} isVendor={isVendor} />
+          </div>
         </div>
-        <form action="/" className="flex sm:hidden min-w-0 flex-1 basis-[150px] items-center gap-2 rounded-full border border-slate-200 bg-white p-2">
+        <form action="/" className="flex sm:hidden bg-gray-200 min-w-0 flex-1 basis-[150px] items-center gap-2 rounded-full border border-slate-200 p-1">
           <input
             name="q"
             defaultValue={q ?? ""}
@@ -65,7 +80,7 @@ export default async function SiteHeader({ searchParams }: HomeProps) {
             type="submit"
             className="shrink-0 rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 sm:px-5"
           >
-            <SearchIcon size={17}/>
+            Search
           </button>
         </form>
       </header>

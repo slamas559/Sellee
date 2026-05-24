@@ -107,6 +107,27 @@ export function UserMenu({ isLoggedIn, isVendor }: UserMenuProps) {
               >
                 Account
               </Link>
+              <Link
+                href="/account/orders"
+                onClick={() => setOpen(false)}
+                className="block rounded-lg px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+              >
+                My Orders
+              </Link>
+              <Link
+                href="/account/favorites"
+                onClick={() => setOpen(false)}
+                className="block rounded-lg px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+              >
+                Saved items
+              </Link>
+              <Link
+                href="/account/follows"
+                onClick={() => setOpen(false)}
+                className="block rounded-lg px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+              >
+                Followed Vendors
+              </Link>
               <div className="mt-1 border-t border-slate-100 pt-1">
                 <SignOutButton
                   callbackUrl="/"
