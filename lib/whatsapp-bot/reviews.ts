@@ -417,12 +417,14 @@ export async function handleReviewReply(
 
     // ── Save product review ──────────────────────────────────────────────────
     if (pendingReview.product_id) {
+      const reviewerName = await resolveReviewerName(supabase, pendingReview.customer_phone);
+
       const { error: productReviewError } = await supabase
         .from("product_reviews")
         .insert({
           product_id: pendingReview.product_id,
           store_id: pendingReview.store_id,
-          reviewer_name: "WhatsApp Customer",
+          reviewer_name: reviewerName,
           rating: productRating,
           comment: productComment,
         });
@@ -434,11 +436,13 @@ export async function handleReviewReply(
     }
 
     // ── Save vendor/store review ─────────────────────────────────────────────
+    const reviewerName = await resolveReviewerName(supabase, pendingReview.customer_phone);
+
     const { error: vendorReviewError } = await supabase
       .from("vendor_reviews")
       .insert({
         store_id: pendingReview.store_id,
-        reviewer_name: "WhatsApp Customer",
+        reviewer_name: reviewerName,
         rating: vendorRating,
         comment: null, // Vendor review is service-only, no comment needed
       });
