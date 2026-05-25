@@ -40,6 +40,35 @@ type PendingReviewRow = {
   expires_at: string;
 };
 
+// Try to resolve a display name for a reviewer using their phone number.
+// Falls back to email local-part if user record has email, or a short 'Customer ####' label.
+async function resolveReviewerName(supabase: ReturnType<typeof createAdminSupabaseClient>, phone: string) {
+  try {
+    const { data: user } = await supabase
+      .from("users")
+      .select("full_name, email")
+      .eq("phone", phone)
+      .maybeSingle();
+
+    if (user) {
+      if (user.full_name?.trim()) return user.full_name.trim();
+      if (user.email) {
+        const local = (user.email.split("@")[0] ?? "customer").replace(/[._-]+/g, " ").trim();
+        if (local) return local
+          .split(" ")
+          .filter(Boolean)
+          .map((p: string) => p.charAt(0).toUpperCase() + p.slice(1))
+          .join(" ");
+      }
+    }
+  } catch (e) {
+    // ignore and fall back
+  }
+  const digits = String(phone).replace(/\D/g, "");
+  const suffix = digits.slice(-4);
+  return suffix ? `Customer ${suffix}` : "WhatsApp Customer";
+}
+
 // ─── Rating word map ──────────────────────────────────────────────────────────
 // Accepts digits AND common English expressions so vendors/customers aren't locked
 // into typing exactly "4" — "good", "great", "nice" all resolve to 4.
