@@ -1,9 +1,6 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { useSession } from "next-auth/react";
-import { RatingPicker } from "@/components/reviews/rating-picker";
 import { StarRating } from "@/components/store/star-rating";
 
 type VendorReviewsSectionProps = {
@@ -34,20 +31,13 @@ export function VendorReviewsSection({
   initialRatingAvg,
   initialRatingCount,
 }: VendorReviewsSectionProps) {
-  const { data: session, status } = useSession();
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [summary, setSummary] = useState({
     rating_avg: initialRatingAvg ?? 0,
     rating_count: initialRatingCount ?? 0,
   });
-  const [form, setForm] = useState({
-    rating: 5,
-    comment: "",
-  });
-  const canSubmitReview = status === "authenticated";
 
   const loadReviews = useCallback(async () => {
     setLoading(true);
@@ -79,38 +69,8 @@ export function VendorReviewsSection({
     return () => clearTimeout(timeoutId);
   }, [loadReviews]);
 
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!canSubmitReview) {
-      setError("Please log in to submit a vendor review.");
-      return;
-    }
-
-    setIsSubmitting(true);
-    setError(null);
-    try {
-      const response = await fetch("/api/reviews/vendor", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          store_id: storeId,
-          rating: form.rating,
-          comment: form.comment,
-        }),
-      });
-      const payload = (await response.json()) as { error?: string };
-      if (!response.ok) {
-        setError(payload.error ?? "Could not submit vendor review.");
-        return;
-      }
-      setForm({ rating: 5, comment: "" });
-      await loadReviews();
-    } catch {
-      setError("Network error while submitting vendor review.");
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
+  // Note: Submission UI removed. Reviews are read-only here; server-side
+  // enforcement should allow writes only for eligible customers (delivered orders).
 
   return (
     <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -124,51 +84,7 @@ export function VendorReviewsSection({
         />
       </div>
 
-      <form onSubmit={handleSubmit} className="mt-4 space-y-3 rounded-xl border border-slate-200 bg-gradient-to-br from-white via-emerald-50/30 to-amber-50/20 p-4">
-        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-emerald-100 bg-white/90 p-3">
-          <p className="text-sm font-medium text-slate-700">
-            {canSubmitReview
-              ? `Posting as ${session?.user?.name || "your account"}`
-              : "Log in to rate this vendor"}
-          </p>
-          {canSubmitReview ? (
-            <RatingPicker
-              value={form.rating}
-              onChange={(nextRating) =>
-                setForm((prev) => ({ ...prev, rating: nextRating }))
-              }
-              disabled={isSubmitting}
-            />
-          ) : (
-            <Link
-              href="/login"
-              className="rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-700"
-            >
-              Login to rate
-            </Link>
-          )}
-        </div>
-
-        <label className="space-y-1 text-sm">
-          <span className="font-medium text-slate-700">Comment</span>
-          <textarea
-            value={form.comment}
-            onChange={(event) =>
-              setForm((prev) => ({ ...prev, comment: event.target.value }))
-            }
-            className="min-h-24 w-full rounded-md border border-slate-200 px-3 py-2 outline-none ring-emerald-300 focus:ring-2"
-            placeholder="How was your experience with this vendor?"
-          />
-        </label>
-
-        <button
-          type="submit"
-          disabled={isSubmitting || !canSubmitReview}
-          className="rounded-full bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {isSubmitting ? "Submitting..." : "Submit vendor review"}
-        </button>
-      </form>
+      {/* Submission UI removed intentionally. Reviews are displayed read-only. */}
 
       {error ? (
         <p className="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">

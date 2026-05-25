@@ -113,6 +113,7 @@ export default async function StoreProductPage({ params, searchParams }: Product
     .maybeSingle<StoreRecord>();
 
   if (!store) {
+    console.log("Product page debug: store not found", { slug, productSlug, parsedPath });
     notFound();
   }
 
@@ -140,6 +141,7 @@ export default async function StoreProductPage({ params, searchParams }: Product
   }
 
   if (!product) {
+    console.log("Product page debug: product not found", { slug, productSlug, parsedPath });
     notFound();
   }
   const canonicalProductRef = formatProductPathSegment({
