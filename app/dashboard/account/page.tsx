@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { AccountProfileForm } from "@/components/dashboard/account-profile-form";
+import { Suspense } from "react";
 
 export const metadata: Metadata = {
   title: "Account",
@@ -17,7 +18,9 @@ export default function DashboardAccountPage() {
           Update your display name for reviews and customer-facing touchpoints.
         </p>
       </header>
-      <AccountProfileForm />
+      <Suspense fallback={<div className="rounded-xl border border-slate-200 bg-slate-50 p-6 text-sm text-slate-600">Loading profile...</div>}>
+        <AccountProfileForm />
+      </Suspense>
     </section>
   );
 }

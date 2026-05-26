@@ -1,5 +1,6 @@
 "use client";
 
+import { PhoneCall } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -118,8 +119,8 @@ export function SiteFooter() {
                 </a>
               </li>
               <li>
-                <a href="tel:08100596007" className="transition hover:text-emerald-700">
-                  08100596007
+                <a href="tel:08100596007" className="flex items-center transition hover:text-emerald-700">
+                  <PhoneCall size={14}/> <span> : 08100596007</span>
                 </a>
               </li>
               <li>

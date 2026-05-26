@@ -9,11 +9,11 @@ import logoText from "@/app/logos/image-text-logo.png";
 import { UserMenu } from "@/components/layout/user-menu";
 import { useSession } from "next-auth/react";
 
-type Props = {
-  initialSearchParams?: Record<string, string>;
-};
+// type Props = {
+//   initialSearchParams?: Record<string, string>;
+// };
 
-export default function SiteHeader({ initialSearchParams }: Props) {
+export default function SiteHeader() {
   const pathname = usePathname() || "/";
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -25,12 +25,10 @@ export default function SiteHeader({ initialSearchParams }: Props) {
   const hideOn = ["/login", "/register"];
   if (hideOn.includes(pathname) || pathname === "/store" || pathname.startsWith("/store/")) return null;
 
-  const [q, setQ] = useState<string>(
-    initialSearchParams?.q ?? (searchParams?.get("q") ?? "")
-  );
-  const [category, setCategory] = useState<string>(
-    initialSearchParams?.category ?? (searchParams?.get("category") ?? "")
-  );
+  // FIX: Read query parameters directly from the browser's searchParams stream
+  const [q, setQ] = useState<string>(() => searchParams?.get("q") ?? "");
+  const [category, setCategory] = useState<string>(() => searchParams?.get("category") ?? "");
+
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [focusedSuggestion, setFocusedSuggestion] = useState(-1);
@@ -143,10 +141,10 @@ export default function SiteHeader({ initialSearchParams }: Props) {
   }
 
   // Shared CSS for the form border/ring
-  const formClass = `flex items-center gap-1.5 rounded-full border bg-white transition-all duration-200 px-3 py-1.5 ${
+  const formClass = `flex items-center gap-1.5 rounded-full border transition-all duration-200 px-3 py-1.5 ${
     isSearchFocused
-      ? "border-emerald-400 ring-2 ring-emerald-100 shadow-sm"
-      : "border-slate-200 hover:border-slate-300"
+      ? "border-emerald-400 ring-2 ring-emerald-100 shadow-sm bg-white"
+      : "border-slate-200 hover:border-slate-300 bg-gray-50"
   }`;
 
   const inputClass =

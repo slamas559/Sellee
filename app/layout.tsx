@@ -1,9 +1,11 @@
+export const dynamic = 'force-dynamic'
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/app/providers";
 import { ConditionalFooter } from "@/components/layout/conditional-footer";
 import SiteHeader from "@/components/layout/site-header";
+import { Suspense } from "react";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -79,7 +81,11 @@ export default function RootLayout({
                     q: String((searchParams as any)?.q ?? ""),
                     category: String((searchParams as any)?.category ?? ""),
                   };
-                  return <SiteHeader initialSearchParams={initialSearchParams} />;
+                  return(
+                    <Suspense fallback={<SiteHeader />}>
+                      <SiteHeader />
+                    </Suspense>
+                  );
                 })()
               }
               {children}
