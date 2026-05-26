@@ -6,6 +6,19 @@ import { createAdminSupabaseClient } from "@/lib/supabase-admin";
 
 export const metadata: Metadata = {
   title: "Vendors",
+  description: "Browse all active Sellee vendors and find local stores to shop from.",
+  alternates: { canonical: "/vendors" },
+  openGraph: {
+    title: "Vendors | Sellee",
+    description: "Browse all active Sellee vendors and find local stores to shop from.",
+    url: "https://sellee.store/vendors",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Vendors | Sellee",
+    description: "Browse all active Sellee vendors and find local stores to shop from.",
+  },
 };
 
 type StoreRow = {

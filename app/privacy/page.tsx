@@ -118,7 +118,7 @@ export default function PrivacyPage() {
         <section>
           <h2 className="text-lg font-semibold text-slate-900">8. Contact</h2>
           <p>
-            Contact: <a href="mailto:support@sellee.app" className="font-medium text-sky-700 hover:underline">support@sellee.app</a>
+            Contact: <a href="mailto:support@sellee.store" className="font-medium text-sky-700 hover:underline">support@sellee.store</a>
           </p>
         </section>
       </article>

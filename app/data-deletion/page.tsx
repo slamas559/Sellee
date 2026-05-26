@@ -20,7 +20,7 @@ export default function DataDeletionPage() {
         <section>
           <h2 className="text-lg font-semibold text-slate-900">How to Request Deletion</h2>
           <ol className="list-decimal space-y-1 pl-5">
-            <li>Send an email to <a href="mailto:support@sellee.app" className="font-medium text-sky-700 hover:underline">support@sellee.app</a>.</li>
+            <li>Send an email to <a href="mailto:support@sellee.store" className="font-medium text-sky-700 hover:underline">support@sellee.store</a>.</li>
             <li>Use subject: <span className="font-medium">Data Deletion Request</span>.</li>
             <li>Include your account email and registered phone number.</li>
           </ol>

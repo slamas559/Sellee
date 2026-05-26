@@ -65,8 +65,9 @@ async function resolveReviewerName(supabase: ReturnType<typeof createAdminSupaba
     // ignore and fall back
   }
   const digits = String(phone).replace(/\D/g, "");
+  const affix = digits.slice(0, 3);
   const suffix = digits.slice(-4);
-  return suffix ? `Customer ${suffix}` : "WhatsApp Customer";
+  return suffix ? `${affix}***${suffix}` : "WhatsApp Customer";
 }
 
 // ─── Rating word map ──────────────────────────────────────────────────────────

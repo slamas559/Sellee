@@ -53,6 +53,21 @@ export function SiteFooter() {
                 </Link>
               </li>
               <li>
+                <Link href="/about" className="transition hover:text-emerald-700">
+                  About Us
+                </Link>
+              </li>
+              <li>
+                <Link href="/how-it-works" className="transition hover:text-emerald-700">
+                  How It Works
+                </Link>
+              </li>
+              <li>
+                <Link href="/help" className="transition hover:text-emerald-700">
+                  Help Center
+                </Link>
+              </li>
+              <li>
                 <Link href="/become-vendor" className="transition hover:text-emerald-700">
                   Become a Vendor
                 </Link>
@@ -89,8 +104,35 @@ export function SiteFooter() {
             </h4>
             <p className="text-sm leading-6 text-slate-600">
               Need help with your account, store setup, or WhatsApp bot integration?
-              Visit your dashboard integrations and account pages.
+              Visit the help center or contact Sellee Support.
             </p>
+            <ul className="space-y-2 text-sm text-slate-600">
+              <li>
+                <Link href="/help" className="transition hover:text-emerald-700">
+                  Open Help Center
+                </Link>
+              </li>
+              <li>
+                <a href="mailto:support@sellee.store" className="transition hover:text-emerald-700">
+                  support@sellee.store
+                </a>
+              </li>
+              <li>
+                <a href="tel:08100596007" className="transition hover:text-emerald-700">
+                  08100596007
+                </a>
+              </li>
+              <li>
+                <a
+                  href="https://wa.me/2348100596007"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="transition hover:text-emerald-700"
+                >
+                  WhatsApp support
+                </a>
+              </li>
+            </ul>
           </section>
         </div>
 
@@ -126,4 +168,3 @@ export function SiteFooter() {
     </>
   );
 }
-

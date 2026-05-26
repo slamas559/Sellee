@@ -71,7 +71,17 @@ export default function RootLayout({
         <Providers>
           <div className="flex min-h-full flex-col">
             <div className="flex-1">
-              <SiteHeader searchParams={Promise.resolve(searchParams ?? {})} />
+              {
+                // Pass initial search params from the server to avoid a client flash
+                // and improve first paint SEO for the header search input.
+                (() => {
+                  const initialSearchParams: Record<string, string> = {
+                    q: String((searchParams as any)?.q ?? ""),
+                    category: String((searchParams as any)?.category ?? ""),
+                  };
+                  return <SiteHeader initialSearchParams={initialSearchParams} />;
+                })()
+              }
               {children}
             </div>
             <ConditionalFooter />

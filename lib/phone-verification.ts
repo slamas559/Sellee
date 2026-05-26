@@ -1,4 +1,6 @@
 import bcrypt from "bcryptjs";
+import { sendWelcomeEmail } from "@/app/actions/emails";
+import { logDevError } from "@/lib/logger";
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
 import { validateWhatsAppNumber } from "@/lib/whatsapp";
 import { sendWhatsAppTextMessage } from "@/lib/whatsapp-cloud";
@@ -318,6 +320,19 @@ async function finalizePendingRegistration(
       updated_at: nowIso,
     })
     .eq("id", pending.id);
+
+  const welcomeEmail = await sendWelcomeEmail({
+    to: pending.email,
+    name: pending.full_name,
+    role: pending.role,
+  });
+
+  if (!welcomeEmail.success) {
+    logDevError("registration.welcome-email", welcomeEmail.error, {
+      userId,
+      email: pending.email,
+    });
+  }
 
   return {
     userId,
