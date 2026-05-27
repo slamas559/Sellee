@@ -34,6 +34,7 @@ export default async function DashboardOrdersPage() {
   const isLinked = Boolean(linkStatus.linked?.is_active);
   const confirmedCount = orders.filter((item) => item.order.status === "confirmed").length;
   const pendingCount = orders.filter((item) => item.order.status === "pending_whatsapp").length;
+  const deliveredCount = orders.filter((item) => item.order.status === "delivered").length;
   const totalRevenue = orders.reduce(
     (sum, item) =>
       item.order.status === "confirmed"
@@ -74,8 +75,8 @@ export default async function DashboardOrdersPage() {
           <h2 className="mt-1 text-2xl font-black text-slate-900">{orders.length}</h2>
         </article>
         <article className="rounded-xl border border-emerald-100 bg-white p-4 shadow-sm">
-          <p className="text-sm text-slate-500">Confirmed</p>
-          <h2 className="mt-1 text-2xl font-black text-slate-900">{confirmedCount}</h2>
+          <p className="text-sm text-slate-500">Delivered</p>
+          <h2 className="mt-1 text-2xl font-black text-slate-900">{deliveredCount}</h2>
           <p className="mt-1 text-xs text-slate-500">
             Revenue: {formatNaira(totalRevenue)}
           </p>

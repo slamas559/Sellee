@@ -12,7 +12,7 @@ export function OrderStatusActions({ orderId }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const updateStatus = (status: "confirmed" | "rejected") => {
+  const updateStatus = (status: "confirmed" | "rejected" | "delivered") => {
     setError(null);
     startTransition(async () => {
       const response = await fetch(`/api/vendor/orders/${orderId}/status`, {
@@ -50,6 +50,15 @@ export function OrderStatusActions({ orderId }: Props) {
           className="rounded-md bg-red-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {isPending ? "Updating..." : "Reject Order"}
+        </button>
+        {/* make the delivered button trigger the whatsapp message so it sends a message to the customer */}
+        <button
+          type="button"
+          onClick={() => updateStatus("delivered")}
+          disabled={isPending}
+          className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {isPending ? "Updating..." : "Mark as Delivered"}
         </button>
       </div>
       {error ? <p className="mt-2 text-xs text-red-600">{error}</p> : null}
