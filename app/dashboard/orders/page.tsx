@@ -37,7 +37,7 @@ export default async function DashboardOrdersPage() {
   const deliveredCount = orders.filter((item) => item.order.status === "delivered").length;
   const totalRevenue = orders.reduce(
     (sum, item) =>
-      item.order.status === "confirmed"
+      item.order.status === "confirmed" || item.order.status === "delivered"
         ? sum + Number(item.order.total_amount ?? 0)
         : sum,
     0,
@@ -66,15 +66,20 @@ export default async function DashboardOrdersPage() {
         </div>
         <p className="mt-1 text-sm text-slate-600">
           Every click on &quot;Order via WhatsApp&quot; is logged here with pending status.
+          Marking an order as delivered will automatically prompt the customer to leave a review.
         </p>
       </header>
 
-      <section className="grid gap-4 sm:grid-cols-3">
+      <section className="grid gap-4 sm:grid-cols-4">
         <article className="rounded-xl border border-emerald-100 bg-white p-4 shadow-sm">
           <p className="text-sm text-slate-500">Total Orders</p>
           <h2 className="mt-1 text-2xl font-black text-slate-900">{orders.length}</h2>
         </article>
         <article className="rounded-xl border border-emerald-100 bg-white p-4 shadow-sm">
+          <p className="text-sm text-slate-500">Confirmed</p>
+          <h2 className="mt-1 text-2xl font-black text-slate-900">{confirmedCount}</h2>
+        </article>
+        <article className="rounded-xl border border-blue-100 bg-white p-4 shadow-sm">
           <p className="text-sm text-slate-500">Delivered</p>
           <h2 className="mt-1 text-2xl font-black text-slate-900">{deliveredCount}</h2>
           <p className="mt-1 text-xs text-slate-500">
@@ -118,7 +123,7 @@ export default async function DashboardOrdersPage() {
                   </div>
 
                   <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${statusClass(order.status)}`}>
-                    {order.status}
+                    {order.status.replace(/_/g, " ")}
                   </span>
                 </div>
 
@@ -134,9 +139,7 @@ export default async function DashboardOrdersPage() {
                   </p>
                 </div>
 
-                {order.status === "pending_whatsapp" ? (
-                  <OrderStatusActions orderId={order.id} />
-                ) : null}
+                <OrderStatusActions orderId={order.id} currentStatus={order.status} />
 
                 <div className="mt-3 border-t border-slate-100 pt-3">
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Items</p>

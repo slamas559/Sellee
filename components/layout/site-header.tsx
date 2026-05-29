@@ -9,9 +9,7 @@ import logoText from "@/app/logos/image-text-logo.png";
 import { UserMenu } from "@/components/layout/user-menu";
 import { useSession } from "next-auth/react";
 
-// type Props = {
-//   initialSearchParams?: Record<string, string>;
-// };
+const HIDDEN_ON_ROUTES = ["/login", "/register"];
 
 export default function SiteHeader() {
   const pathname = usePathname() || "/";
@@ -22,10 +20,6 @@ export default function SiteHeader() {
   const isLoggedIn = Boolean(session?.user?.id);
   const isVendor = session?.user?.role === "vendor";
 
-  const hideOn = ["/login", "/register"];
-  if (hideOn.includes(pathname) || pathname === "/store" || pathname.startsWith("/store/")) return null;
-
-  // FIX: Read query parameters directly from the browser's searchParams stream
   const [q, setQ] = useState<string>(() => searchParams?.get("q") ?? "");
   const [category, setCategory] = useState<string>(() => searchParams?.get("category") ?? "");
 
@@ -37,7 +31,7 @@ export default function SiteHeader() {
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const desktopInputRef = useRef<HTMLInputElement | null>(null);
 
-  // Sync with URL
+  // Sync with URL — all hooks must be declared before any conditional return
   useEffect(() => {
     const newQ = searchParams?.get("q") ?? "";
     const newCategory = searchParams?.get("category") ?? "";
@@ -45,19 +39,6 @@ export default function SiteHeader() {
     if (newCategory !== category) setCategory(newCategory);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
-
-  // Update URL bar silently
-  const updateUrl = (value: string) => {
-    const params = new URLSearchParams();
-    if (value) params.set("q", value);
-    if (category) params.set("category", category);
-    const url = params.toString() ? `/search?${params.toString()}` : "/search";
-    try {
-      window.history.replaceState({}, "", url);
-    } catch (_) {
-      router.replace(url);
-    }
-  };
 
   // Debounced suggestions
   useEffect(() => {
@@ -91,6 +72,31 @@ export default function SiteHeader() {
     document.addEventListener("mousedown", onDoc);
     return () => document.removeEventListener("mousedown", onDoc);
   }, []);
+
+  // ── All hooks have run — now it is safe to conditionally return ──
+  const shouldHide =
+    HIDDEN_ON_ROUTES.some((route) => pathname.startsWith(route)) ||
+    // pathname === "/store" ||
+    // pathname.startsWith("/store/") ||
+    pathname === "/login" ||
+    pathname.startsWith("/login/") ||
+    pathname === "/register" ||
+    pathname.startsWith("/register/");
+
+  if (shouldHide) return null;
+
+  // Update URL bar silently
+  const updateUrl = (value: string) => {
+    const params = new URLSearchParams();
+    if (value) params.set("q", value);
+    if (category) params.set("category", category);
+    const url = params.toString() ? `/search?${params.toString()}` : "/search";
+    try {
+      window.history.replaceState({}, "", url);
+    } catch (_) {
+      router.replace(url);
+    }
+  };
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (!showSuggestions || !suggestions.length) return;
@@ -126,7 +132,6 @@ export default function SiteHeader() {
     desktopInputRef.current?.focus();
   }
 
-  // Shared input change handler
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const v = e.target.value;
     setQ(v);
@@ -135,12 +140,10 @@ export default function SiteHeader() {
     setFocusedSuggestion(-1);
   }
 
-  // Shared form submit handler
   function handleSubmit() {
     setShowSuggestions(false);
   }
 
-  // Shared CSS for the form border/ring
   const formClass = `flex items-center gap-1.5 rounded-full border transition-all duration-200 px-3 py-1.5 ${
     isSearchFocused
       ? "border-emerald-400 ring-2 ring-emerald-100 shadow-sm bg-white"

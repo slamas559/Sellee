@@ -57,12 +57,20 @@ export const metadata: Metadata = {
   },
 };
 
+function HeaderFallback() {
+  return (
+    <header className="sticky top-0 z-40 w-full border-b border-slate-100 bg-white/95 backdrop-blur-sm">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6">
+        <div className="flex h-16 items-center gap-4" />
+      </div>
+    </header>
+  );
+}
+
 export default function RootLayout({
   children,
-  searchParams,
 }: Readonly<{
   children: React.ReactNode;
-  searchParams?: Record<string, unknown>;
 }>) {
   return (
     <html
@@ -73,21 +81,9 @@ export default function RootLayout({
         <Providers>
           <div className="flex min-h-full flex-col">
             <div className="flex-1">
-              {
-                // Pass initial search params from the server to avoid a client flash
-                // and improve first paint SEO for the header search input.
-                (() => {
-                  const initialSearchParams: Record<string, string> = {
-                    q: String((searchParams as any)?.q ?? ""),
-                    category: String((searchParams as any)?.category ?? ""),
-                  };
-                  return(
-                    <Suspense fallback={<SiteHeader />}>
-                      <SiteHeader />
-                    </Suspense>
-                  );
-                })()
-              }
+              <Suspense fallback={<HeaderFallback />}>
+                <SiteHeader />
+              </Suspense>
               {children}
             </div>
             <ConditionalFooter />

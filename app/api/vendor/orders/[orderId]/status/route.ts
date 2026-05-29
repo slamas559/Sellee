@@ -6,9 +6,10 @@ import { requireVerifiedPhone } from "@/lib/require-verified-phone";
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
 import { sendWhatsAppTextMessage } from "@/lib/whatsapp-cloud";
 import { waMessage, waTitle } from "@/lib/whatsapp-bot/message-format";
+import { promptCustomerReview } from "@/lib/whatsapp-bot/reviews";
 
 const statusSchema = z.object({
-  status: z.enum(["confirmed", "rejected"]),
+  status: z.enum(["confirmed", "rejected", "delivered"]),
 });
 
 export async function PATCH(
@@ -42,7 +43,7 @@ export async function PATCH(
 
   const { data: store } = await supabase
     .from("stores")
-    .select("id,vendor_id")
+    .select("id,vendor_id,name")
     .eq("vendor_id", session.user.id)
     .order("created_at", { ascending: false })
     .limit(1)
@@ -63,9 +64,18 @@ export async function PATCH(
     return NextResponse.json({ error: "Order not found." }, { status: 404 });
   }
 
-  if (order.status !== "pending_whatsapp") {
+  // Allow confirmed → delivered, or pending_whatsapp → confirmed/rejected
+  const allowedTransitions: Record<string, string[]> = {
+    pending_whatsapp: ["confirmed", "rejected"],
+    confirmed: ["delivered"],
+  };
+
+  const allowed = allowedTransitions[order.status] ?? [];
+  if (!allowed.includes(parsed.data.status)) {
     return NextResponse.json(
-      { error: "Only pending orders can be confirmed or rejected." },
+      {
+        error: `Cannot change status from "${order.status}" to "${parsed.data.status}".`,
+      },
       { status: 400 },
     );
   }
@@ -94,18 +104,40 @@ export async function PATCH(
     "your product";
   const ref = String(orderId).slice(0, 8).toUpperCase();
   const customerPhone = String(order.customer_whatsapp ?? "").trim();
+
+  // Notify customer of status change
   if (customerPhone && customerPhone !== "unknown") {
-    const line =
-      parsed.data.status === "confirmed"
-        ? `Your order #${ref} (${productName}) was confirmed.`
-        : `Your order #${ref} (${productName}) was rejected.`;
     try {
-      await sendWhatsAppTextMessage({
-        to: customerPhone,
-        message: waMessage(waTitle("Order Update"), line),
-      });
+      if (parsed.data.status === "delivered") {
+        // Delivery notification
+        await sendWhatsAppTextMessage({
+          to: customerPhone,
+          message: waMessage(
+            waTitle(`Your order #${ref} has been delivered!`),
+            `From ${store.name}. We hope you love it.`,
+          ),
+        });
+
+        // Trigger the same review prompt flow as the bot
+        await promptCustomerReview({
+          orderId,
+          storeId: store.id,
+          storeName: store.name,
+          customerPhone,
+        });
+      } else {
+        // confirmed / rejected notification
+        const line =
+          parsed.data.status === "confirmed"
+            ? `Your order #${ref} (${productName}) was confirmed.`
+            : `Your order #${ref} (${productName}) was rejected.`;
+        await sendWhatsAppTextMessage({
+          to: customerPhone,
+          message: waMessage(waTitle("Order Update"), line),
+        });
+      }
     } catch {
-      // non-blocking customer notification
+      // Non-blocking — don't fail the status update if notification errors
     }
   }
 
