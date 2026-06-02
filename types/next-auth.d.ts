@@ -6,6 +6,7 @@ declare module "next-auth" {
       id: string;
       role: "vendor" | "customer";
     };
+    error?: "UserDeleted";
   }
 
   interface User {
@@ -16,5 +17,6 @@ declare module "next-auth" {
 declare module "next-auth/jwt" {
   interface JWT {
     role?: "vendor" | "customer";
+    isDeleted?: boolean;
   }
 }

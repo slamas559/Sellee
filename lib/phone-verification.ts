@@ -56,7 +56,8 @@ function mapPhoneOwnershipError(error: unknown): Error {
   if (
     text.includes("idx_users_phone_unique") ||
     text.includes("duplicate key") ||
-    text.includes("users_phone_key")
+    text.includes("users_phone_key") ||
+    text.includes("already linked")
   ) {
     return new Error("This WhatsApp number is already linked to another account.");
   }
@@ -107,6 +108,37 @@ async function ensureVendorPhoneSync(userId: string, phone: string) {
   );
 }
 
+/**
+ * Check whether a phone number is already used by another account.
+ * Returns an error string if taken, null if available.
+ */
+async function checkPhoneAvailability(
+  phone: string,
+  excludeUserId?: string,
+): Promise<string | null> {
+  const supabase = createAdminSupabaseClient();
+  let query = supabase.from("users").select("id").eq("phone", phone);
+  if (excludeUserId) {
+    query = query.neq("id", excludeUserId);
+  }
+  const { data, error } = await query.limit(1);
+  // const { data, error } = await query.maybeSingle();
+  // console.log("Phone availability check", { phone, excludeUserId, data, error });
+
+  if (error) {
+    throw new Error("Network error while checking phone number.", error);
+  }
+
+  // if (data?.id) {
+  //   return "This WhatsApp number is already registered to another Sellee account. Please use a different number.";
+  // }
+
+  if (data && data.length > 0) {
+    return "This WhatsApp number is already registered to another Sellee account. Please use a different number or sign in to that account.";
+  }
+  return null;
+}
+
 export async function startRegistrationVerification(params: {
   fullName: string;
   email: string;
@@ -136,6 +168,7 @@ export async function startRegistrationVerification(params: {
   const nowIso = new Date().toISOString();
   const supabase = createAdminSupabaseClient();
 
+  // Check email uniqueness
   const { data: existingUser } = await supabase
     .from("users")
     .select("id")
@@ -143,17 +176,15 @@ export async function startRegistrationVerification(params: {
     .maybeSingle();
 
   if (existingUser?.id) {
-    throw new Error("An account with this email already exists.");
+    throw new Error(
+      "An account with this email already exists. Please sign in or use a different email address.",
+    );
   }
 
-  const { data: existingPhoneUser } = await supabase
-    .from("users")
-    .select("id")
-    .eq("phone", phoneCheck.normalized)
-    .maybeSingle();
-
-  if (existingPhoneUser?.id) {
-    throw new Error("This WhatsApp number is already linked to another account.");
+  // Check phone uniqueness with a clear, actionable message
+  const phoneError = await checkPhoneAvailability(phoneCheck.normalized);
+  if (phoneError) {
+    throw new Error(phoneError);
   }
 
   const { data: pending, error: pendingError } = await supabase
@@ -271,16 +302,18 @@ async function finalizePendingRegistration(
   let userId = "";
   if (existing?.id) {
     userId = String(existing.id);
-    const { data: phoneOwner } = await supabase
-      .from("users")
-      .select("id")
-      .eq("phone", pending.target_phone)
-      .neq("id", userId)
-      .maybeSingle();
-    if (phoneOwner?.id) {
-      throw new Error("This WhatsApp number is already linked to another account.");
+    // Re-check phone ownership at finalization time
+    const phoneError = await checkPhoneAvailability(pending.target_phone, userId);
+    if (phoneError) {
+      throw new Error(phoneError);
     }
   } else {
+    // Final phone uniqueness guard before insert
+    const phoneError = await checkPhoneAvailability(pending.target_phone);
+    if (phoneError) {
+      throw new Error(phoneError);
+    }
+
     const { data: created, error: createError } = await supabase
       .from("users")
       .insert({
@@ -295,7 +328,18 @@ async function finalizePendingRegistration(
       .single();
 
     if (createError || !created?.id) {
-      throw new Error(createError?.message ?? "Failed to finalize account.");
+      // Surface a user-friendly message for duplicate phone at DB level
+      const msg = createError?.message ?? "";
+      if (
+        msg.includes("idx_users_phone_unique") ||
+        msg.includes("duplicate key") ||
+        msg.includes("users_phone_key")
+      ) {
+        throw new Error(
+          "This WhatsApp number is already registered to another Sellee account. Please use a different number.",
+        );
+      }
+      throw new Error(msg || "Failed to finalize account.");
     }
     userId = String(created.id);
   }
@@ -366,15 +410,21 @@ export async function verifyChallengeByOtp(params: {
     throw new Error("This verification challenge is no longer active.");
   }
   if (new Date(challenge.expires_at).getTime() <= Date.now()) {
-    throw new Error("Verification challenge has expired.");
+    throw new Error("Verification challenge has expired. Please start the process again.");
   }
   if (challenge.otp_code !== params.otpCode.trim()) {
-    throw new Error("Invalid OTP code.");
+    throw new Error("Invalid OTP code. Please check the code and try again.");
   }
 
   if (challenge.purpose === "account_phone_change") {
     if (!params.userId || challenge.user_id !== params.userId) {
       throw new Error("Unauthorized challenge.");
+    }
+
+    // Check phone is still available before applying the change
+    const phoneError = await checkPhoneAvailability(challenge.target_phone, params.userId);
+    if (phoneError) {
+      throw new Error(phoneError);
     }
 
     try {
@@ -416,7 +466,7 @@ export async function verifyChallengeByOtp(params: {
   }
   const pendingRow = pending as PendingRegistrationRow;
   if (pendingRow.status !== "pending") {
-    throw new Error("Pending registration is no longer active.");
+    throw new Error("This registration has already been completed or expired.");
   }
 
   const finalized = await finalizePendingRegistration(pendingRow);
@@ -457,7 +507,7 @@ export async function verifyByWhatsAppCommand(params: {
   if (error || !data) {
     return {
       completed: false,
-      message: "Verification code is invalid or expired.",
+      message: "Verification code is invalid or expired. Please start the process again.",
     };
   }
 
@@ -465,7 +515,7 @@ export async function verifyByWhatsAppCommand(params: {
   if (new Date(challenge.expires_at).getTime() <= Date.now()) {
     return {
       completed: false,
-      message: "Verification code has expired.",
+      message: "Verification code has expired. Please start again from the app.",
     };
   }
 
@@ -475,6 +525,12 @@ export async function verifyByWhatsAppCommand(params: {
         completed: false,
         message: "Could not resolve account for this verification.",
       };
+    }
+
+    // Check phone is still available
+    const phoneError = await checkPhoneAvailability(challenge.target_phone, challenge.user_id);
+    if (phoneError) {
+      return { completed: false, message: phoneError };
     }
 
     try {
@@ -521,8 +577,16 @@ export async function verifyByWhatsAppCommand(params: {
   if (!pending || (pending as PendingRegistrationRow).status !== "pending") {
     return {
       completed: false,
-      message: "Registration is already completed or expired.",
+      message: "This registration has already been completed or has expired.",
     };
+  }
+
+  // Check phone availability one final time at WhatsApp verification
+  const phoneError = await checkPhoneAvailability(
+    (pending as PendingRegistrationRow).target_phone,
+  );
+  if (phoneError) {
+    return { completed: false, message: phoneError };
   }
 
   try {
@@ -615,15 +679,10 @@ export async function startAccountPhoneChangeVerification(params: {
     throw new Error("This phone number is already linked to your account.");
   }
 
-  const { data: phoneOwner } = await supabase
-    .from("users")
-    .select("id")
-    .eq("phone", phoneCheck.normalized)
-    .neq("id", params.userId)
-    .maybeSingle();
-
-  if (phoneOwner?.id) {
-    throw new Error("This WhatsApp number is already linked to another account.");
+  // Clear, actionable message when phone belongs to another account
+  const phoneError = await checkPhoneAvailability(phoneCheck.normalized, params.userId);
+  if (phoneError) {
+    throw new Error(phoneError);
   }
 
   const verifyCode = generateCode();

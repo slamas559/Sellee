@@ -77,7 +77,6 @@ export function RegisterForm() {
   const [notice, setNotice] = useState<string | null>(null);
   const isBusy =
     isSubmitting || isSendingOtp || isVerifyingOtp || isCheckingStatus;
-
   const normalizedLocalPhone = useMemo(
     () => form.phone_local.replace(/[^0-9]/g, ""),
     [form.phone_local],
@@ -96,7 +95,7 @@ export function RegisterForm() {
       router.push("/login");
       return;
     }
-
+    
     router.push("/");
     router.refresh();
   }
@@ -151,7 +150,7 @@ export function RegisterForm() {
     if (normalizedLocalPhone.length < 6) {
       setError("Enter your phone number.");
       return;
-    }
+    } 
 
     setIsSubmitting(true);
     try {
@@ -248,7 +247,7 @@ export function RegisterForm() {
         <div className="auth-stagger-2 rounded-xl border border-slate-200 bg-white p-3">
           <p className="text-sm font-semibold text-slate-900">Option 1: Verify on WhatsApp</p>
           <p className="mt-1 text-xs text-slate-600">
-            Open chat and send this command from the same number.
+            Open bot chat and send this command from the same number.
           </p>
           <code className="mt-2 block rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
             {challenge.command}
