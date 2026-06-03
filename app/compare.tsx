@@ -51,7 +51,6 @@ type HomeProps = {
   searchParams: Promise<{
     q?: string;
     category?: string;
-    niche?: string;
   }>;
 };
 
@@ -104,53 +103,47 @@ const FALLBACK_CATEGORIES = [
   "Home",
 ];
 
-const CATEGORY_IMAGE_SOURCES: Record<string, string> = {
-  // Exact niche name matches (case-insensitive key lookup below)
-  "groceries":           "https://images.unsplash.com/photo-1543168256-418811576931?auto=format&fit=crop&w=80&h=80&q=70",
-  "fashion":             "https://images.unsplash.com/photo-1445205170230-053b83016050?auto=format&fit=crop&w=80&h=80&q=70",
-  "electronics":         "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?auto=format&fit=crop&w=80&h=80&q=70",
-  "beauty":              "https://images.unsplash.com/photo-1596462502278-27bfdc403348?auto=format&fit=crop&w=80&h=80&q=70",
-  "home & living":       "https://images.unsplash.com/photo-1484101403633-562f891dc89a?auto=format&fit=crop&w=80&h=80&q=70",
-  "home-living":         "https://images.unsplash.com/photo-1484101403633-562f891dc89a?auto=format&fit=crop&w=80&h=80&q=70",
-  "health & fitness":    "https://images.unsplash.com/photo-1554284126-aa88f22d8a90?auto=format&fit=crop&w=80&h=80&q=70",
-  "health-fitness":      "https://images.unsplash.com/photo-1554284126-aa88f22d8a90?auto=format&fit=crop&w=80&h=80&q=70",
-  "baby & kids":         "https://images.unsplash.com/photo-1545558014-8692077e9b5c?auto=format&fit=crop&w=80&h=80&q=70",
-  "baby-kids":           "https://images.unsplash.com/photo-1545558014-8692077e9b5c?auto=format&fit=crop&w=80&h=80&q=70",
-  "furnitures":          "https://images.unsplash.com/photo-1484101403633-562f891dc89a?auto=format&fit=crop&w=80&h=80&q=70",
-  "automotive":          "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=80&h=80&q=70",
-  "food & drinks":       "https://images.unsplash.com/photo-1504754524776-8f4f37790ca0?auto=format&fit=crop&w=80&h=80&q=70",
-  "food-drinks":         "https://images.unsplash.com/photo-1504754524776-8f4f37790ca0?auto=format&fit=crop&w=80&h=80&q=70",
-  "books & stationery":  "https://images.unsplash.com/photo-1512820790803-83ca734da794?auto=format&fit=crop&w=80&h=80&q=70",
-  "books-stationery":    "https://images.unsplash.com/photo-1512820790803-83ca734da794?auto=format&fit=crop&w=80&h=80&q=70",
-  "gadgets & electronics":"https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=80&h=80&q=70",
-  "gadgets-electronics":  "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=80&h=80&q=70",
-  "sports":              "https://images.unsplash.com/photo-1508609349937-5ec4ae374ebf?auto=format&fit=crop&w=80&h=80&q=70",
-  "art & crafts":        "https://images.unsplash.com/photo-1513364776144-60967b0f800f?auto=format&fit=crop&w=80&h=80&q=70",
-  "art-crafts":          "https://images.unsplash.com/photo-1513364776144-60967b0f800f?auto=format&fit=crop&w=80&h=80&q=70",
-  "digital products":    "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=80&h=80&q=70",
-  "digital-products":    "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=80&h=80&q=70",
-  "thrift & vintage":    "https://images.unsplash.com/photo-1520975918642-1d0b45d9c6f9?auto=format&fit=crop&w=80&h=80&q=70",
-  "thrift-vintage":      "https://images.unsplash.com/photo-1520975918642-1d0b45d9c6f9?auto=format&fit=crop&w=80&h=80&q=70",
-  "jewelry":             "https://images.unsplash.com/photo-1617038260897-41a1f14a8ca0?auto=format&fit=crop&w=80&h=80&q=70",
-  "pets":                "https://images.unsplash.com/photo-1450778869180-41d0601e046e?auto=format&fit=crop&w=80&h=80&q=70",
-  "phones & accessories":"https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=80&h=80&q=70",
-  "phones-accessories":  "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=80&h=80&q=70",
-  "services":            "https://images.unsplash.com/photo-1521791136064-7986c2920216?auto=format&fit=crop&w=80&h=80&q=70",
-  "event & party":       "https://images.unsplash.com/photo-1530103862676-de8c9debad1d?auto=format&fit=crop&w=80&h=80&q=70",
-  "event-party":         "https://images.unsplash.com/photo-1530103862676-de8c9debad1d?auto=format&fit=crop&w=80&h=80&q=70",
-  "gaming":              "https://images.unsplash.com/photo-1493711662062-fa541adb3fc8?auto=format&fit=crop&w=80&h=80&q=70",
-};
-
-const CATEGORY_IMAGE_DEFAULT =
-  "https://images.unsplash.com/photo-1472851294608-062f824d29cc?auto=format&fit=crop&w=80&h=80&q=70";
+const CATEGORY_IMAGE_SOURCES: Array<{ match: RegExp; image: string }> = [
+  {
+    match: /(grocery|food|breakfast|drink|snack|meal|restaurant|kitchen)/i,
+    image:
+      "https://images.unsplash.com/photo-1543168256-418811576931?auto=format&fit=crop&w=80&h=80&q=70",
+  },
+  {
+    match: /(fashion|cloth|clothe|wear|shoe|bag|boutique)/i,
+    image:
+      "https://images.unsplash.com/photo-1445205170230-053b83016050?auto=format&fit=crop&w=80&h=80&q=70",
+  },
+  {
+    match: /(electronic|phone|laptop|device|gadget|tech)/i,
+    image:
+      "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=80&h=80&q=70",
+  },
+  {
+    match: /(beauty|cosmetic|skincare|makeup|salon)/i,
+    image:
+      "https://images.unsplash.com/photo-1596462502278-27bfdc403348?auto=format&fit=crop&w=80&h=80&q=70",
+  },
+  {
+    match: /(home|furniture|decor|interior)/i,
+    image:
+      "https://images.unsplash.com/photo-1484101403633-562f891dc89a?auto=format&fit=crop&w=80&h=80&q=70",
+  },
+  {
+    match: /(sport|fitness|gym)/i,
+    image:
+      "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&w=80&h=80&q=70",
+  },
+];
 
 function categoryImageUrl(category: string): string {
   return (
-    CATEGORY_IMAGE_SOURCES[category.toLowerCase().trim()] ?? CATEGORY_IMAGE_DEFAULT
+    CATEGORY_IMAGE_SOURCES.find((item) => item.match.test(category))?.image ??
+    "https://images.unsplash.com/photo-1472851294608-062f824d29cc?auto=format&fit=crop&w=80&h=80&q=70"
   );
 }
 
-async function getMarketplaceData(q?: string, category?: string, nicheParam?: string) {
+async function getMarketplaceData(q?: string, category?: string) {
   const { stores, products, categoryRows, niches, nicheCategories } =
     await getHomeMarketplaceBaseDataCached();
 
@@ -188,31 +181,11 @@ async function getMarketplaceData(q?: string, category?: string, nicheParam?: st
   const storesById = new Map(enrichedStores.map((store) => [store.id, store]));
 
   let filteredProducts = allProducts;
-
-  // Filter by explicit category query param (legacy behavior)
   if (category) {
     const categoryLower = category.toLowerCase();
     filteredProducts = filteredProducts.filter(
       (product) => (product.category ?? "").toLowerCase() === categoryLower,
     );
-  }
-
-  // If a niche slug is provided, resolve its categories and filter products
-  if (nicheParam) {
-    const selectedNiche = (niches ?? []).find(
-      (n) => String(n.slug ?? "").toLowerCase() === String(nicheParam).toLowerCase(),
-    );
-    if (selectedNiche) {
-      const categoriesInSelectedNiche = ((nicheCategories ?? []) as Array<{ niche_id: string; name: string }>)
-        .filter((row) => row.niche_id === selectedNiche.id)
-        .map((r) => String(r.name ?? "").toLowerCase());
-
-      if (categoriesInSelectedNiche.length > 0) {
-        filteredProducts = filteredProducts.filter((product) =>
-          categoriesInSelectedNiche.includes((product.category ?? "").toLowerCase()),
-        );
-      }
-    }
   }
 
   if (q) {
@@ -256,18 +229,17 @@ async function getMarketplaceData(q?: string, category?: string, nicheParam?: st
 
   const categories = [
     ...new Set(
-      (niches ?? [])
-        .map((n) => String(n.name ?? "").trim())
+      (categoryRows ?? [])
+        .map((row) => String(row.category ?? "").trim())
         .filter(Boolean),
     ),
-  ].slice(0, 20);
+  ].slice(0, 12);
 
   return {
     stores: enrichedStores,
     products: filteredProducts.slice(0, 24),
     categories: categories.length > 0 ? categories : FALLBACK_CATEGORIES,
     storesById,
-    niches,
   };
 }
 
@@ -277,8 +249,7 @@ export default async function Home({ searchParams }: HomeProps) {
   const q = params.q?.trim() || undefined;
   const category = params.category?.trim() || undefined;
 
-  const niche = params.niche?.trim() || undefined;
-  const { stores, products, categories, storesById, niches } = await getMarketplaceData(q, category, niche);
+  const { stores, products, categories, storesById } = await getMarketplaceData(q, category);
   const isLoggedIn = Boolean(session?.user?.id);
   const isVendor = session?.user?.role === "vendor";
   const botNumber = process.env.NEXT_PUBLIC_WHATSAPP_BOT_NUMBER?.trim() ?? "";
@@ -360,20 +331,19 @@ export default async function Home({ searchParams }: HomeProps) {
       {botNumber ? <WhatsAppBotAccess botNumber={botNumber} /> : null}
 
       <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
-        <div className="flex items-center justify-between mb-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-lg font-bold text-slate-900 sm:text-xl">Browse Categories</h2>
           {category ? (
             <Link href={q ? `/?q=${encodeURIComponent(q)}` : "/"} className="text-sm font-medium text-emerald-700 hover:underline">
-              Clear filter
+              Clear category
             </Link>
           ) : (
             <Link href="/marketplace" className="text-sm font-medium text-emerald-700 hover:underline">
-              View all
+              Browse marketplace
             </Link>
           )}
         </div>
-
-        <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8">
+        <div className="mt-4 -mx-1 flex snap-x snap-mandatory gap-2 overflow-x-auto px-1 pb-1 sm:mx-0 sm:px-0">
           {categories.map((item) => {
             const href = q
               ? `/?q=${encodeURIComponent(q)}&category=${encodeURIComponent(item)}`
@@ -384,25 +354,23 @@ export default async function Home({ searchParams }: HomeProps) {
               <Link
                 key={item}
                 href={href}
-                className={`group flex flex-col items-center gap-2.5 rounded-2xl border p-3 pb-2.5 text-center transition ${
+                className={`group inline-flex shrink-0 snap-start items-center gap-2 rounded-2xl border px-2.5 py-2 pr-3 text-sm font-semibold transition ${
                   isActive
-                    ? "border-emerald-500 bg-emerald-50"
-                    : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
+                    ? "border-emerald-600 bg-emerald-600 text-white shadow-sm"
+                    : "border-slate-200 bg-white text-slate-700 hover:border-emerald-200 hover:bg-emerald-50"
                 }`}
               >
-                <span className="relative h-12 w-12 overflow-hidden rounded-xl">
+                <span className={`relative h-8 w-8 overflow-hidden rounded-xl ring-1 ${isActive ? "ring-white/40" : "ring-slate-200"}`}>
                   <Image
                     src={categoryImageUrl(item)}
                     alt={`${item} category`}
                     fill
                     className="object-cover transition group-hover:scale-105"
-                    sizes="48px"
+                    sizes="32px"
                     unoptimized
                   />
                 </span>
-                <p className={`text-xs font-medium leading-tight ${isActive ? "text-emerald-700" : "text-slate-700"}`}>
-                  {item}
-                </p>
+                {item}
               </Link>
             );
           })}

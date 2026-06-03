@@ -8,6 +8,7 @@ import { useMemo, useRef, useState } from "react";
 import { StarRating } from "@/components/store/star-rating";
 import { formatNaira, formatProductPathSegment } from "@/lib/format";
 import type { StoreTemplate } from "@/types";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 type ProductShowcaseCardProps = {
   product: {
@@ -161,18 +162,18 @@ export function ProductShowcaseCard({
             <button
               type="button"
               onClick={prevSlide}
-              className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-white/80 px-1.5 py-1 text-xs font-bold text-slate-900 backdrop-blur hover:bg-white sm:left-3 sm:px-2.5 sm:py-1 sm:text-sm"
+              className="absolute left-1 top-1/2 -translate-y-1/2 bg-white/40 rounded-full px-1 py-1 text-xs font-bold text-slate-900 hover:backdrop-blur sm:left-1 sm:px-1 sm:py-1 sm:text-sm"
               aria-label="Previous image"
             >
-              {"<"}
+              {<ChevronLeft className="h-4 w-4 text-gray-600" />}
             </button>
             <button
               type="button"
               onClick={nextSlide}
-              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-white/80 px-1.5 py-1 text-xs font-bold text-slate-900 backdrop-blur hover:bg-white sm:right-3 sm:px-2.5 sm:py-1 sm:text-sm"
+              className="absolute right-1 top-1/2 -translate-y-1/2 bg-white/40 rounded-full px-1.5 py-1 text-xs font-bold text-slate-900 hover:backdrop-blur sm:right-1 sm:px-1 sm:py-1 sm:text-sm"
               aria-label="Next image"
             >
-              {">"}
+              {<ChevronRight className="h-4 w-4 text-gray-600" />}
             </button>
             <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 gap-1.5 rounded-full bg-black/20 px-1.5 py-1 sm:px-2.5 sm:py-1 backdrop-blur">
               {images.map((_, dotIndex) => (

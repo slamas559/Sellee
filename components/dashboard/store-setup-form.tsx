@@ -30,17 +30,11 @@ type NicheOption = {
   id: string;
   slug: string;
   name: string;
-  categories: Array<{
-    id: string;
-    slug: string;
-    name: string;
-  }>;
+  categories: Array<{ id: string; slug: string; name: string }>;
 };
 
 type MeResponse = {
-  user?: {
-    phone?: string | null;
-  };
+  user?: { phone?: string | null };
 };
 
 const INITIAL_UPLOAD_STATE: UploadState = {
@@ -50,46 +44,153 @@ const INITIAL_UPLOAD_STATE: UploadState = {
   error: null,
 };
 
-const PREVIEW_PRODUCTS = [
-  { name: "Eco Flask", price: "NGN 14,500" },
-  { name: "Kitchen Set", price: "NGN 22,000" },
-  { name: "Daily Essentials", price: "NGN 8,900" },
-  { name: "Smart Organizer", price: "NGN 12,300" },
-];
-
 const SECTION_LABELS: Record<StorefrontSectionId, string> = {
   featured_products: "Featured products",
   promo_strip: "Promo strip",
   reviews: "Reviews",
 };
 
-function useObjectUrl(file: File | null, fallback: string): string {
-  const objectUrl = useMemo(() => {
-    if (!file) return null;
-    return URL.createObjectURL(file);
-  }, [file]);
+// ─── Template visual card ──────────────────────────────────────────────────
 
-  useEffect(() => {
-    return () => {
-      if (objectUrl) {
-        URL.revokeObjectURL(objectUrl);
-      }
-    };
-  }, [objectUrl]);
+function TemplateCard({
+  option,
+  selected,
+  onSelect,
+}: {
+  option: (typeof STOREFRONT_TEMPLATE_OPTIONS)[number];
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      className={`group relative flex-shrink-0 snap-start rounded-2xl border-2 p-4 text-left transition-all duration-200 ${
+        selected
+          ? "border-emerald-500 bg-emerald-50 shadow-md"
+          : "border-slate-200 bg-white hover:border-emerald-300 hover:shadow-sm"
+      } min-w-[200px] max-w-[240px] sm:min-w-[220px]`}
+    >
+      {/* Visual icon area */}
+      <div className="mb-3 overflow-hidden rounded-xl border border-slate-100 bg-slate-50" style={{ height: 100 }}>
+        {option.key === "grocery_promo" && (
+          <div className="h-full w-full p-2" style={{ background: `linear-gradient(135deg, ${option.accent}15, ${option.accent}05)` }}>
+            {/* Bold hero bar */}
+            <div className="h-5 w-full rounded-md" style={{ backgroundColor: option.accent }} />
+            {/* Product grid */}
+            <div className="mt-2 grid grid-cols-3 gap-1">
+              {[...Array(6)].map((_, i) => (
+                <div key={i} className="h-8 rounded-md bg-white shadow-sm" />
+              ))}
+            </div>
+          </div>
+        )}
+        {option.key === "fashion_editorial" && (
+          <div className="relative h-full w-full overflow-hidden bg-slate-900">
+            {/* Dark full-bleed */}
+            <div className="absolute inset-0 bg-gradient-to-br from-slate-800 to-slate-950" />
+            <div className="absolute bottom-0 left-0 right-0 p-2">
+              <div className="h-2 w-20 rounded bg-white/80" />
+              <div className="mt-1 h-1.5 w-14 rounded bg-white/40" />
+              <div className="mt-2 flex gap-1">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="h-8 flex-1 rounded-md bg-white/20" />
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+        {option.key === "lifestyle_showcase" && (
+          <div className="grid h-full grid-cols-2 gap-1 p-2" style={{ background: `${option.accent}08` }}>
+            {/* Split screen */}
+            <div className="flex flex-col gap-1">
+              <div className="h-3 w-12 rounded bg-slate-300" />
+              <div className="h-2 w-10 rounded bg-slate-200" />
+              <div className="mt-auto h-5 w-14 rounded-full" style={{ backgroundColor: option.accent }} />
+            </div>
+            <div className="overflow-hidden rounded-xl" style={{ backgroundColor: `${option.accent}20` }}>
+              <div className="h-full w-full rounded-xl bg-gradient-to-br from-transparent to-white/40" />
+            </div>
+          </div>
+        )}
+        {option.key === "modern_grid" && (
+          <div className="grid h-full grid-cols-[40px_1fr] gap-1 p-2" style={{ backgroundColor: `${option.accent}08` }}>
+            {/* Sidebar + grid */}
+            <div className="flex flex-col gap-1">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="h-2.5 rounded" style={{ backgroundColor: i === 0 ? option.accent : "#e2e8f0" }} />
+              ))}
+            </div>
+            <div className="grid grid-cols-2 gap-1">
+              {[...Array(6)].map((_, i) => (
+                <div key={i} className="rounded-md bg-white shadow-sm" />
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
 
-  return objectUrl ?? fallback;
+      {selected && (
+        <div className="absolute right-2.5 top-2.5 flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500">
+          <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" className="h-3 w-3"><path d="m5 12 5 5 9-9" /></svg>
+        </div>
+      )}
+
+      <p className="text-sm font-bold text-slate-900">{option.label}</p>
+      <p className="mt-0.5 text-xs leading-4 text-slate-500">{option.description}</p>
+    </button>
+  );
 }
+
+// ─── Theme colour card ─────────────────────────────────────────────────────
+
+function ThemeCard({
+  preset,
+  selected,
+  onSelect,
+}: {
+  preset: (typeof STOREFRONT_THEME_PRESETS)[number];
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      className={`relative flex-shrink-0 snap-start rounded-xl border-2 p-2.5 text-left transition-all ${
+        selected ? "border-emerald-500 shadow-md" : "border-slate-200 hover:border-slate-300"
+      } min-w-[100px]`}
+    >
+      {/* Colour swatches */}
+      <div className="flex gap-1.5">
+        <span className="h-7 w-7 rounded-full border border-white shadow-sm" style={{ backgroundColor: preset.primary }} />
+        <span className="h-7 w-7 rounded-full border border-white shadow-sm" style={{ backgroundColor: preset.accent }} />
+        <span className="h-7 w-7 rounded-full border border-slate-200 shadow-sm" style={{ backgroundColor: preset.surface }} />
+      </div>
+      <p className="mt-2 text-xs font-semibold text-slate-700">{preset.label}</p>
+      {selected && (
+        <div className="absolute right-1.5 top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500">
+          <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" className="h-2.5 w-2.5"><path d="m5 12 5 5 9-9" /></svg>
+        </div>
+      )}
+    </button>
+  );
+}
+
+// ─── Upload dropzone ────────────────────────────────────────────────────────
 
 function UploadDropzone({
   title,
   hint,
   onFile,
   state,
+  previewUrl,
 }: {
   title: string;
   hint: string;
   onFile: (file: File) => void;
   state: UploadState;
+  previewUrl?: string;
 }) {
   function handleDrop(event: React.DragEvent<HTMLLabelElement>) {
     event.preventDefault();
@@ -106,232 +207,73 @@ function UploadDropzone({
     <label
       onDragOver={(event) => event.preventDefault()}
       onDrop={handleDrop}
-      className="flex min-h-36 cursor-pointer flex-col justify-between rounded-xl border border-dashed border-slate-300 bg-white p-3 text-sm transition hover:border-emerald-400 hover:bg-emerald-50/30"
+      className="flex cursor-pointer flex-col gap-2 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm transition hover:border-emerald-400 hover:bg-emerald-50/30"
     >
-      <div className="space-y-1">
-        <span className="block font-medium text-slate-700">{title}</span>
-        <span className="block text-xs text-slate-500">{hint}</span>
+      <div className="flex items-center gap-3">
+        {previewUrl ? (
+          <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-white">
+            <Image src={previewUrl} alt="preview" fill className="object-cover" sizes="56px" unoptimized />
+          </div>
+        ) : (
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="h-6 w-6"><path d="M4 16l4-4 4 4 4-8 4 6" /><rect x="3" y="3" width="18" height="18" rx="3" /></svg>
+          </div>
+        )}
+        <div className="min-w-0">
+          <p className="font-semibold text-slate-700">{title}</p>
+          <p className="text-xs text-slate-500">{hint}</p>
+          {state.fileName && !state.isUploading && (
+            <p className="mt-0.5 truncate text-[11px] font-medium text-emerald-700">{state.fileName} ✓</p>
+          )}
+        </div>
       </div>
       <input type="file" accept="image/*" onChange={handleChange} className="hidden" />
-      <div className="space-y-2">
-        {state.fileName ? (
-          <p className="line-clamp-1 text-xs font-medium text-slate-700">{state.fileName}</p>
-        ) : (
-          <p className="text-xs text-slate-400">Drop file here or click to browse</p>
-        )}
-      </div>
       {state.isUploading ? (
-        <div className="space-y-1">
-          <div className="h-2 w-full rounded-full bg-slate-100">
-            <div
-              className="h-2 rounded-full bg-emerald-500 transition-all"
-              style={{ width: `${state.progress}%` }}
-            />
+        <div>
+          <div className="h-1.5 w-full rounded-full bg-slate-200">
+            <div className="h-1.5 rounded-full bg-emerald-500 transition-all" style={{ width: `${state.progress}%` }} />
           </div>
-          <p className="text-[11px] text-slate-500">{state.progress}% uploading...</p>
+          <p className="mt-1 text-[11px] text-slate-500">{state.progress}% uploading…</p>
         </div>
       ) : null}
-      {state.error ? <p className="text-xs font-medium text-red-600">{state.error}</p> : null}
+      {state.error ? <p className="text-[11px] font-medium text-red-600">{state.error}</p> : null}
     </label>
   );
 }
 
-function PreviewImage({
-  src,
-  alt,
-  className,
+// ─── Step section wrapper ──────────────────────────────────────────────────
+
+function StepSection({
+  step,
+  title,
+  description,
+  children,
 }: {
-  src: string;
-  alt: string;
-  className?: string;
+  step: string;
+  title: string;
+  description?: string;
+  children: React.ReactNode;
 }) {
-  if (!src) {
-    return (
-      <div className={`flex items-center justify-center bg-white/60 text-xs text-slate-500 ${className ?? ""}`}>
-        Add image
-      </div>
-    );
-  }
-
   return (
-    <div className={`relative overflow-hidden ${className ?? ""}`}>
-      <Image
-        src={src}
-        alt={alt}
-        fill
-        unoptimized
-        sizes="(max-width: 768px) 100vw, 50vw"
-        className="object-contain"
-      />
+    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+      <div className="mb-4 flex items-start gap-3">
+        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-xs font-black text-emerald-700">{step}</span>
+        <div>
+          <p className="font-semibold text-slate-900 sm:text-base">{title}</p>
+          {description && <p className="mt-0.5 text-sm text-slate-500">{description}</p>}
+        </div>
+      </div>
+      {children}
     </div>
   );
 }
 
-function LiveStorefrontPreview(props: {
-  template: StoreTemplate;
-  viewport?: "desktop" | "phone";
-  storeName: string;
-  promoText: string;
-  heroTitle: string;
-  heroSubtitle: string;
-  heroCtaText: string;
-  heroImageUrl: string;
-  secondaryBannerUrl: string;
-  bannerUrls: string[];
-  primaryColor: string;
-  accentColor: string;
-  surfaceColor: string;
-}) {
-  const {
-    template,
-    viewport = "desktop",
-    storeName,
-    promoText,
-    heroTitle,
-    heroSubtitle,
-    heroCtaText,
-    heroImageUrl,
-    secondaryBannerUrl,
-    bannerUrls,
-    primaryColor,
-    accentColor,
-    surfaceColor,
-  } = props;
-  const isPhone = viewport === "phone";
-  const activeBannerUrl = bannerUrls[0] ?? secondaryBannerUrl;
-
-  if (template === "fashion_editorial") {
-    return (
-      <div className="space-y-3 rounded-xl border border-slate-200 bg-white p-3">
-        <div className="flex items-center justify-between">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">{storeName || "Store"}</p>
-          <span className="rounded-full border border-slate-200 px-2 py-0.5 text-[10px] text-slate-600">Live preview</span>
-        </div>
-        <div className={`grid gap-3 ${isPhone ? "grid-cols-1" : "md:grid-cols-[1.3fr_1fr]"}`}>
-          <div className="overflow-hidden rounded-lg border border-slate-200 bg-slate-100">
-            <PreviewImage src={heroImageUrl} alt="Hero" className={isPhone ? "h-44" : "h-44 md:h-52"} />
-          </div>
-          <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">{promoText}</p>
-            <h4 className="mt-2 line-clamp-2 text-lg font-black text-slate-900">{heroTitle}</h4>
-            <p className="mt-2 line-clamp-3 text-xs text-slate-600">{heroSubtitle}</p>
-            <button
-              type="button"
-              className="mt-3 rounded-full px-3 py-1.5 text-xs font-semibold text-white"
-              style={{ backgroundColor: primaryColor }}
-            >
-              {heroCtaText}
-            </button>
-          </div>
-        </div>
-        <div className={`grid gap-2 ${isPhone ? "grid-cols-2" : "grid-cols-2 sm:grid-cols-4"}`}>
-          {PREVIEW_PRODUCTS.map((product) => (
-            <article key={product.name} className="rounded-lg border border-slate-200 p-2">
-              <p className="line-clamp-1 text-xs font-semibold text-slate-900">{product.name}</p>
-              <p className="mt-1 text-[11px] text-slate-600">{product.price}</p>
-            </article>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  if (template === "lifestyle_showcase") {
-    return (
-      <div className="space-y-3 rounded-xl border border-slate-200 p-3" style={{ backgroundColor: surfaceColor }}>
-        <div className={`grid gap-3 ${isPhone ? "grid-cols-1" : "lg:grid-cols-[1.4fr_1fr]"}`}>
-          <div className="rounded-lg bg-white/80 p-3">
-            <p className="text-xs font-semibold" style={{ color: primaryColor }}>{promoText}</p>
-            <h4 className="mt-2 line-clamp-2 text-xl font-black text-slate-900">{heroTitle}</h4>
-            <p className="mt-2 line-clamp-3 text-xs text-slate-700">{heroSubtitle}</p>
-            <button
-              type="button"
-              className="mt-3 rounded-full px-3 py-1.5 text-xs font-semibold text-white"
-              style={{ backgroundColor: primaryColor }}
-            >
-              {heroCtaText}
-            </button>
-          </div>
-          <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
-            <PreviewImage src={heroImageUrl} alt="Hero" className={isPhone ? "h-44" : "h-44 lg:h-full"} />
-          </div>
-        </div>
-        <div className={`grid gap-2 ${isPhone ? "grid-cols-1" : "sm:grid-cols-3"}`}>
-          <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
-            <PreviewImage src={activeBannerUrl} alt="Secondary banner" className="h-24" />
-          </div>
-          <div className="rounded-lg border border-slate-200 bg-white p-2 text-xs text-slate-600">Story card</div>
-          <div className="rounded-lg border border-slate-200 bg-white p-2 text-xs text-slate-600">Review highlights</div>
-        </div>
-      </div>
-    );
-  }
-
-  if (template === "modern_grid") {
-    return (
-      <div className="rounded-xl border border-slate-200 bg-slate-100 p-3">
-        <div className={`grid gap-3 ${isPhone ? "grid-cols-1" : "lg:grid-cols-[160px_1fr]"}`}>
-          <aside className="space-y-2 rounded-lg bg-white p-2">
-            {["All", "Top rated", "Deals", "New arrivals"].map((item) => (
-              <p key={item} className="rounded-md bg-slate-50 px-2 py-1 text-[11px] text-slate-700">{item}</p>
-            ))}
-          </aside>
-          <div className="space-y-2">
-            <article className="rounded-lg bg-white p-3">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.16em]" style={{ color: primaryColor }}>{promoText}</p>
-              <h4 className="line-clamp-1 text-lg font-black text-slate-900">{heroTitle}</h4>
-            </article>
-            <div className={`grid gap-2 ${isPhone ? "grid-cols-2" : "grid-cols-2 sm:grid-cols-4"}`}>
-              {PREVIEW_PRODUCTS.map((product) => (
-                <article key={product.name} className="rounded-lg bg-white p-2">
-                  <p className="line-clamp-1 text-[11px] font-semibold text-slate-900">{product.name}</p>
-                  <p className="text-[10px] text-slate-600">{product.price}</p>
-                  <button type="button" className="mt-1 rounded-full px-2 py-0.5 text-[10px] font-semibold text-white" style={{ backgroundColor: primaryColor }}>
-                    Buy
-                  </button>
-                </article>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-3 rounded-xl border border-slate-200 p-3" style={{ backgroundColor: surfaceColor }}>
-      <div className={`grid gap-3 ${isPhone ? "grid-cols-1" : "md:grid-cols-[1.2fr_1fr]"}`}>
-        <article className="rounded-lg bg-white/85 p-3">
-          <p className="inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold text-white" style={{ backgroundColor: primaryColor }}>
-            {promoText}
-          </p>
-          <h4 className="mt-2 line-clamp-2 text-xl font-black text-slate-900">{heroTitle}</h4>
-          <p className="mt-2 line-clamp-3 text-xs text-slate-700">{heroSubtitle}</p>
-          <button type="button" className="mt-3 rounded-full px-3 py-1.5 text-xs font-semibold text-slate-900" style={{ backgroundColor: accentColor }}>
-            {heroCtaText}
-          </button>
-        </article>
-        <div className="overflow-hidden rounded-lg border border-white/70 bg-white/70">
-          <PreviewImage src={heroImageUrl} alt="Hero" className={isPhone ? "h-40" : "h-40 md:h-48"} />
-        </div>
-      </div>
-      <div className={`grid gap-2 ${isPhone ? "grid-cols-2" : "grid-cols-2 sm:grid-cols-4"}`}>
-        {PREVIEW_PRODUCTS.map((product) => (
-          <article key={product.name} className="rounded-lg border border-white/80 bg-white p-2">
-            <p className="line-clamp-1 text-[11px] font-semibold text-slate-900">{product.name}</p>
-            <p className="text-[10px] text-slate-600">{product.price}</p>
-          </article>
-        ))}
-      </div>
-    </div>
-  );
-}
+// ─── Main form ────────────────────────────────────────────────────────────
 
 export function StoreSetupForm({ initialStore }: StoreSetupFormProps) {
   const initialConfig = normalizeStorefrontConfig(initialStore?.storefront_config);
   const [store, setStore] = useState<StoreRecord | null>(initialStore);
   const [draggedSection, setDraggedSection] = useState<StorefrontSectionId | null>(null);
-  const [previewViewport, setPreviewViewport] = useState<"desktop" | "phone">("desktop");
   const [isSaving, setIsSaving] = useState(false);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [heroImageFile, setHeroImageFile] = useState<File | null>(null);
@@ -350,6 +292,7 @@ export function StoreSetupForm({ initialStore }: StoreSetupFormProps) {
   const [isLoadingNiches, setIsLoadingNiches] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
   const [form, setForm] = useState({
     name: initialStore?.name ?? "",
     whatsapp_number: initialStore?.whatsapp_number ?? "",
@@ -379,64 +322,53 @@ export function StoreSetupForm({ initialStore }: StoreSetupFormProps) {
 
   const shareablePath = store?.slug ? `/store/${store.slug}` : null;
   const hasCoordinates = Boolean(form.latitude && form.longitude);
-  const selectedTheme = useMemo(
-    () =>
-      STOREFRONT_THEME_PRESETS.find((preset) => preset.key === form.store_theme_preset) ??
-      STOREFRONT_THEME_PRESETS[0],
-    [form.store_theme_preset],
-  );
-  const previewLogoUrl = useObjectUrl(logoFile, form.logo_url);
-  const previewHeroUrl = useObjectUrl(heroImageFile, form.hero_image_url);
-  const previewSecondaryBannerUrl = useObjectUrl(secondaryBannerFile, form.secondary_banner_url);
-  const isAnyUploading = Object.values(uploadState).some((state) => state.isUploading);
-  const selectedNicheNames = useMemo(
-    () =>
-      nicheOptions
-        .filter((niche) => form.niche_ids.includes(niche.id))
-        .map((niche) => niche.name),
-    [form.niche_ids, nicheOptions],
-  );
-  const selectedAllNicheNames = useMemo(
-    () => [...selectedNicheNames, ...form.custom_niches],
-    [selectedNicheNames, form.custom_niches],
-  );
+
+  // Live preview URLs
+  const previewLogoUrl = useMemo(() => {
+    if (logoFile) return URL.createObjectURL(logoFile);
+    return form.logo_url;
+  }, [logoFile, form.logo_url]);
+
+  const previewHeroUrl = useMemo(() => {
+    if (heroImageFile) return URL.createObjectURL(heroImageFile);
+    return form.hero_image_url;
+  }, [heroImageFile, form.hero_image_url]);
+
+  const previewBannerUrl = useMemo(() => {
+    if (secondaryBannerFile) return URL.createObjectURL(secondaryBannerFile);
+    return form.banner_urls[0] ?? form.secondary_banner_url;
+  }, [secondaryBannerFile, form.banner_urls, form.secondary_banner_url]);
+
+  const isAnyUploading = Object.values(uploadState).some((s) => s.isUploading);
+
+  const selectedAllNicheNames = useMemo(() => {
+    const fromIds = nicheOptions.filter((n) => form.niche_ids.includes(n.id)).map((n) => n.name);
+    return [...fromIds, ...form.custom_niches];
+  }, [form.niche_ids, form.custom_niches, nicheOptions]);
 
   useEffect(() => {
     let ignore = false;
-
     async function loadCatalog() {
       setIsLoadingNiches(true);
       try {
         const response = await fetch("/api/catalog", { cache: "no-store" });
-        const payload = (await response.json()) as {
-          niches?: NicheOption[];
-        };
+        const payload = (await response.json()) as { niches?: NicheOption[] };
         if (!response.ok || ignore) return;
         setNicheOptions(payload.niches ?? []);
       } catch {
-        if (!ignore) {
-          setNicheOptions([]);
-        }
+        if (!ignore) setNicheOptions([]);
       } finally {
-        if (!ignore) {
-          setIsLoadingNiches(false);
-        }
+        if (!ignore) setIsLoadingNiches(false);
       }
     }
-
     void loadCatalog();
-    return () => {
-      ignore = true;
-    };
+    return () => { ignore = true; };
   }, []);
 
   useEffect(() => {
     let ignore = false;
-
     async function loadAccountPhone() {
-      if (form.whatsapp_number.trim()) {
-        return;
-      }
+      if (form.whatsapp_number.trim()) return;
       try {
         const response = await fetch("/api/me", { cache: "no-store" });
         const payload = (await response.json()) as MeResponse;
@@ -444,100 +376,65 @@ export function StoreSetupForm({ initialStore }: StoreSetupFormProps) {
         const phone = payload.user?.phone?.trim();
         if (!phone) return;
         setForm((prev) => (prev.whatsapp_number.trim() ? prev : { ...prev, whatsapp_number: phone }));
-      } catch {
-        // Keep silent; store save validation will guide vendor if phone is still missing.
-      }
+      } catch {}
     }
-
     void loadAccountPhone();
-    return () => {
-      ignore = true;
-    };
+    return () => { ignore = true; };
   }, [form.whatsapp_number]);
 
   useEffect(() => {
     if (!message && !error) return;
-    const timeout = setTimeout(() => {
-      setMessage(null);
-      setError(null);
-    }, 4500);
+    const timeout = setTimeout(() => { setMessage(null); setError(null); }, 5000);
     return () => clearTimeout(timeout);
   }, [message, error]);
-
-  function pushBannerUrl(url: string) {
-    const normalized = url.trim();
-    if (!normalized) return;
-    setForm((prev) => {
-      const next = Array.from(new Set([normalized, ...prev.banner_urls])).slice(0, 8);
-      return {
-        ...prev,
-        banner_urls: next,
-        secondary_banner_url: next[0] ?? prev.secondary_banner_url,
-      };
-    });
-  }
-
-  function removeBannerUrl(url: string) {
-    setForm((prev) => {
-      const next = prev.banner_urls.filter((item) => item !== url);
-      return {
-        ...prev,
-        banner_urls: next,
-        secondary_banner_url: next[0] ?? "",
-      };
-    });
-  }
 
   function updateFormField<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
   function updateUpload(kind: UploadKind, patch: Partial<UploadState>) {
-    setUploadState((prev) => ({
-      ...prev,
-      [kind]: {
-        ...prev[kind],
-        ...patch,
-      },
-    }));
+    setUploadState((prev) => ({ ...prev, [kind]: { ...prev[kind], ...patch } }));
+  }
+
+  function pushBannerUrl(url: string) {
+    const normalized = url.trim();
+    if (!normalized) return;
+    setForm((prev) => {
+      const next = Array.from(new Set([normalized, ...prev.banner_urls])).slice(0, 8);
+      return { ...prev, banner_urls: next, secondary_banner_url: next[0] ?? prev.secondary_banner_url };
+    });
+  }
+
+  function removeBannerUrl(url: string) {
+    setForm((prev) => {
+      const next = prev.banner_urls.filter((item) => item !== url);
+      return { ...prev, banner_urls: next, secondary_banner_url: next[0] ?? "" };
+    });
+  }
+
+  function applyThemePreset(key: (typeof form)["store_theme_preset"]) {
+    const nextTheme = STOREFRONT_THEME_PRESETS.find((p) => p.key === key) ?? STOREFRONT_THEME_PRESETS[0];
+    setForm((prev) => ({ ...prev, store_theme_preset: nextTheme.key, theme_color: nextTheme.primary }));
   }
 
   function addCustomNiche() {
     const name = customNicheInput.trim();
     if (!name) return;
-    setForm((prev) => ({
-      ...prev,
-      custom_niches: Array.from(new Set([...prev.custom_niches, name])).slice(0, 8),
-    }));
+    setForm((prev) => ({ ...prev, custom_niches: Array.from(new Set([...prev.custom_niches, name])).slice(0, 8) }));
     setCustomNicheInput("");
   }
 
   function moveSectionByDrag(target: StorefrontSectionId) {
-    if (!draggedSection || draggedSection === target) {
-      return;
-    }
+    if (!draggedSection || draggedSection === target) return;
     setForm((prev) => {
       const next = [...prev.sections_order];
       const from = next.indexOf(draggedSection);
       const to = next.indexOf(target);
-      if (from === -1 || to === -1) {
-        return prev;
-      }
+      if (from === -1 || to === -1) return prev;
       next.splice(from, 1);
       next.splice(to, 0, draggedSection);
       return { ...prev, sections_order: next };
     });
-  }
-
-  function applyThemePreset(key: (typeof form)["store_theme_preset"]) {
-    const nextTheme =
-      STOREFRONT_THEME_PRESETS.find((preset) => preset.key === key) ??
-      STOREFRONT_THEME_PRESETS[0];
-    setForm((prev) => ({
-      ...prev,
-      store_theme_preset: nextTheme.key,
-      theme_color: nextTheme.primary,
-    }));
   }
 
   async function uploadAsset(kind: UploadKind, file: File) {
@@ -545,12 +442,7 @@ export function StoreSetupForm({ initialStore }: StoreSetupFormProps) {
     if (kind === "hero") setHeroImageFile(file);
     if (kind === "banner") setSecondaryBannerFile(file);
 
-    updateUpload(kind, {
-      isUploading: true,
-      progress: 0,
-      fileName: file.name,
-      error: null,
-    });
+    updateUpload(kind, { isUploading: true, progress: 0, fileName: file.name, error: null });
 
     await new Promise<void>((resolve) => {
       const xhr = new XMLHttpRequest();
@@ -560,82 +452,44 @@ export function StoreSetupForm({ initialStore }: StoreSetupFormProps) {
 
       xhr.upload.onprogress = (event) => {
         if (!event.lengthComputable) return;
-        const next = Math.max(1, Math.round((event.loaded / event.total) * 100));
-        updateUpload(kind, { progress: next });
+        updateUpload(kind, { progress: Math.max(1, Math.round((event.loaded / event.total) * 100)) });
       };
 
       xhr.onreadystatechange = () => {
         if (xhr.readyState !== XMLHttpRequest.DONE) return;
-
         let payload: { url?: string; error?: string } = {};
-        if (xhr.responseText) {
-          try {
-            payload = JSON.parse(xhr.responseText) as { url?: string; error?: string };
-          } catch {
-            payload = {};
-          }
-        }
+        try { payload = JSON.parse(xhr.responseText); } catch {}
 
         if (xhr.status >= 200 && xhr.status < 300 && payload.url) {
           if (kind === "logo") updateFormField("logo_url", payload.url);
           if (kind === "hero") updateFormField("hero_image_url", payload.url);
           if (kind === "banner") pushBannerUrl(payload.url);
           updateUpload(kind, { isUploading: false, progress: 100, error: null });
-          setMessage(`${kind} image uploaded successfully.`);
+          setMessage(`${kind} image uploaded.`);
         } else {
-          updateUpload(kind, {
-            isUploading: false,
-            error: payload.error ?? `Upload failed (${xhr.status}).`,
-          });
+          updateUpload(kind, { isUploading: false, error: payload.error ?? `Upload failed (${xhr.status}).` });
         }
-
         resolve();
       };
 
-      xhr.onerror = () => {
-        updateUpload(kind, {
-          isUploading: false,
-          error: "Network error while uploading file.",
-        });
-        resolve();
-      };
-
+      xhr.onerror = () => { updateUpload(kind, { isUploading: false, error: "Network error." }); resolve(); };
       xhr.open("POST", "/api/stores/upload");
       xhr.send(body);
     });
   }
 
   function useCurrentLocation() {
-    if (!navigator.geolocation) {
-      setError("Geolocation is not supported in this browser.");
-      return;
-    }
-
+    if (!navigator.geolocation) { setError("Geolocation is not supported."); return; }
     setIsDetectingLocation(true);
     setError(null);
-    setMessage(null);
-
     navigator.geolocation.getCurrentPosition(
       async (position) => {
         const lat = position.coords.latitude.toFixed(6);
         const lng = position.coords.longitude.toFixed(6);
-
         try {
-          const response = await fetch(`/api/location/reverse?lat=${lat}&lng=${lng}`, {
-            cache: "no-store",
-          });
-
+          const response = await fetch(`/api/location/reverse?lat=${lat}&lng=${lng}`, { cache: "no-store" });
           if (response.ok) {
-            const payload = (await response.json()) as {
-              location?: {
-                street?: string | null;
-                city?: string | null;
-                state?: string | null;
-                country?: string | null;
-                display_name?: string | null;
-              };
-            };
-
+            const payload = (await response.json()) as { location?: { street?: string | null; city?: string | null; state?: string | null; country?: string | null } };
             setForm((prev) => ({
               ...prev,
               latitude: lat,
@@ -646,54 +500,26 @@ export function StoreSetupForm({ initialStore }: StoreSetupFormProps) {
               state: payload.location?.state?.trim() || prev.state,
               country: payload.location?.country?.trim() || prev.country,
             }));
-
-            const locationLabel =
-              [payload.location?.city, payload.location?.state, payload.location?.country]
-                .map((value) => value?.trim())
-                .filter(Boolean)
-                .join(", ") || payload.location?.display_name?.trim() || "your current area";
-
-            setMessage(`Location detected: ${locationLabel}. You can still edit address details manually.`);
+            const locationLabel = [payload.location?.city, payload.location?.state].filter(Boolean).join(", ") || "your location";
+            setMessage(`Location detected: ${locationLabel}.`);
           } else {
-            setForm((prev) => ({
-              ...prev,
-              latitude: lat,
-              longitude: lng,
-              location_source: "gps",
-            }));
-            setMessage("Coordinates detected. You can still edit address details manually.");
+            setForm((prev) => ({ ...prev, latitude: lat, longitude: lng, location_source: "gps" }));
+            setMessage("Coordinates saved.");
           }
         } catch {
-          setForm((prev) => ({
-            ...prev,
-            latitude: lat,
-            longitude: lng,
-            location_source: "gps",
-          }));
-          setMessage("Coordinates detected. You can still edit address details manually.");
+          setForm((prev) => ({ ...prev, latitude: lat, longitude: lng, location_source: "gps" }));
         } finally {
           setIsDetectingLocation(false);
         }
       },
-      () => {
-        setError("Could not detect your location. Please enter it manually.");
-        setIsDetectingLocation(false);
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 12000,
-      },
+      () => { setError("Could not detect location. Enter manually."); setIsDetectingLocation(false); },
+      { enableHighAccuracy: true, timeout: 12000 },
     );
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-
-    if (isAnyUploading) {
-      setError("Please wait for uploads to complete before saving.");
-      return;
-    }
-
+    if (isAnyUploading) { setError("Please wait for uploads to complete."); return; }
     setIsSaving(true);
     setError(null);
     setMessage(null);
@@ -704,26 +530,12 @@ export function StoreSetupForm({ initialStore }: StoreSetupFormProps) {
 
     if ((parsedLatitude === null) !== (parsedLongitude === null)) {
       setError("Enter both latitude and longitude, or leave both empty.");
-      setIsSaving(false);
-      return;
-    }
-
-    if (parsedLatitude !== null && Number.isNaN(parsedLatitude)) {
-      setError("Latitude must be a valid number.");
-      setIsSaving(false);
-      return;
-    }
-
-    if (parsedLongitude !== null && Number.isNaN(parsedLongitude)) {
-      setError("Longitude must be a valid number.");
-      setIsSaving(false);
-      return;
+      setIsSaving(false); return;
     }
 
     if (form.niche_ids.length === 0 && form.custom_niches.length === 0) {
       setError("Select at least one niche for your store.");
-      setIsSaving(false);
-      return;
+      setIsSaving(false); return;
     }
 
     const storefrontConfig = normalizeStorefrontConfig({
@@ -747,10 +559,7 @@ export function StoreSetupForm({ initialStore }: StoreSetupFormProps) {
       body.append("country", form.country);
       body.append("latitude", parsedLatitude !== null ? String(parsedLatitude) : "");
       body.append("longitude", parsedLongitude !== null ? String(parsedLongitude) : "");
-      body.append(
-        "location_source",
-        parsedLatitude !== null && parsedLongitude !== null ? form.location_source : "",
-      );
+      body.append("location_source", parsedLatitude !== null ? form.location_source : "");
       body.append("store_template", form.store_template);
       body.append("store_theme_preset", form.store_theme_preset);
       body.append("theme_color", form.theme_color);
@@ -760,18 +569,10 @@ export function StoreSetupForm({ initialStore }: StoreSetupFormProps) {
       body.append("niche_ids", JSON.stringify(form.niche_ids));
       body.append("custom_niches", JSON.stringify(form.custom_niches));
 
-      const response = await fetch("/api/stores", {
-        method: "POST",
-        body,
-      });
-
+      const response = await fetch("/api/stores", { method: "POST", body });
       const payload = await response.json();
 
-      if (!response.ok) {
-        setError(payload.error ?? "Could not save store setup.");
-        setIsSaving(false);
-        return;
-      }
+      if (!response.ok) { setError(payload.error ?? "Could not save store."); setIsSaving(false); return; }
 
       const nextStore = payload.store as StoreRecord;
       const nextConfig = normalizeStorefrontConfig(nextStore.storefront_config);
@@ -788,7 +589,7 @@ export function StoreSetupForm({ initialStore }: StoreSetupFormProps) {
         location_source: nextStore.location_source ?? "manual",
         store_template: normalizeStoreTemplate(nextStore.store_template),
         store_theme_preset: normalizeThemePreset(nextStore.store_theme_preset),
-        theme_color: nextStore.theme_color ?? selectedTheme.primary,
+        theme_color: nextStore.theme_color ?? "#059669",
         logo_url: nextStore.logo_url ?? "",
         is_active: nextStore.is_active,
         hero_title: nextConfig.hero_title,
@@ -802,683 +603,274 @@ export function StoreSetupForm({ initialStore }: StoreSetupFormProps) {
         niche_ids: nextStore.niche_ids ?? [],
         custom_niches: nextStore.custom_niches ?? form.custom_niches,
       });
-
-      setMessage(
-        payload.action === "created"
-          ? "Store created successfully."
-          : "Store updated successfully.",
-      );
+      setMessage(payload.action === "created" ? "Store created!" : "Store updated successfully.");
       setShowVendorSuccessBanner(Boolean(payload.became_vendor));
     } catch {
-      setError("Network error while saving store setup.");
+      setError("Network error while saving.");
     } finally {
       setIsSaving(false);
     }
   }
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-b from-white to-slate-50/50 p-3 shadow-sm sm:p-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    <section className="rounded-2xl border border-slate-200 bg-slate-50 p-3 sm:p-5">
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">
-            Storefront Setup
-          </p>
-          <h2 className="mt-1 text-xl font-semibold text-slate-900 sm:text-2xl">
-            {store ? "Refine your storefront" : "Set up your storefront"}
-          </h2>
-          <p className="mt-1 text-sm text-slate-600 sm:text-base">
-            A guided setup for branding, design, media, and location.
-          </p>
+          <p className="text-xs font-bold uppercase tracking-[0.16em] text-emerald-700">Store Setup</p>
+          <h2 className="mt-1 text-xl font-black text-slate-900 sm:text-2xl">{store ? "Update your store" : "Set up your store"}</h2>
+          <p className="mt-1 text-sm text-slate-500">Configure branding, template, content, and location.</p>
         </div>
-        <div className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700">
-          Mobile-ready preview
-        </div>
+        <label className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50">
+          <input type="checkbox" className="accent-emerald-600" checked={form.is_active} onChange={(e) => updateFormField("is_active", e.target.checked)} />
+          Visible publicly
+        </label>
       </div>
 
-      <form onSubmit={handleSubmit} className="mt-5 space-y-5 pb-24 sm:mt-6 sm:pb-0">
-        {showVendorSuccessBanner ? (
-          <p className="rounded-xl border border-emerald-300 bg-emerald-100 px-3 py-2 text-sm font-semibold text-emerald-800">
-            You are now a vendor.
-          </p>
-        ) : null}
+      <form onSubmit={handleSubmit} className="space-y-4 pb-24 sm:pb-0">
+        {showVendorSuccessBanner && (
+          <div className="rounded-xl border border-emerald-300 bg-emerald-100 px-4 py-3 text-sm font-semibold text-emerald-800">🎉 You are now a vendor!</div>
+        )}
 
-        {error ? (
-          <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-            {error}
-          </p>
-        ) : null}
-
-        {message ? (
-          <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
-            {message}
-          </p>
-        ) : null}
-
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
-                Step 1
-              </p>
-              <p className="text-sm font-semibold text-slate-900 sm:text-base">
-                Store basics
-              </p>
-            </div>
-            <label className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-slate-700">
-              <input
-                type="checkbox"
-                checked={form.is_active}
-                onChange={(event) => updateFormField("is_active", event.target.checked)}
-              />
-              Visible publicly
+        {/* ── Step 1: Basics ─────────────────────────────────────── */}
+        <StepSection step="1" title="Store basics" description="Name, WhatsApp number, logo and niches.">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="space-y-1.5 text-sm">
+              <span className="font-medium text-slate-700">Store name <span className="text-red-500">*</span></span>
+              <input required value={form.name} onChange={(e) => updateFormField("name", e.target.value)} placeholder="e.g. Moores Furniture" className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none ring-emerald-300 transition focus:ring-2" />
             </label>
-          </div>
-          <div className="grid gap-4 md:grid-cols-2">
-            <label className="space-y-2 text-sm">
-              <span className="font-medium text-slate-700">Store name</span>
-              <input
-                required
-                value={form.name}
-                onChange={(event) => updateFormField("name", event.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none ring-emerald-300 focus:ring-2"
-                placeholder="Sellee Home Essentials"
-              />
-            </label>
-            <div className="space-y-2 text-sm">
+
+            <div className="space-y-1.5 text-sm">
               <span className="font-medium text-slate-700">WhatsApp number</span>
-              <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-slate-700">
-                {form.whatsapp_number || "Not set yet in your account"}
+              <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-slate-600">
+                {form.whatsapp_number || <span className="text-slate-400">Loading from account…</span>}
               </div>
-              <p className="text-xs text-slate-500">
-                Pulled from your account automatically. Update it in Account settings when needed.
-              </p>
+              <p className="text-[11px] text-slate-400">Update in Account settings when needed.</p>
             </div>
-            <div className="space-y-2 text-sm md:col-span-2">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="font-medium text-slate-700">Store niches</span>
-                <span className="text-xs text-slate-500">
-                  {selectedAllNicheNames.length > 0
-                    ? `${selectedAllNicheNames.length} selected`
-                    : "Select at least one niche"}
-                </span>
+
+            {/* Logo */}
+            <div className="space-y-1.5 text-sm">
+              <span className="font-medium text-slate-700">Logo</span>
+              <UploadDropzone
+                title="Upload logo"
+                hint="Square image · max 10 MB"
+                onFile={(file) => void uploadAsset("logo", file)}
+                state={uploadState.logo}
+                previewUrl={previewLogoUrl || undefined}
+              />
+              <input value={form.logo_url} onChange={(e) => updateFormField("logo_url", e.target.value)} placeholder="Or paste logo URL…" className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none ring-emerald-300 transition focus:ring-2" />
+            </div>
+
+            {/* Niches */}
+            <div className="space-y-1.5 text-sm sm:col-span-1">
+              <div className="flex items-center justify-between">
+                <span className="font-medium text-slate-700">Store niches <span className="text-red-500">*</span></span>
+                <span className="text-[11px] text-slate-400">{selectedAllNicheNames.length} selected</span>
               </div>
-              <p className="text-xs text-slate-500">Can&apos;t find yours? Use Others.</p>
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+              <div className="rounded-xl border border-slate-200 bg-white p-3">
                 {isLoadingNiches ? (
-                  <p className="text-xs text-slate-500">Loading niches...</p>
-                ) : nicheOptions.length === 0 ? (
-                  <p className="text-xs text-slate-500">
-                    No niche options available yet. Run the niches SQL migration.
-                  </p>
+                  <p className="text-xs text-slate-400">Loading niches…</p>
                 ) : (
                   <div className="flex flex-wrap gap-2">
                     {nicheOptions.map((niche) => {
-                      const selected = form.niche_ids.includes(niche.id);
+                      const sel = form.niche_ids.includes(niche.id);
                       return (
-                        <button
-                          key={niche.id}
-                          type="button"
-                          onClick={() =>
-                            setForm((prev) => ({
-                              ...prev,
-                              niche_ids: selected
-                                ? prev.niche_ids.filter((id) => id !== niche.id)
-                                : [...prev.niche_ids, niche.id].slice(0, 8),
-                            }))
-                          }
-                          className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
-                            selected
-                              ? "border-emerald-600 bg-emerald-600 text-white"
-                              : "border-slate-200 bg-white text-slate-700 hover:border-emerald-300"
-                          }`}
-                        >
-                          {niche.name}
-                        </button>
+                        <button key={niche.id} type="button"
+                          onClick={() => setForm((prev) => ({ ...prev, niche_ids: sel ? prev.niche_ids.filter((id) => id !== niche.id) : [...prev.niche_ids, niche.id].slice(0, 8) }))}
+                          className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${sel ? "border-emerald-600 bg-emerald-600 text-white" : "border-slate-200 text-slate-700 hover:border-emerald-300"}`}
+                        >{niche.name}</button>
                       );
                     })}
-                    <button
-                      type="button"
-                      onClick={() => setShowCustomNicheInput((prev) => !prev)}
-                      className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
-                        showCustomNicheInput
-                          ? "border-amber-500 bg-amber-50 text-amber-700"
-                          : "border-slate-200 bg-white text-slate-700 hover:border-amber-300"
-                      }`}
-                    >
-                      Others
-                    </button>
+                    <button type="button" onClick={() => setShowCustomNicheInput((v) => !v)}
+                      className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${showCustomNicheInput ? "border-amber-400 bg-amber-50 text-amber-700" : "border-slate-200 text-slate-700 hover:border-amber-300"}`}
+                    >Others</button>
                   </div>
                 )}
-                {showCustomNicheInput ? (
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <input
-                      value={customNicheInput}
-                      onChange={(event) => setCustomNicheInput(event.target.value)}
-                      className="min-w-[220px] flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none ring-emerald-300 focus:ring-2"
-                      placeholder="Type custom niche"
-                    />
-                    <button
-                      type="button"
-                      onClick={addCustomNiche}
-                      className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50"
-                    >
-                      Add
-                    </button>
+                {showCustomNicheInput && (
+                  <div className="mt-3 flex gap-2">
+                    <input value={customNicheInput} onChange={(e) => setCustomNicheInput(e.target.value)} placeholder="Type custom niche" className="min-w-0 flex-1 rounded-lg border border-slate-200 px-3 py-1.5 text-sm outline-none ring-emerald-300 focus:ring-2" />
+                    <button type="button" onClick={addCustomNiche} className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-semibold text-slate-800 hover:bg-slate-50">Add</button>
                   </div>
-                ) : null}
-                {form.custom_niches.length > 0 ? (
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {form.custom_niches.map((niche) => (
-                      <button
-                        key={niche}
-                        type="button"
-                        onClick={() =>
-                          setForm((prev) => ({
-                            ...prev,
-                            custom_niches: prev.custom_niches.filter((item) => item !== niche),
-                          }))
-                        }
-                        className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-800"
-                        title="Remove custom niche"
-                      >
-                        {niche}
-                        <span aria-hidden="true">x</span>
-                      </button>
+                )}
+                {form.custom_niches.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {form.custom_niches.map((n) => (
+                      <button key={n} type="button" onClick={() => setForm((prev) => ({ ...prev, custom_niches: prev.custom_niches.filter((item) => item !== n) }))}
+                        className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-800"
+                      >{n} ×</button>
                     ))}
                   </div>
-                ) : null}
+                )}
               </div>
-              {selectedAllNicheNames.length > 0 ? (
-                <p className="text-xs text-slate-600">
-                  Selected: {selectedAllNicheNames.join(", ")}
-                </p>
-              ) : null}
             </div>
-            <label className="space-y-2 text-sm">
-              <span className="font-medium text-slate-700">Logo URL (fallback)</span>
-              <input
-                value={form.logo_url}
-                onChange={(event) => updateFormField("logo_url", event.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none ring-emerald-300 focus:ring-2"
-                placeholder="https://..."
+          </div>
+        </StepSection>
+
+        {/* ── Step 2: Template ───────────────────────────────────── */}
+        <StepSection step="2" title="Storefront template" description="Choose the layout style for your public store page.">
+          <div className="-mx-1 flex snap-x snap-mandatory gap-3 overflow-x-auto px-1 pb-2 touch-pan-x">
+            {STOREFRONT_TEMPLATE_OPTIONS.map((option) => (
+              <TemplateCard
+                key={option.key}
+                option={option}
+                selected={form.store_template === option.key}
+                onSelect={() => updateFormField("store_template", option.key)}
               />
-            </label>
-            <div className="space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm">
-              <UploadDropzone
-                title="Upload logo"
-                hint="Square image recommended"
-                onFile={(file) => void uploadAsset("logo", file)}
-                state={uploadState.logo}
+            ))}
+          </div>
+        </StepSection>
+
+        {/* ── Step 3: Colours ────────────────────────────────────── */}
+        <StepSection step="3" title="Colour theme" description="Pick a preset or set a custom primary colour.">
+          <div className="-mx-1 flex snap-x snap-mandatory gap-3 overflow-x-auto px-1 pb-2 touch-pan-x">
+            {STOREFRONT_THEME_PRESETS.map((preset) => (
+              <ThemeCard
+                key={preset.key}
+                preset={preset}
+                selected={form.store_theme_preset === preset.key}
+                onSelect={() => applyThemePreset(preset.key)}
               />
-              {previewLogoUrl ? (
-                <div className="relative h-16 w-16 overflow-hidden rounded-full border border-slate-200 bg-slate-100">
-                  <Image
-                    src={previewLogoUrl}
-                    alt="Logo preview"
-                    fill
-                    unoptimized
-                    sizes="64px"
-                    className="object-cover"
-                  />
-                </div>
-              ) : null}
+            ))}
+          </div>
+          <label className="mt-4 block space-y-1.5 text-sm">
+            <span className="font-medium text-slate-700">Custom primary colour</span>
+            <div className="flex items-center gap-3">
+              <input type="color" value={form.theme_color} onChange={(e) => updateFormField("theme_color", e.target.value)} className="h-10 w-12 cursor-pointer rounded-lg border border-slate-200 bg-white p-1" />
+              <input value={form.theme_color} onChange={(e) => updateFormField("theme_color", e.target.value)} className="w-36 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-mono outline-none ring-emerald-300 transition focus:ring-2" />
             </div>
-          </div>
-        </div>
+          </label>
+        </StepSection>
 
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
-                Step 2
-              </p>
-              <p className="text-sm font-semibold text-slate-900 sm:text-base">
-                Pick your template and colors
-              </p>
-            </div>
-            <p className="text-xs text-slate-500">Choose a style customers can trust at a glance.</p>
-          </div>
-          <div className="-mx-1 flex snap-x snap-mandatory gap-3 overflow-x-auto px-1 pb-2">
-            {STOREFRONT_TEMPLATE_OPTIONS.map((option) => {
-              const selected = form.store_template === option.key;
-              return (
-                <button
-                  key={option.key}
-                  type="button"
-                  onClick={() => updateFormField("store_template", option.key)}
-                  className={`rounded-xl border p-3 text-left transition ${
-                    selected
-                      ? "border-emerald-500 bg-emerald-50/40 shadow-sm"
-                      : "border-slate-200 bg-white hover:border-emerald-300"
-                  } min-w-[40vw] max-w-[68vw] flex-shrink-0 snap-start sm:min-w-[300px] sm:max-w-[300px]`}
-                >
-                  <div
-                    className={`relative mb-3 h-32 overflow-hidden rounded-lg border border-slate-200 bg-gradient-to-br ${option.previewClass}`}
-                  >
-                    <div className="absolute inset-x-2 top-2 h-3 rounded-full bg-white/80" />
-                    <div className="absolute inset-x-2 top-7 grid grid-cols-3 gap-1">
-                      <div className="h-6 rounded bg-white/80" />
-                      <div className="h-6 rounded bg-emerald-200/80" />
-                      <div className="h-6 rounded bg-amber-200/80" />
-                    </div>
-                    <div className="absolute inset-x-2 bottom-2 h-10 rounded bg-white/75" />
-                  </div>
-                  <p className="text-sm font-semibold text-slate-900">{option.label}</p>
-                  <p className="mt-1 text-xs text-slate-600">{option.description}</p>
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3 sm:p-4">
-            <p className="text-sm font-semibold text-slate-800">Color presets</p>
-            <div className="mt-3 -mx-1 flex snap-x snap-mandatory gap-2 overflow-x-auto px-1 pb-2 touch-pan-x">
-              {STOREFRONT_THEME_PRESETS.map((preset) => {
-                const selected = form.store_theme_preset === preset.key;
-                return (
-                  <button
-                    key={preset.key}
-                    type="button"
-                    onClick={() => applyThemePreset(preset.key)}
-                    className={`rounded-lg border p-2 text-left ${
-                      selected
-                        ? "border-emerald-500 bg-white"
-                        : "border-slate-200 bg-white hover:border-emerald-300"
-                    } min-w-[44vw] max-w-[44vw] flex-shrink-0 snap-start sm:min-w-[180px] sm:max-w-[180px]`}
-                  >
-                    <div className="mb-2 flex gap-1">
-                      <span
-                        className="h-5 w-5 rounded-full border border-slate-200"
-                        style={{ backgroundColor: preset.primary }}
-                      />
-                      <span
-                        className="h-5 w-5 rounded-full border border-slate-200"
-                        style={{ backgroundColor: preset.accent }}
-                      />
-                      <span
-                        className="h-5 w-5 rounded-full border border-slate-200"
-                        style={{ backgroundColor: preset.surface }}
-                      />
-                    </div>
-                    <p className="text-xs font-semibold text-slate-800">{preset.label}</p>
-                  </button>
-                );
-              })}
-            </div>
-
-            <label className="mt-3 block space-y-2 text-sm">
-              <span className="font-medium text-slate-700">Primary color override</span>
-              <div className="flex items-center gap-2">
-                <input
-                  type="color"
-                  value={form.theme_color}
-                  onChange={(event) => updateFormField("theme_color", event.target.value)}
-                  className="h-10 w-12 rounded border border-slate-300 bg-white"
-                />
-                <input
-                  value={form.theme_color}
-                  onChange={(event) => updateFormField("theme_color", event.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none ring-emerald-300 focus:ring-2"
-                />
-              </div>
-            </label>
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
-          <div className="mb-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Step 3</p>
-            <p className="text-sm font-semibold text-slate-900 sm:text-base">Content and media</p>
-            <p className="mt-1 text-xs text-slate-500">
-              Add text and visuals customers will see first.
-            </p>
-          </div>
-          <div className="grid gap-4 md:grid-cols-2">
-            <label className="space-y-2 text-sm md:col-span-2">
+        {/* ── Step 4: Content & media ────────────────────────────── */}
+        <StepSection step="4" title="Content & media" description="Hero text, promo label, images and banners.">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="space-y-1.5 text-sm sm:col-span-2">
               <span className="font-medium text-slate-700">Hero title</span>
-              <input
-                value={form.hero_title}
-                onChange={(event) => updateFormField("hero_title", event.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none ring-emerald-300 focus:ring-2"
-              />
+              <input value={form.hero_title} onChange={(e) => updateFormField("hero_title", e.target.value)} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none ring-emerald-300 transition focus:ring-2" />
             </label>
-            <label className="space-y-2 text-sm md:col-span-2">
+            <label className="space-y-1.5 text-sm sm:col-span-2">
               <span className="font-medium text-slate-700">Hero subtitle</span>
-              <textarea
-                value={form.hero_subtitle}
-                onChange={(event) => updateFormField("hero_subtitle", event.target.value)}
-                className="min-h-24 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none ring-emerald-300 focus:ring-2"
-              />
+              <textarea rows={2} value={form.hero_subtitle} onChange={(e) => updateFormField("hero_subtitle", e.target.value)} className="min-h-16 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none ring-emerald-300 transition focus:ring-2" />
             </label>
-            <label className="space-y-2 text-sm">
-              <span className="font-medium text-slate-700">Hero CTA text</span>
-              <input
-                value={form.hero_cta_text}
-                onChange={(event) => updateFormField("hero_cta_text", event.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none ring-emerald-300 focus:ring-2"
-                placeholder="Shop now"
-              />
+            <label className="space-y-1.5 text-sm">
+              <span className="font-medium text-slate-700">CTA button text</span>
+              <input value={form.hero_cta_text} onChange={(e) => updateFormField("hero_cta_text", e.target.value)} placeholder="Shop now" className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none ring-emerald-300 transition focus:ring-2" />
             </label>
-            <label className="space-y-2 text-sm">
-              <span className="font-medium text-slate-700">Promo text</span>
-              <input
-                value={form.promo_text}
-                onChange={(event) => updateFormField("promo_text", event.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none ring-emerald-300 focus:ring-2"
-              />
+            <label className="space-y-1.5 text-sm">
+              <span className="font-medium text-slate-700">Promo label</span>
+              <input value={form.promo_text} onChange={(e) => updateFormField("promo_text", e.target.value)} placeholder="e.g. Fresh picks this week" className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none ring-emerald-300 transition focus:ring-2" />
             </label>
-            <label className="space-y-2 text-sm md:col-span-2">
-              <span className="font-medium text-slate-700">Hero image URL (fallback)</span>
-              <input
-                value={form.hero_image_url}
-                onChange={(event) => updateFormField("hero_image_url", event.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none ring-emerald-300 focus:ring-2"
-                placeholder="https://..."
-              />
-            </label>
-            <div className="grid gap-3 md:col-span-2 md:grid-cols-2">
-              <UploadDropzone
-                title="Upload hero image"
-                hint="Best ratio: 16:9"
-                onFile={(file) => void uploadAsset("hero", file)}
-                state={uploadState.hero}
-              />
-              <UploadDropzone
-                title="Upload banner image"
-                hint="Each upload is added to your banner slider (max 8)"
-                onFile={(file) => void uploadAsset("banner", file)}
-                state={uploadState.banner}
-              />
+
+            {/* Hero image upload */}
+            <div className="space-y-1.5 text-sm">
+              <span className="font-medium text-slate-700">Hero image</span>
+              <UploadDropzone title="Upload hero image" hint="16:9 ratio · max 10 MB" onFile={(file) => void uploadAsset("hero", file)} state={uploadState.hero} previewUrl={previewHeroUrl || undefined} />
+              <input value={form.hero_image_url} onChange={(e) => updateFormField("hero_image_url", e.target.value)} placeholder="Or paste URL…" className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none ring-emerald-300 transition focus:ring-2" />
             </div>
-            <div className="space-y-2 text-sm md:col-span-2">
-              <span className="font-medium text-slate-700">Banner URLs</span>
-              <div className="flex flex-wrap gap-2">
-                <input
-                  value={bannerUrlInput}
-                  onChange={(event) => setBannerUrlInput(event.target.value)}
-                  className="min-w-[220px] flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none ring-emerald-300 focus:ring-2"
-                  placeholder="https://..."
-                />
-                <button
-                  type="button"
-                  onClick={() => {
-                    try {
-                      if (!bannerUrlInput.trim()) return;
-                      const normalized = new URL(bannerUrlInput.trim()).toString();
-                      pushBannerUrl(normalized);
-                      setBannerUrlInput("");
-                    } catch {
-                      setError("Please enter a valid banner URL.");
-                    }
-                  }}
-                  className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50"
-                >
-                  Add banner
-                </button>
+
+            {/* Banner upload */}
+            <div className="space-y-1.5 text-sm">
+              <span className="font-medium text-slate-700">Banner images</span>
+              <UploadDropzone title="Upload banner" hint="Added to banner slider (max 8)" onFile={(file) => void uploadAsset("banner", file)} state={uploadState.banner} previewUrl={previewBannerUrl || undefined} />
+              <div className="flex gap-2">
+                <input value={bannerUrlInput} onChange={(e) => setBannerUrlInput(e.target.value)} placeholder="Or paste URL and Add…" className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none ring-emerald-300 transition focus:ring-2" />
+                <button type="button" onClick={() => { try { const n = new URL(bannerUrlInput.trim()).toString(); pushBannerUrl(n); setBannerUrlInput(""); } catch { setError("Invalid URL."); } }} className="shrink-0 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50">Add</button>
               </div>
-              <p className="text-xs text-slate-500">
-                First banner is used as fallback/primary banner. Max 8 banners.
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {form.banner_urls.map((url) => (
+              {form.banner_urls.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {form.banner_urls.map((url) => (
+                    <span key={url} className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] text-slate-600">
+                      <span className="max-w-[140px] truncate">{url}</span>
+                      <button type="button" onClick={() => removeBannerUrl(url)} className="font-bold text-red-400 hover:text-red-600">×</button>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Sections order */}
+            <div className="space-y-1.5 text-sm sm:col-span-2">
+              <span className="font-medium text-slate-700">Section order</span>
+              <p className="text-[11px] text-slate-400">Drag to reorder sections on your store page.</p>
+              <div className="space-y-1.5">
+                {form.sections_order.map((section) => (
                   <div
-                    key={url}
-                    className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs text-slate-700"
+                    key={section}
+                    draggable
+                    onDragStart={() => setDraggedSection(section)}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={() => { moveSectionByDrag(section); setDraggedSection(null); }}
+                    onDragEnd={() => setDraggedSection(null)}
+                    className={`flex cursor-grab items-center justify-between rounded-xl border px-4 py-2.5 text-sm transition active:cursor-grabbing ${draggedSection === section ? "border-emerald-400 bg-emerald-50 text-emerald-800" : "border-slate-200 bg-white text-slate-700"}`}
                   >
-                    <span className="max-w-[180px] truncate">{url}</span>
-                    <button
-                      type="button"
-                      onClick={() => removeBannerUrl(url)}
-                      className="font-semibold text-red-600 hover:text-red-700"
-                      aria-label="Remove banner"
-                    >
-                      ×
-                    </button>
+                    <span className="font-medium">{SECTION_LABELS[section]}</span>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4 text-slate-400"><path d="M8 9h8M8 15h8" /></svg>
                   </div>
                 ))}
               </div>
             </div>
           </div>
+        </StepSection>
 
-          <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3">
-            <p className="text-sm font-semibold text-slate-800">Section order (drag and drop)</p>
-            <p className="text-xs text-slate-500">
-              Drag sections to control how they appear on your storefront page.
-            </p>
-            <div className="space-y-2 pt-2">
-              {form.sections_order.map((section) => (
-                <div
-                  key={section}
-                  draggable
-                  onDragStart={() => setDraggedSection(section)}
-                  onDragOver={(event) => event.preventDefault()}
-                  onDrop={() => {
-                    moveSectionByDrag(section);
-                    setDraggedSection(null);
-                  }}
-                  onDragEnd={() => setDraggedSection(null)}
-                  className={`flex cursor-grab items-center justify-between rounded-md border px-3 py-2 text-sm transition active:cursor-grabbing ${
-                    draggedSection === section
-                      ? "border-emerald-400 bg-emerald-50 text-emerald-800"
-                      : "border-slate-200 bg-white text-slate-700"
-                  }`}
-                >
-                  <span>{SECTION_LABELS[section]}</span>
-                  <span className="text-xs text-slate-400">Drag</span>
-                </div>
-              ))}
+        {/* ── Step 5: Location ──────────────────────────────────── */}
+        <StepSection step="5" title="Location" description="Help customers find your store in nearby search.">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="flex items-end gap-2 sm:col-span-2">
+              <label className="min-w-0 flex-1 space-y-1.5 text-sm">
+                <span className="font-medium text-slate-700">Address line</span>
+                <input value={form.address_line1} onChange={(e) => updateFormField("address_line1", e.target.value)} placeholder="12 Allen Avenue" className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none ring-emerald-300 transition focus:ring-2" />
+              </label>
+              <button type="button" onClick={useCurrentLocation} disabled={isDetectingLocation} className="shrink-0 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100 disabled:opacity-60">
+                {isDetectingLocation ? "Detecting…" : "📍 Detect"}
+              </button>
             </div>
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Step 4</p>
-              <p className="text-sm font-semibold text-slate-900 sm:text-base">Location and discovery</p>
-              <p className="mt-1 text-xs text-slate-500">
-                Buyers can find your store in nearby and location search.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={useCurrentLocation}
-              disabled={isDetectingLocation}
-              className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-100 disabled:opacity-60"
-            >
-              {isDetectingLocation ? "Detecting..." : "Use current location"}
-            </button>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <label className="space-y-2 text-sm md:col-span-2">
-              <span className="font-medium text-slate-700">Address line</span>
-              <input
-                value={form.address_line1}
-                onChange={(event) => updateFormField("address_line1", event.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none ring-emerald-300 focus:ring-2"
-                placeholder="12 Allen Avenue"
-              />
-            </label>
-            <label className="space-y-2 text-sm">
+            <label className="space-y-1.5 text-sm">
               <span className="font-medium text-slate-700">City</span>
-              <input
-                value={form.city}
-                onChange={(event) => updateFormField("city", event.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none ring-emerald-300 focus:ring-2"
-                placeholder="Ikeja"
-              />
+              <input value={form.city} onChange={(e) => updateFormField("city", e.target.value)} placeholder="Ikeja" className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none ring-emerald-300 transition focus:ring-2" />
             </label>
-            <label className="space-y-2 text-sm">
+            <label className="space-y-1.5 text-sm">
               <span className="font-medium text-slate-700">State</span>
-              <input
-                value={form.state}
-                onChange={(event) => updateFormField("state", event.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none ring-emerald-300 focus:ring-2"
-                placeholder="Lagos"
-              />
+              <input value={form.state} onChange={(e) => updateFormField("state", e.target.value)} placeholder="Lagos" className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none ring-emerald-300 transition focus:ring-2" />
             </label>
-            <label className="space-y-2 text-sm">
+            <label className="space-y-1.5 text-sm">
               <span className="font-medium text-slate-700">Country</span>
-              <input
-                value={form.country}
-                onChange={(event) => updateFormField("country", event.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none ring-emerald-300 focus:ring-2"
-                placeholder="Nigeria"
-              />
+              <input value={form.country} onChange={(e) => updateFormField("country", e.target.value)} placeholder="Nigeria" className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none ring-emerald-300 transition focus:ring-2" />
             </label>
-            <label className="space-y-2 text-sm">
+            <label className="space-y-1.5 text-sm">
               <span className="font-medium text-slate-700">Location source</span>
-              <select
-                value={form.location_source}
-                onChange={(event) =>
-                  updateFormField("location_source", event.target.value as "manual" | "gps")
-                }
-                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none ring-emerald-300 focus:ring-2"
-              >
+              <select value={form.location_source} onChange={(e) => updateFormField("location_source", e.target.value as "manual" | "gps")} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none ring-emerald-300 transition focus:ring-2">
                 <option value="manual">Manual</option>
                 <option value="gps">GPS</option>
               </select>
             </label>
-            <label className="space-y-2 text-sm">
-              <span className="font-medium text-slate-700">Latitude (optional)</span>
-              <input
-                value={form.latitude}
-                onChange={(event) => updateFormField("latitude", event.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none ring-emerald-300 focus:ring-2"
-                placeholder="6.601838"
-              />
+            <label className="space-y-1.5 text-sm">
+              <span className="font-medium text-slate-700">Latitude</span>
+              <input value={form.latitude} onChange={(e) => updateFormField("latitude", e.target.value)} placeholder="6.601838" className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 font-mono outline-none ring-emerald-300 transition focus:ring-2" />
             </label>
-            <label className="space-y-2 text-sm">
-              <span className="font-medium text-slate-700">Longitude (optional)</span>
-              <input
-                value={form.longitude}
-                onChange={(event) => updateFormField("longitude", event.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none ring-emerald-300 focus:ring-2"
-                placeholder="3.351486"
-              />
+            <label className="space-y-1.5 text-sm">
+              <span className="font-medium text-slate-700">Longitude</span>
+              <input value={form.longitude} onChange={(e) => updateFormField("longitude", e.target.value)} placeholder="3.351486" className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 font-mono outline-none ring-emerald-300 transition focus:ring-2" />
             </label>
           </div>
-          <p className="mt-3 text-xs text-slate-600">
-            {hasCoordinates
-              ? "Coordinates captured. Nearby search will use precise distance."
-              : "Tip: Add coordinates for accurate nearby search results."}
+          <p className="mt-2 text-[11px] text-slate-400">
+            {hasCoordinates ? "✅ Coordinates captured. Nearby search will use precise distance." : "Tip: Use Detect or enter coordinates for accurate nearby results."}
           </p>
-        </div>
+        </StepSection>
 
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Step 5</p>
-              <p className="text-sm font-semibold text-slate-900 sm:text-base">Live preview</p>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setPreviewViewport("desktop")}
-                className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
-                  previewViewport === "desktop"
-                    ? "bg-emerald-600 text-white"
-                    : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-                }`}
-              >
-                Desktop
-              </button>
-              <button
-                type="button"
-                onClick={() => setPreviewViewport("phone")}
-                className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
-                  previewViewport === "phone"
-                    ? "bg-emerald-600 text-white"
-                    : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-                }`}
-              >
-                Phone
-              </button>
-            </div>
-          </div>
-
-          {previewViewport === "phone" ? (
-            <div className="mx-auto w-full max-w-[410px] rounded-[2rem] border-[10px] border-slate-900 bg-slate-900 p-2 shadow-lg">
-              <div className="mb-2 flex justify-center">
-                <span className="h-1.5 w-16 rounded-full bg-slate-700" />
-              </div>
-              <div className="max-h-[620px] overflow-auto rounded-[1.4rem] bg-white p-2">
-                <LiveStorefrontPreview
-                  template={form.store_template}
-                  viewport="phone"
-                  storeName={form.name}
-                  promoText={form.promo_text}
-                  heroTitle={form.hero_title}
-                  heroSubtitle={form.hero_subtitle}
-                  heroCtaText={form.hero_cta_text}
-                  heroImageUrl={previewHeroUrl}
-                  secondaryBannerUrl={previewSecondaryBannerUrl}
-                  bannerUrls={form.banner_urls}
-                  primaryColor={form.theme_color}
-                  accentColor={selectedTheme.accent}
-                  surfaceColor={selectedTheme.surface}
-                />
-              </div>
-            </div>
-          ) : (
-            <LiveStorefrontPreview
-              template={form.store_template}
-              viewport="desktop"
-              storeName={form.name}
-              promoText={form.promo_text}
-              heroTitle={form.hero_title}
-              heroSubtitle={form.hero_subtitle}
-              heroCtaText={form.hero_cta_text}
-              heroImageUrl={previewHeroUrl}
-              secondaryBannerUrl={previewSecondaryBannerUrl}
-              bannerUrls={form.banner_urls}
-              primaryColor={form.theme_color}
-              accentColor={selectedTheme.accent}
-              surfaceColor={selectedTheme.surface}
-            />
-          )}
-        </div>
-
-        <div className="fixed bottom-16 left-1/2 z-30 flex w-[calc(100%-1rem)] max-w-2xl -translate-x-1/2 flex-wrap gap-3 rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-white/85 sm:static sm:w-auto sm:max-w-none sm:translate-x-0 sm:rounded-2xl sm:shadow-md">
-          <button
-            type="submit"
-            disabled={isSaving || isAnyUploading}
-            className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
-          >
-            {isSaving
-              ? "Saving..."
-              : isAnyUploading
-                ? "Uploading files..."
-                : store
-                  ? "Update store"
-                  : "Create store"}
+        {/* ── Sticky save bar ───────────────────────────────────── */}
+        <div className="fixed bottom-16 left-1/2 z-30 flex w-[calc(100%-1.5rem)] max-w-2xl -translate-x-1/2 flex-wrap gap-2 rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-lg backdrop-blur sm:static sm:bottom-auto sm:left-auto sm:translate-x-0 sm:rounded-2xl sm:shadow-md">
+          <button type="submit" disabled={isSaving || isAnyUploading} className="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-emerald-700 disabled:opacity-60">
+            {isSaving ? "Saving…" : isAnyUploading ? "Uploading…" : store ? "Update store" : "Create store"}
           </button>
-          {shareablePath ? (
-            <a
-              href={shareablePath}
-              target="_blank"
-              rel="noreferrer"
-              className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50"
-            >
-              Open public store
+          {shareablePath && (
+            <a href={shareablePath} target="_blank" rel="noreferrer" className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 hover:bg-slate-50">
+              View store ↗
             </a>
-          ) : null}
-          {store?.slug ? (
-            <p className="self-center text-xs text-slate-600 sm:text-sm">
-              Shareable link: <span className="font-medium">{shareablePath}</span>
-            </p>
-          ) : null}
-          {error ? (
-            <p className="w-full rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-700 sm:text-sm">
-              {error}
-            </p>
-          ) : null}
-          {message ? (
-            <p className="w-full rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700 sm:text-sm">
-              {message}
-            </p>
-          ) : null}
+          )}
+          {store?.slug && (
+            <p className="self-center text-xs text-slate-500">{shareablePath}</p>
+          )}
+          {error && <p className="w-full rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-700">{error}</p>}
+          {message && <p className="w-full rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700">{message}</p>}
         </div>
       </form>
     </section>

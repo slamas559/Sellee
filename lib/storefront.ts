@@ -10,31 +10,31 @@ export const STOREFRONT_TEMPLATE_OPTIONS: Array<{
   key: StoreTemplate;
   label: string;
   description: string;
-  previewClass: string;
+  accent: string; // accent colour shown in the picker card
 }> = [
   {
     key: "grocery_promo",
-    label: "Grocery Promo",
-    description: "Banner-first deal layout with promo strips and category momentum.",
-    previewClass: "from-emerald-100 via-white to-amber-100",
+    label: "Market",
+    description: "Bold hero, vibrant promo strip, dense product grid — built for high-volume stores.",
+    accent: "#10b981",
   },
   {
     key: "fashion_editorial",
-    label: "Fashion Editorial",
-    description: "Clean premium layout with large hero and collection blocks.",
-    previewClass: "from-white via-slate-100 to-white",
+    label: "Editorial",
+    description: "Full-bleed imagery, typographic hierarchy, curated collection rows.",
+    accent: "#0f172a",
   },
   {
     key: "lifestyle_showcase",
-    label: "Lifestyle Showcase",
-    description: "Story-driven rich media sections and visual discovery tiles.",
-    previewClass: "from-teal-100 via-emerald-50 to-lime-50",
+    label: "Showcase",
+    description: "Split-screen storytelling, horizontal product scroll, feature callouts.",
+    accent: "#0ea5e9",
   },
   {
     key: "modern_grid",
-    label: "Modern Grid",
-    description: "Dense shopping layout with filter sidebar and fast browsing.",
-    previewClass: "from-slate-100 via-white to-slate-100",
+    label: "Grid",
+    description: "Sidebar navigation, compact card grid — fast, dense, browser-like.",
+    accent: "#7c3aed",
   },
 ];
 
@@ -47,35 +47,35 @@ export const STOREFRONT_THEME_PRESETS: Array<{
 }> = [
   {
     key: "emerald_fresh",
-    label: "Emerald Fresh",
+    label: "Emerald",
     primary: "#059669",
     accent: "#f59e0b",
     surface: "#ecfdf5",
   },
   {
     key: "sunlit_market",
-    label: "Sunlit Market",
+    label: "Sunlit",
     primary: "#16a34a",
     accent: "#facc15",
     surface: "#fefce8",
   },
   {
     key: "midnight_luxe",
-    label: "Midnight Luxe",
+    label: "Midnight",
     primary: "#0f172a",
     accent: "#22c55e",
     surface: "#e2e8f0",
   },
   {
     key: "ocean_breeze",
-    label: "Ocean Breeze",
+    label: "Ocean",
     primary: "#0e7490",
     accent: "#eab308",
     surface: "#ecfeff",
   },
   {
     key: "rose_boutique",
-    label: "Rose Boutique",
+    label: "Rose",
     primary: "#be185d",
     accent: "#f59e0b",
     surface: "#fff1f2",

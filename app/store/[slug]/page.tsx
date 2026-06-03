@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { ProductCard } from "@/components/store/product-card";
+import { ProductShowcaseCard } from "@/components/marketplace/product-showcase-card";
 import { BannerCarousel } from "@/components/store/banner-carousel";
 import { FollowStoreButton } from "@/components/store/follow-store-button";
 import { SocialShareActions } from "@/components/shared/social-share-actions";
@@ -45,9 +46,7 @@ export async function generateMetadata({ params }: StorePageProps): Promise<Meta
   return {
     title: `${label} Store`,
     description,
-    alternates: {
-      canonical,
-    },
+    alternates: { canonical },
     openGraph: {
       title: `${label} Store | Sellee`,
       description,
@@ -64,169 +63,622 @@ export async function generateMetadata({ params }: StorePageProps): Promise<Meta
   };
 }
 
-function StoreHero({
+// ─── Shared search/filter controls ──────────────────────────────────────────
+
+function StoreSearchBar({
+  slug,
+  query,
+  selectedCategory,
+  categories,
+}: {
+  slug: string;
+  query: string;
+  selectedCategory: string;
+  categories: string[];
+}) {
+  return (
+    <div className="space-y-2">
+      <form className="flex flex-nowrap items-center gap-2" action={`/store/${slug}`}>
+        <input
+          name="q"
+          defaultValue={query}
+          placeholder="Search this store…"
+          className="min-w-0 flex-1 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none ring-emerald-300 transition focus:ring-2"
+        />
+        {selectedCategory ? <input type="hidden" name="category" value={selectedCategory} /> : null}
+        <button
+          type="submit"
+          className="shrink-0 rounded-full bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700"
+        >
+          Search
+        </button>
+      </form>
+      {categories.length > 0 && (
+        <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none]">
+          <Link
+            href={`/store/${slug}${query ? `?q=${encodeURIComponent(query)}` : ""}`}
+            className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+              !selectedCategory
+                ? "border-emerald-600 bg-emerald-600 text-white"
+                : "border-slate-200 bg-white text-slate-700 hover:border-emerald-300"
+            }`}
+          >
+            All
+          </Link>
+          {categories.map((cat) => (
+            <Link
+              key={cat}
+              href={`/store/${slug}?category=${encodeURIComponent(cat)}${query ? `&q=${encodeURIComponent(query)}` : ""}`}
+              className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+                selectedCategory === cat
+                  ? "border-emerald-600 bg-emerald-600 text-white"
+                  : "border-slate-200 bg-white text-slate-700 hover:border-emerald-300"
+              }`}
+            >
+              {cat}
+            </Link>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── TEMPLATE 1: Market ──────────────────────────────────────────────────────
+// Big hero banner, vibrant colour accent bar, tag-based filters, dense 2-4 col grid.
+
+function MarketTemplate({
   store,
-  primaryColor,
+  products,
   nicheNames,
+  primaryColor,
+  config,
+  categories,
+  selectedCategory,
+  query,
   isLoggedIn,
   activeUserId,
   isFollowing,
   storeUrl,
-  heroTitle,
-  heroSubtitle,
-  template,
-}: {
+  bannerUrls,
+  storeJsonLd,
+}: TemplateProps) {
+  return (
+    <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(storeJsonLd) }} />
+      <main className="min-h-screen bg-slate-50">
+
+        {/* Hero */}
+        <section className="relative overflow-hidden" style={{ backgroundColor: primaryColor }}>
+          <div className="absolute inset-0 opacity-20"
+            style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")" }}
+          />
+          {config.hero_image_url && (
+            <Image
+              src={config.hero_image_url}
+              alt={store.name}
+              fill
+              className="object-cover opacity-25"
+              sizes="100vw"
+            />
+          )}
+          <div className="relative mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-14">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div className="flex items-center gap-4">
+                {store.logo_url ? (
+                  <div className="relative h-16 w-16 overflow-hidden rounded-2xl border-2 border-white/40 shadow-lg sm:h-20 sm:w-20">
+                    <Image src={store.logo_url} alt={store.name} fill className="object-cover" sizes="80px" />
+                  </div>
+                ) : (
+                  <div className="flex h-16 w-16 items-center justify-center rounded-2xl border-2 border-white/40 bg-white/20 text-2xl font-black text-white sm:h-20 sm:w-20">
+                    {store.name.charAt(0)}
+                  </div>
+                )}
+                <div>
+                  <h1 className="text-2xl font-black tracking-tight text-white sm:text-3xl">{store.name}</h1>
+                  <p className="mt-0.5 text-sm text-white/80">{config.promo_text}</p>
+                  {nicheNames.length > 0 && (
+                    <div className="mt-1.5 flex flex-wrap gap-1.5">
+                      {nicheNames.slice(0, 4).map((n) => (
+                        <span key={n} className="rounded-full border border-white/40 bg-white/20 px-2 py-0.5 text-[11px] font-semibold text-white backdrop-blur">{n}</span>
+                      ))}
+                    </div>
+                  )}
+                  <div className="mt-2">
+                    <StarRating value={store.rating_avg} count={store.rating_count} accent="yellow" />
+                  </div>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <FollowStoreButton storeId={store.id} storeSlug={store.slug} isLoggedIn={isLoggedIn} isOwner={Boolean(activeUserId && activeUserId === store.vendor_id)} initialFollowing={isFollowing} compact />
+                <a href={`https://wa.me/${store.whatsapp_number}`} className="rounded-full border border-white/60 bg-white/20 px-4 py-2 text-sm font-semibold text-white backdrop-blur hover:bg-white/30"><span className="text-white">Chat vendor</span></a>
+                <SocialShareActions mode="menu" compact url={storeUrl} title={`${store.name} on Sellee`} text={`Shop at ${store.name} on Sellee.`} triggerClassName="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/50 bg-white/20 text-white backdrop-blur hover:bg-white/30" triggerLabel="Share" />
+              </div>
+            </div>
+            {config.hero_title && (
+              <div className="mt-6 max-w-xl">
+                <p className="text-xl font-bold text-white sm:text-2xl">{config.hero_title}</p>
+                {config.hero_subtitle && <p className="mt-1 text-sm text-white/80">{config.hero_subtitle}</p>}
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* Accent bar */}
+        <div className="h-1.5 w-full" style={{ background: `linear-gradient(90deg, ${primaryColor}, ${primaryColor}88, transparent)` }} />
+
+        {/* Banner carousel */}
+        {bannerUrls.length > 0 && (
+          <div className="mx-auto max-w-7xl px-4 pt-4 sm:px-6">
+            <BannerCarousel banners={bannerUrls} storeName={store.name} className="h-44 rounded-2xl sm:h-56" />
+          </div>
+        )}
+
+        {/* Products */}
+        <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
+          <div className="mb-4">
+            <StoreSearchBar slug={store.slug} query={query} selectedCategory={selectedCategory} categories={categories} />
+          </div>
+          {products.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-slate-300 bg-white py-16 text-center text-sm text-slate-500">No products match your search.</div>
+          ) : (
+            <div className="mt-4 grid grid-cols-2 justify-items-center gap-1 [@media(max-width:320px)]:grid-cols-1 sm:mt-5 sm:gap-3 lg:grid-cols-3 xl:grid-cols-4">
+              {products.map((p) => (
+                <div key={p.id} className="w-full max-w-[320px] space-y-2">
+                  <ProductCard product={p} template="grocery_promo" store={{ name: store.name, slug: store.slug, logo_url: store.logo_url, rating_avg: store.rating_avg, rating_count: store.rating_count }} />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Reviews */}
+        <div className="mx-auto max-w-7xl px-4 pb-12 sm:px-6" id="vendor-reviews">
+          <VendorReviewsSection storeId={store.id} initialRatingAvg={store.rating_avg} initialRatingCount={store.rating_count} />
+        </div>
+      </main>
+    </>
+  );
+}
+
+// ─── TEMPLATE 2: Editorial ───────────────────────────────────────────────────
+// Dark hero, full-bleed image, minimal serif-feeling type, horizontal scroll row.
+
+function EditorialTemplate({
+  store,
+  products,
+  nicheNames,
+  primaryColor,
+  config,
+  categories,
+  selectedCategory,
+  query,
+  isLoggedIn,
+  activeUserId,
+  isFollowing,
+  storeUrl,
+  bannerUrls,
+  storeJsonLd,
+}: TemplateProps) {
+  const featured = products.slice(0, 4);
+  const rest = products.slice(4);
+
+  return (
+    <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(storeJsonLd) }} />
+      <main className="min-h-screen bg-white">
+
+        {/* Full-bleed dark hero */}
+        <section className="relative min-h-[420px] overflow-hidden bg-slate-950 sm:min-h-[520px]">
+          {config.hero_image_url && (
+            <Image src={config.hero_image_url} alt={store.name} fill className="object-cover opacity-40" sizes="100vw" priority />
+          )}
+          <div className="absolute inset-0 bg-gradient-to-b from-slate-950/20 via-slate-950/50 to-slate-950" />
+
+          {/* Top bar */}
+          <div className="relative flex items-center justify-between px-4 pt-5 sm:px-8">
+            <div className="flex items-center gap-3">
+              {store.logo_url ? (
+                <div className="relative h-9 w-9 overflow-hidden rounded-full border border-white/30">
+                  <Image src={store.logo_url} alt={store.name} fill className="object-cover" sizes="36px" />
+                </div>
+              ) : null}
+              <span className="text-sm font-bold uppercase tracking-[0.18em] text-white/70">{store.name}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <FollowStoreButton storeId={store.id} storeSlug={store.slug} isLoggedIn={isLoggedIn} isOwner={Boolean(activeUserId && activeUserId === store.vendor_id)} initialFollowing={isFollowing} compact />
+              <SocialShareActions mode="menu" compact url={storeUrl} title={store.name} text={`Shop at ${store.name}.`} triggerClassName="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/30 bg-white/10 text-white hover:bg-white/20" triggerLabel="Share" />
+            </div>
+          </div>
+
+          {/* Hero copy */}
+          <div className="relative flex mt-1 min-h-[340px] flex-col justify-end px-4 pb-10 sm:px-8 sm:pb-14">
+            {nicheNames.length > 0 && (
+              <div className="mb-3 flex flex-wrap gap-2">
+                {nicheNames.slice(0, 3).map((n) => (
+                  <span key={n} style={{ borderColor: `${primaryColor}80`}} className="rounded-full border bg-white/10 px-3 py-0.5 text-xs font-semibold backdrop-blur text-white/50">{n}</span>
+                ))}
+              </div>
+            )}
+            <h1 className="max-w-2xl text-4xl font-black leading-none tracking-tight text-white sm:text-6xl">{config.hero_title || store.name}</h1>
+            {config.hero_subtitle && <p className="mt-3 max-w-xl text-base text-white/70">{config.hero_subtitle}</p>}
+            <div className="mt-4 flex flex-wrap items-center gap-3">
+              <a href={`https://wa.me/${store.whatsapp_number}`} className="rounded-full px-5 py-2 text-sm font-bold text-white" style={{ backgroundColor: primaryColor }}><span className="text-white">{config.hero_cta_text || "Order now"}</span></a>
+              <StarRating value={store.rating_avg} count={store.rating_count} accent="yellow" size="md" />
+            </div>
+          </div>
+        </section>
+
+        {/* Promo label */}
+        {config.promo_text && (
+          <div className="border-y border-slate-100 bg-slate-50">
+            <div className="mx-auto flex max-w-7xl items-center gap-3 overflow-hidden px-4 py-3 sm:px-8">
+              <span className="shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-black uppercase tracking-widest text-white" style={{ backgroundColor: primaryColor }}>New</span>
+              <div className="flex gap-8 overflow-hidden text-sm font-semibold text-slate-600">
+                {[config.promo_text, config.promo_text, config.promo_text].map((t, i) => (
+                  <span key={i} className="shrink-0">{t}</span>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Featured horizontal scroll */}
+        {featured.length > 0 && (
+          <div className="mx-auto max-w-7xl px-4 py-8 sm:px-8">
+            <p className="mb-4 text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Featured</p>
+            <div className="flex gap-4 overflow-x-auto pb-2 [scrollbar-width:none]">
+              {featured.map((p) => (
+                <div key={p.id} className="w-[56vw] max-w-[280px] shrink-0 sm:max-w-[280px]">
+                  <ProductCard product={p} template="fashion_editorial" store={{ name: store.name, slug: store.slug, logo_url: store.logo_url, rating_avg: store.rating_avg, rating_count: store.rating_count }} />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Banner */}
+        {bannerUrls.length > 0 && (
+          <div className="mx-auto max-w-7xl px-4 pb-6 sm:px-8">
+            <BannerCarousel banners={bannerUrls} storeName={store.name} className="h-48 rounded-3xl sm:h-64" />
+          </div>
+        )}
+
+        {/* All products */}
+        <div className="mx-auto max-w-7xl px-4 pb-8 sm:px-8">
+          <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">{rest.length > 0 ? "All products" : "Products"}</p>
+            <div className="w-full max-w-md">
+              <StoreSearchBar slug={store.slug} query={query} selectedCategory={selectedCategory} categories={categories} />
+            </div>
+          </div>
+          {products.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-slate-200 py-16 text-center text-sm text-slate-400">No products found.</div>
+          ) : (
+            <div className="mt-4 grid grid-cols-2 justify-items-center gap-1 [@media(max-width:320px)]:grid-cols-1 sm:mt-5 sm:gap-3 lg:grid-cols-3 xl:grid-cols-4">
+              {(rest.length > 0 ? rest : products).map((p) => (
+                <div key={p.id} className="w-full max-w-[320px] space-y-2">
+                  <ProductCard product={p} template="fashion_editorial" store={{ name: store.name, slug: store.slug, logo_url: store.logo_url, rating_avg: store.rating_avg, rating_count: store.rating_count }} />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Reviews */}
+        <div className="mx-auto max-w-7xl border-t border-slate-100 px-4 py-10 sm:px-8" id="vendor-reviews">
+          <VendorReviewsSection storeId={store.id} initialRatingAvg={store.rating_avg} initialRatingCount={store.rating_count} />
+        </div>
+      </main>
+    </>
+  );
+}
+
+// ─── TEMPLATE 3: Showcase ────────────────────────────────────────────────────
+// Split-screen hero, soft tones, horizontal product scroll, feature stat callouts.
+
+function ShowcaseTemplate({
+  store,
+  products,
+  nicheNames,
+  primaryColor,
+  config,
+  categories,
+  selectedCategory,
+  query,
+  isLoggedIn,
+  activeUserId,
+  isFollowing,
+  storeUrl,
+  bannerUrls,
+  storeJsonLd,
+  surfaceColor,
+}: TemplateProps) {
+  return (
+    <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(storeJsonLd) }} />
+      <main className="min-h-screen" style={{ backgroundColor: surfaceColor }}>
+
+        {/* Split-screen hero */}
+        <section className="mx-auto grid max-w-7xl px-4 py-8 sm:px-6 sm:py-12 lg:grid-cols-[1fr_1fr] lg:gap-8 lg:items-center">
+          {/* Left: copy */}
+          <div>
+            <div className="flex flex-wrap items-center gap-3">
+              {store.logo_url ? (
+                <div className="relative h-12 w-12 overflow-hidden rounded-xl shadow-md">
+                  <Image src={store.logo_url} alt={store.name} fill className="object-cover" sizes="48px" />
+                </div>
+              ) : (
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl font-black text-xl text-white" style={{ backgroundColor: primaryColor }}>{store.name.charAt(0)}</div>
+              )}
+              <span className="text-sm font-semibold text-slate-500">{store.name}</span>
+            </div>
+            <h1 className="mt-5 text-4xl font-black leading-[1.05] tracking-tight text-slate-900 sm:text-5xl lg:text-6xl">
+              {config.hero_title || store.name}
+            </h1>
+            <p className="mt-4 max-w-md text-base leading-7 text-slate-600">{config.hero_subtitle}</p>
+            {nicheNames.length > 0 && (
+              <div className="mt-4 flex flex-wrap gap-2">
+                {nicheNames.slice(0, 4).map((n) => (
+                  <span key={n} className="rounded-full border px-3 py-1 text-xs font-semibold text-slate-700" style={{ borderColor: `${primaryColor}50`, backgroundColor: `${primaryColor}12` }}>{n}</span>
+                ))}
+              </div>
+            )}
+            <div className="mt-6 flex flex-wrap items-center gap-3">
+              <a href={`https://wa.me/${store.whatsapp_number}`} className="rounded-full px-6 py-2 text-sm font-bold text-white shadow-lg transition hover:opacity-90" style={{ backgroundColor: primaryColor }}><span className="text-white">{config.hero_cta_text || "Chat & Order"}</span></a>
+              <FollowStoreButton storeId={store.id} storeSlug={store.slug} isLoggedIn={isLoggedIn} isOwner={Boolean(activeUserId && activeUserId === store.vendor_id)} initialFollowing={isFollowing} />
+              <SocialShareActions mode="menu" compact url={storeUrl} title={store.name} text={`Shop at ${store.name}.`} triggerClassName="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 hover:bg-slate-50" triggerLabel="Share" />
+            </div>
+            <div className="mt-5">
+              <StarRating value={store.rating_avg} count={store.rating_count} accent="yellow" size="md" />
+            </div>
+          </div>
+
+          {/* Right: hero image + stat chips */}
+          <div className="relative mt-8 lg:mt-0">
+            {config.hero_image_url ? (
+              <div className="relative aspect-[4/3] overflow-hidden rounded-3xl shadow-2xl">
+                <Image src={config.hero_image_url} alt={store.name} fill className="object-cover" sizes="(max-width:1024px) 100vw, 50vw" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
+              </div>
+            ) : (
+              <div className="aspect-[4/3] rounded-3xl" style={{ backgroundColor: `${primaryColor}20` }} />
+            )}
+            {/* Floating chip */}
+            <div className="absolute -bottom-4 -left-4 rounded-2xl border border-white bg-white p-3 shadow-xl sm:p-4">
+              <p className="text-2xl font-black text-slate-900">{store.rating_count}+</p>
+              <p className="text-xs font-medium text-slate-500">Reviews</p>
+            </div>
+            <div className="absolute -right-4 top-6 rounded-2xl border border-white bg-white p-3 shadow-xl sm:p-4">
+              <p className="text-2xl font-black" style={{ color: primaryColor }}>{products.length}</p>
+              <p className="text-xs font-medium text-slate-500">Products</p>
+            </div>
+          </div>
+        </section>
+
+        {/* Promo strip */}
+        {config.promo_text && (
+          <div className="py-3" style={{ backgroundColor: primaryColor }}>
+            <p className="text-center text-sm font-semibold text-white">{config.promo_text}</p>
+          </div>
+        )}
+
+        {/* Horizontal product scroll */}
+        {products.length > 0 && (
+          <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+            <div className="mb-4 flex items-center justify-between">
+              <p className="font-bold text-slate-900">Products</p>
+              <span className="text-sm text-slate-500">{products.length} items</span>
+            </div>
+            {/* Filters */}
+            <div className="mb-4">
+              <StoreSearchBar slug={store.slug} query={query} selectedCategory={selectedCategory} categories={categories} />
+            </div>
+            {products.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-slate-300 bg-white py-16 text-center text-sm text-slate-500">No products found.</div>
+            ) : (
+              <div className="mt-4 grid grid-cols-2 justify-items-center gap-1 [@media(max-width:320px)]:grid-cols-1 sm:mt-5 sm:gap-3 lg:grid-cols-3 xl:grid-cols-4">
+                {products.map((p) => (
+                  <div key={p.id} className="w-full max-w-[320px] space-y-2">
+                    <ProductCard product={p} template="lifestyle_showcase" store={{ name: store.name, slug: store.slug, logo_url: store.logo_url, rating_avg: store.rating_avg, rating_count: store.rating_count }} />
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Banner */}
+        {bannerUrls.length > 0 && (
+          <div className="mx-auto max-w-7xl px-4 pb-6 sm:px-6">
+            <BannerCarousel banners={bannerUrls} storeName={store.name} className="h-44 rounded-3xl sm:h-60" />
+          </div>
+        )}
+
+        {/* Reviews */}
+        <div className="mx-auto max-w-7xl px-4 pb-12 sm:px-6" id="vendor-reviews">
+          <VendorReviewsSection storeId={store.id} initialRatingAvg={store.rating_avg} initialRatingCount={store.rating_count} />
+        </div>
+      </main>
+    </>
+  );
+}
+
+// ─── TEMPLATE 4: Grid ────────────────────────────────────────────────────────
+// Sidebar navigation panel + compact card grid. App-like, utilitarian, fast.
+
+function GridTemplate({
+  store,
+  products,
+  nicheNames,
+  primaryColor,
+  config,
+  categories,
+  selectedCategory,
+  query,
+  isLoggedIn,
+  activeUserId,
+  isFollowing,
+  storeUrl,
+  bannerUrls,
+  storeJsonLd,
+}: TemplateProps) {
+  return (
+    <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(storeJsonLd) }} />
+      <main className="min-h-screen bg-slate-100">
+
+        {/* Compact header */}
+        <header className="sticky top-0 z-20 border-b border-slate-200 bg-white shadow-sm">
+          <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
+            <div className="flex items-center gap-3">
+              {store.logo_url ? (
+                <div className="relative h-9 w-9 overflow-hidden rounded-lg">
+                  <Image src={store.logo_url} alt={store.name} fill className="object-cover" sizes="36px" />
+                </div>
+              ) : (
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg font-black text-white text-sm" style={{ backgroundColor: primaryColor }}>{store.name.charAt(0)}</div>
+              )}
+              <div>
+                <p className="text-sm font-bold text-slate-900">{store.name}</p>
+                <StarRating value={store.rating_avg} count={store.rating_count} size="sm" />
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <a href={`https://wa.me/${store.whatsapp_number}`} className="rounded-lg px-3 py-1.5 text-xs font-bold text-white" style={{ backgroundColor: primaryColor }}><span className="text-white">Chat & Order</span></a>
+              <FollowStoreButton storeId={store.id} storeSlug={store.slug} isLoggedIn={isLoggedIn} isOwner={Boolean(activeUserId && activeUserId === store.vendor_id)} initialFollowing={isFollowing} compact />
+              <SocialShareActions mode="menu" compact url={storeUrl} title={store.name} text={`Shop at ${store.name}.`} triggerClassName="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50" triggerLabel="Share" />
+            </div>
+          </div>
+        </header>
+
+        <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:grid lg:grid-cols-[220px_1fr] lg:gap-6">
+          {/* Sidebar */}
+          <aside className="hidden lg:block">
+            <div className="sticky top-20 space-y-4">
+              {/* Store info */}
+              <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                {config.hero_image_url && (
+                  <div className="relative mb-3 h-32 overflow-hidden rounded-lg">
+                    <Image src={config.hero_image_url} alt={store.name} fill className="object-cover" sizes="220px" />
+                  </div>
+                )}
+                <p className="text-sm font-semibold text-slate-900">{config.hero_title || store.name}</p>
+                {config.hero_subtitle && <p className="mt-1 text-xs leading-5 text-slate-500">{config.hero_subtitle}</p>}
+                {config.promo_text && (
+                  <p className="mt-2 rounded-md px-2 py-1 text-xs font-semibold text-white" style={{ backgroundColor: primaryColor }}>{config.promo_text}</p>
+                )}
+              </div>
+
+              {/* Niches */}
+              {nicheNames.length > 0 && (
+                <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <p className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-400">Categories</p>
+                  <div className="space-y-1">
+                    <Link
+                      href={`/store/${store.slug}${query ? `?q=${encodeURIComponent(query)}` : ""}`}
+                      className={`flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm font-medium transition ${!selectedCategory ? "text-white" : "text-slate-600 hover:bg-slate-50"}`}
+                      style={!selectedCategory ? { backgroundColor: primaryColor } : {}}
+                    >
+                      All products
+                    </Link>
+                    {categories.map((cat) => (
+                      <Link
+                        key={cat}
+                        href={`/store/${store.slug}?category=${encodeURIComponent(cat)}${query ? `&q=${encodeURIComponent(query)}` : ""}`}
+                        className={`flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm font-medium transition ${selectedCategory === cat ? "text-white" : "text-slate-600 hover:bg-slate-50"}`}
+                        style={selectedCategory === cat ? { backgroundColor: primaryColor } : {}}
+                      >
+                        {cat}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Banner */}
+              {bannerUrls.length > 0 && (
+                <BannerCarousel banners={bannerUrls} storeName={store.name} className="h-36 rounded-xl" />
+              )}
+            </div>
+          </aside>
+
+          {/* Main content */}
+          <div>
+            {/* Mobile search */}
+            <div className="mb-4 lg:hidden">
+              <StoreSearchBar slug={store.slug} query={query} selectedCategory={selectedCategory} categories={categories} />
+            </div>
+            {/* Desktop search bar */}
+            <div className="mb-4 hidden lg:block">
+              <form className="flex gap-2" action={`/store/${store.slug}`}>
+                <input name="q" defaultValue={query} placeholder="Search products…" className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none ring-slate-300 transition focus:ring-2" />
+                {selectedCategory ? <input type="hidden" name="category" value={selectedCategory} /> : null}
+                <button type="submit" className="rounded-lg px-4 py-2 text-sm font-semibold text-white" style={{ backgroundColor: primaryColor }}>Search</button>
+              </form>
+            </div>
+
+            {/* Stats bar */}
+            <div className="mb-4 flex flex-wrap gap-3">
+              <div className="rounded-lg border border-slate-200 bg-white px-4 py-2 shadow-sm">
+                <p className="text-xs text-slate-500">Products</p>
+                <p className="text-lg font-black text-slate-900">{products.length}</p>
+              </div>
+              <div className="rounded-lg border border-slate-200 bg-white px-4 py-2 shadow-sm">
+                <p className="text-xs text-slate-500">Rating</p>
+                <p className="text-lg font-black" style={{ color: primaryColor }}>{store.rating_avg ? store.rating_avg.toFixed(1) : "New"}</p>
+              </div>
+              <div className="rounded-lg border border-slate-200 bg-white px-4 py-2 shadow-sm">
+                <p className="text-xs text-slate-500">Reviews</p>
+                <p className="text-lg font-black text-slate-900">{store.rating_count}</p>
+              </div>
+            </div>
+
+            {/* Grid */}
+            {products.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-slate-300 bg-white py-16 text-center text-sm text-slate-400">No products match your search.</div>
+            ) : (
+              <div className="mt-4 grid grid-cols-2 justify-items-center gap-1 [@media(max-width:320px)]:grid-cols-1 sm:mt-5 sm:gap-3 lg:grid-cols-3 xl:grid-cols-4">
+                {products.map((p) => (
+                  <div key={p.id} className="w-full max-w-[320px] space-y-2">
+                    <ProductCard key={p.id} product={p} template="modern_grid" store={{ name: store.name, slug: store.slug, logo_url: store.logo_url, rating_avg: store.rating_avg, rating_count: store.rating_count }} />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Reviews */}
+            <div className="mt-8" id="vendor-reviews">
+              <VendorReviewsSection storeId={store.id} initialRatingAvg={store.rating_avg} initialRatingCount={store.rating_count} />
+            </div>
+          </div>
+        </div>
+      </main>
+    </>
+  );
+}
+
+// ─── Shared props type ────────────────────────────────────────────────────────
+
+type TemplateProps = {
   store: StoreRecord;
-  primaryColor: string;
+  products: ProductRecord[];
   nicheNames: string[];
+  primaryColor: string;
+  surfaceColor: string;
+  config: ReturnType<typeof normalizeStorefrontConfig>;
+  categories: string[];
+  selectedCategory: string;
+  query: string;
   isLoggedIn: boolean;
   activeUserId: string | null;
   isFollowing: boolean;
   storeUrl: string;
-  heroTitle: string;
-  heroSubtitle: string;
-  template: StoreRecord["store_template"];
-}) {
-  const heroImageUrl = normalizeStorefrontConfig(store.storefront_config).hero_image_url;
-  const templateMode = normalizeStoreTemplate(template);
-  const heroHeightClass =
-    templateMode === "fashion_editorial"
-      ? "h-[300px] sm:h-[380px] lg:h-[430px]"
-      : templateMode === "modern_grid"
-        ? "h-[280px] sm:h-[360px] lg:h-[410px]"
-        : "h-[290px] sm:h-[370px] lg:h-[420px]";
-  const overlayClass =
-    templateMode === "modern_grid"
-      ? "absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-900/45 to-slate-900/15"
-      : templateMode === "fashion_editorial"
-        ? "absolute inset-0 bg-gradient-to-t from-black/70 via-black/35 to-black/10"
-        : "absolute inset-0 bg-gradient-to-t from-black/65 via-black/30 to-transparent";
-  const motionClass =
-    templateMode === "fashion_editorial"
-      ? "storefront-anim-fade"
-      : templateMode === "modern_grid"
-        ? "storefront-anim-slide"
-        : templateMode === "lifestyle_showcase"
-          ? "storefront-anim-zoom"
-          : "storefront-anim-fade";
+  bannerUrls: string[];
+  storeJsonLd: object;
+};
 
-  return (
-    <section className={`relative left-1/2 w-screen max-w-[100vw] -translate-x-1/2 overflow-hidden rounded-none border-y border-slate-200 shadow-sm ${motionClass}`}>
-      <div className={`relative ${heroHeightClass}`}>
-        {heroImageUrl ? (
-          <Image
-            src={heroImageUrl}
-            alt={`${store.name} hero`}
-            fill
-            className="object-cover"
-            sizes="100vw"
-          />
-        ) : (
-          <div className="flex h-full items-center justify-center bg-slate-200 text-sm font-semibold text-slate-600">
-            Add hero image in dashboard
-          </div>
-        )}
-        <div className={overlayClass} />
-        <div className="absolute inset-x-0 bottom-0 p-4 sm:p-6">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div className="max-w-2xl space-y-2">
-              <div className="flex items-center gap-3">
-                <div className="relative h-12 w-12 overflow-hidden rounded-full border border-white/50 bg-white/20 sm:h-14 sm:w-14">
-                  {store.logo_url ? (
-                    <Image src={store.logo_url} alt={`${store.name} logo`} fill className="object-cover" sizes="56px" />
-                  ) : (
-                    <div className="flex h-full items-center justify-center text-[10px] text-white">Logo</div>
-                  )}
-                </div>
-                <div>
-                  <h1 className="text-2xl font-black tracking-tight text-white sm:text-3xl lg:text-4xl">{store.name}</h1>
-                  <p className="text-xs text-white/85 sm:text-sm">{heroTitle}</p>
-                </div>
-              </div>
-              <p className="max-w-xl text-sm text-white/90 sm:text-base lg:text-lg">{heroSubtitle}</p>
-              {nicheNames.length > 0 ? (
-                <div className="flex flex-wrap gap-1.5">
-                  {nicheNames.slice(0, 6).map((niche) => (
-                    <span
-                      key={`${store.id}-${niche}`}
-                      className="inline-flex rounded-full border border-white/40 bg-white/20 px-2 py-0.5 text-[11px] font-semibold text-white backdrop-blur"
-                    >
-                      {niche}
-                    </span>
-                  ))}
-                </div>
-              ) : null}
-              <StarRating value={store.rating_avg} count={store.rating_count} accent="yellow" />
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <FollowStoreButton
-                storeId={store.id}
-                storeSlug={store.slug}
-                isLoggedIn={isLoggedIn}
-                isOwner={Boolean(activeUserId && activeUserId === store.vendor_id)}
-                initialFollowing={isFollowing}
-              />
-              <Link
-                href={`https://wa.me/${store.whatsapp_number}`}
-                className="rounded-full px-4 py-2 text-sm font-semibold text-white"
-                style={{ backgroundColor: primaryColor }}
-              >
-                Chat vendor
-              </Link>
-              <SocialShareActions
-                mode="menu"
-                compact
-                url={storeUrl}
-                title={`${store.name} on Sellee`}
-                text={`Check out ${store.name} on Sellee.`}
-                triggerClassName="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/60 bg-white/20 text-white backdrop-blur hover:bg-white/35"
-                triggerLabel="Share store"
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function ProductGrid({
-  products,
-  store,
-  template,
-}: {
-  products: ProductRecord[];
-  store: StoreRecord;
-  template: StoreRecord["store_template"];
-}) {
-  if (products.length === 0) {
-    return (
-      <div className="rounded-xl border border-slate-200 bg-white p-6 text-sm text-slate-600 shadow-sm">
-        No products available yet.
-      </div>
-    );
-  }
-
-  return (
-    <div className="grid grid-cols-2 justify-items-center gap-3 px-2 [@media(max-width:320px)]:grid-cols-1 sm:px-0 lg:grid-cols-3 xl:grid-cols-4">
-      {products.map((product) => (
-        <div key={product.id} className="w-full max-w-[320px]">
-          <ProductCard
-            product={product}
-            template={template}
-            store={{
-              name: store.name,
-              slug: store.slug,
-              logo_url: store.logo_url,
-              rating_avg: store.rating_avg,
-              rating_count: store.rating_count,
-            }}
-          />
-        </div>
-      ))}
-    </div>
-  );
-}
+// ─── Page ────────────────────────────────────────────────────────────────────
 
 export default async function StorePage({ params, searchParams }: StorePageProps) {
   const { slug } = await params;
@@ -236,71 +688,40 @@ export default async function StorePage({ params, searchParams }: StorePageProps
 
   const storefrontData = await getStorefrontPublicDataCached(slug);
   const store = storefrontData.store as StoreRecord | null;
-  if (!store) {
-    notFound();
-  }
+  if (!store) notFound();
+
   const products = storefrontData.products;
   const nicheNames = storefrontData.nicheNames;
 
   let isFollowing = false;
   if (session?.user?.id) {
-    const { data: me } = await supabase
-      .from("users")
-      .select("phone")
-      .eq("id", session.user.id)
-      .maybeSingle();
+    const { data: me } = await supabase.from("users").select("phone").eq("id", session.user.id).maybeSingle();
     if (me?.phone) {
-      const { data: followRow } = await supabase
-        .from("customer_store_follows")
-        .select("id")
-        .eq("store_id", store.id)
-        .eq("customer_phone", String(me.phone))
-        .maybeSingle();
+      const { data: followRow } = await supabase.from("customer_store_follows").select("id").eq("store_id", store.id).eq("customer_phone", String(me.phone)).maybeSingle();
       isFollowing = Boolean(followRow?.id);
     }
   }
 
   const availableProducts = (products ?? []) as ProductRecord[];
-  const storeCategories = Array.from(
-    new Set(
-      availableProducts
-        .map((product) => product.category?.trim() ?? "")
-        .filter(Boolean),
-    ),
-  );
+  const storeCategories = Array.from(new Set(availableProducts.map((p) => p.category?.trim() ?? "").filter(Boolean)));
   const q = query.q?.trim().toLowerCase() ?? "";
   const selectedCategory = query.category?.trim() ?? "";
-  const filteredProducts = availableProducts.filter((product) => {
-    if (selectedCategory && (product.category ?? "") !== selectedCategory) return false;
+  const filteredProducts = availableProducts.filter((p) => {
+    if (selectedCategory && (p.category ?? "") !== selectedCategory) return false;
     if (!q) return true;
-    const name = product.name.toLowerCase();
-    const description = (product.description ?? "").toLowerCase();
-    const category = (product.category ?? "").toLowerCase();
-    return name.includes(q) || description.includes(q) || category.includes(q);
+    return `${p.name} ${p.description ?? ""} ${p.category ?? ""}`.toLowerCase().includes(q);
   });
+
   const template = normalizeStoreTemplate(store.store_template);
-  const bodyMotionClass =
-    template === "fashion_editorial"
-      ? "storefront-anim-fade"
-      : template === "modern_grid"
-        ? "storefront-anim-slide"
-        : template === "lifestyle_showcase"
-          ? "storefront-anim-zoom"
-          : "storefront-anim-fade";
   const themePreset = normalizeThemePreset(store.store_theme_preset);
   const theme = getThemeByPreset(themePreset);
   const config = normalizeStorefrontConfig(store.storefront_config);
-  const sectionsOrder = config.sections_order;
   const primaryColor = store.theme_color ?? theme.primary;
+  const surfaceColor = theme.surface;
   const appBaseUrl = (process.env.NEXTAUTH_URL || "http://localhost:3000").replace(/\/$/, "");
   const storeUrl = `${appBaseUrl}/store/${slug}`;
-  const bannerUrls = config.banner_urls.length > 0
-    ? config.banner_urls
-    : (config.secondary_banner_url ? [config.secondary_banner_url] : []);
-  const mobileEdgeBannerClass =
-    "h-44 w-screen max-w-none relative left-1/2 right-1/2 -mx-[50vw] rounded-none border-0 shadow-none sm:static sm:left-auto sm:right-auto sm:mx-0 sm:h-52 sm:w-full sm:max-w-full sm:rounded-xl sm:border sm:border-slate-200 sm:shadow-sm";
-  const mobileEdgeBannerTallClass =
-    "h-56 w-screen max-w-none relative left-1/2 right-1/2 -mx-[50vw] rounded-none border-0 shadow-none sm:static sm:left-auto sm:right-auto sm:mx-0 sm:w-full sm:max-w-full sm:rounded-xl sm:border sm:border-slate-200 sm:shadow-sm";
+  const bannerUrls = config.banner_urls.length > 0 ? config.banner_urls : config.secondary_banner_url ? [config.secondary_banner_url] : [];
+
   const storeJsonLd = {
     "@context": "https://schema.org",
     "@type": "Store",
@@ -316,295 +737,30 @@ export default async function StorePage({ params, searchParams }: StorePageProps
     },
     aggregateRating:
       typeof store.rating_avg === "number" && store.rating_count > 0
-        ? {
-            "@type": "AggregateRating",
-            ratingValue: store.rating_avg,
-            reviewCount: store.rating_count,
-          }
+        ? { "@type": "AggregateRating", ratingValue: store.rating_avg, reviewCount: store.rating_count }
         : undefined,
   };
 
-  const storefrontControls = (
-    <section className="space-y-2 rounded-2xl border border-slate-200 bg-white p-2.5 shadow-sm sm:space-y-3 sm:p-4">
-      <form className="flex flex-nowrap items-center gap-2" action={`/store/${slug}`}>
-        <input
-          name="q"
-          defaultValue={query.q ?? ""}
-          placeholder="Search this store..."
-          className="min-w-0 flex-1 rounded-full border border-slate-200 px-3 py-2 text-sm outline-none ring-emerald-300 focus:ring-2 sm:px-4"
-        />
-        {selectedCategory ? <input type="hidden" name="category" value={selectedCategory} /> : null}
-        <button className="shrink-0 rounded-full bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700 sm:px-4">
-          Search
-        </button>
-      </form>
-      <div className="flex gap-2 overflow-x-auto pb-1">
-        <Link
-          href={`/store/${slug}${query.q ? `?q=${encodeURIComponent(query.q)}` : ""}`}
-          className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold ${
-            !selectedCategory
-              ? "border-emerald-600 bg-emerald-600 text-white"
-              : "border-slate-200 bg-white text-slate-700"
-          }`}
-        >
-          All
-        </Link>
-        {storeCategories.map((category) => (
-          <Link
-            key={category}
-            href={`/store/${slug}?category=${encodeURIComponent(category)}${query.q ? `&q=${encodeURIComponent(query.q)}` : ""}`}
-            className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold ${
-              selectedCategory === category
-                ? "border-emerald-600 bg-emerald-600 text-white"
-                : "border-slate-200 bg-white text-slate-700"
-            }`}
-          >
-            {category}
-          </Link>
-        ))}
-      </div>
-    </section>
-  );
+  const props: TemplateProps = {
+    store,
+    products: filteredProducts,
+    nicheNames,
+    primaryColor,
+    surfaceColor,
+    config,
+    categories: storeCategories,
+    selectedCategory,
+    query: q,
+    isLoggedIn: Boolean(session?.user?.id),
+    activeUserId: session?.user?.id ?? null,
+    isFollowing,
+    storeUrl,
+    bannerUrls,
+    storeJsonLd,
+  };
 
-  if (template === "fashion_editorial") {
-    return (
-      <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(storeJsonLd) }}
-      />
-      <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 bg-white px-0 py-0 sm:px-6 sm:pb-6 sm:pt-0">
-        <StoreHero
-          store={store}
-          primaryColor={primaryColor}
-          nicheNames={nicheNames}
-          isLoggedIn={Boolean(session?.user?.id)}
-          activeUserId={session?.user?.id ?? null}
-          isFollowing={isFollowing}
-          storeUrl={storeUrl}
-          heroTitle={config.hero_title}
-          heroSubtitle={config.hero_subtitle}
-          template={template}
-        />
-        <div className={`px-2 pt-2 sm:px-0 sm:pt-4 ${bodyMotionClass}`}>{storefrontControls}</div>
-        {sectionsOrder.map((section) => {
-          if (section === "featured_products") {
-            return (
-              <section key={section} className="space-y-4">
-                <h3 className="text-lg font-semibold text-slate-900">Collections</h3>
-                <div className={bodyMotionClass}>
-                  <ProductGrid products={filteredProducts} store={store} template={template} />
-                </div>
-              </section>
-            );
-          }
-          if (section === "promo_strip") {
-            return (
-              <section key={section} className="mx-0 space-y-3 rounded-none border border-slate-200 bg-slate-50 p-4 sm:rounded-xl lg:hidden">
-                <p className="text-sm font-semibold text-slate-700">{config.promo_text}</p>
-                <BannerCarousel banners={bannerUrls} storeName={store.name} className={mobileEdgeBannerClass} />
-              </section>
-            );
-          }
-          return (
-            <section key={section} id="vendor-reviews">
-              <VendorReviewsSection
-                storeId={store.id}
-                initialRatingAvg={store.rating_avg}
-                initialRatingCount={store.rating_count}
-              />
-            </section>
-          );
-        })}
-      </main>
-      </>
-    );
-  }
-
-  if (template === "lifestyle_showcase") {
-    return (
-      <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(storeJsonLd) }}
-      />
-      <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 bg-slate-50 px-0 py-0 sm:px-6 sm:pb-6 sm:pt-0">
-        <StoreHero
-          store={store}
-          primaryColor={primaryColor}
-          nicheNames={nicheNames}
-          isLoggedIn={Boolean(session?.user?.id)}
-          activeUserId={session?.user?.id ?? null}
-          isFollowing={isFollowing}
-          storeUrl={storeUrl}
-          heroTitle={config.hero_title}
-          heroSubtitle={config.hero_subtitle}
-          template={template}
-        />
-        <div className={`px-2 pt-2 sm:px-0 sm:pt-4 ${bodyMotionClass}`}>{storefrontControls}</div>
-        {sectionsOrder.map((section) => {
-          if (section === "featured_products") {
-            return (
-              <section key={section} className="space-y-4">
-                <h3 className="text-lg font-semibold text-slate-900">Featured Products</h3>
-                <div className={bodyMotionClass}>
-                  <ProductGrid products={filteredProducts} store={store} template={template} />
-                </div>
-              </section>
-            );
-          }
-          if (section === "promo_strip") {
-            return (
-              <section key={section} className="mx-0 grid gap-4 px-0 lg:hidden">
-                <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Promo</p>
-                  <p className="mt-2 text-sm text-slate-700">{config.promo_text}</p>
-                </article>
-                <BannerCarousel banners={bannerUrls} storeName={store.name} className={mobileEdgeBannerTallClass} />
-              </section>
-            );
-          }
-          return (
-            <section key={section} id="vendor-reviews">
-              <VendorReviewsSection
-                storeId={store.id}
-                initialRatingAvg={store.rating_avg}
-                initialRatingCount={store.rating_count}
-              />
-            </section>
-          );
-        })}
-      </main>
-      </>
-    );
-  }
-
-  if (template === "modern_grid") {
-    return (
-      <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(storeJsonLd) }}
-      />
-      <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 bg-slate-100 px-0 py-0 sm:px-6 sm:pb-6 sm:pt-0">
-        <StoreHero
-          store={store}
-          primaryColor={primaryColor}
-          nicheNames={nicheNames}
-          isLoggedIn={Boolean(session?.user?.id)}
-          activeUserId={session?.user?.id ?? null}
-          isFollowing={isFollowing}
-          storeUrl={storeUrl}
-          heroTitle={config.hero_title}
-          heroSubtitle={config.hero_subtitle}
-          template={template}
-        />
-        <div className={`px-2 pt-2 sm:px-0 sm:pt-4 ${bodyMotionClass}`}>{storefrontControls}</div>
-        <section className="mx-2 grid gap-4 sm:mx-0 lg:grid-cols-[260px_1fr]">
-          <aside className="space-y-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <p className="text-sm font-semibold text-slate-800">Browse</p>
-            <p className="text-xs text-slate-600">{config.promo_text}</p>
-            <div className="space-y-2 pt-2">
-              {["All products", "Top rated", "Recently added", "On discount"].map((item) => (
-                <div key={item} className="rounded-md bg-slate-50 px-3 py-2 text-sm text-slate-700">
-                  {item}
-                </div>
-              ))}
-            </div>
-          </aside>
-          <div className="space-y-4">
-            {sectionsOrder.map((section) => {
-              if (section === "featured_products") {
-                return (
-                  <div key={section}>
-                    <div className={bodyMotionClass}>
-                      <ProductGrid products={filteredProducts} store={store} template={template} />
-                    </div>
-                  </div>
-                );
-              }
-              if (section === "promo_strip") {
-                return (
-                  <section key={section} className="mx-0 space-y-3 rounded-none border border-slate-200 bg-white p-4 shadow-sm sm:rounded-xl lg:hidden">
-                    <p className="text-sm text-slate-700">{config.promo_text}</p>
-                    <BannerCarousel banners={bannerUrls} storeName={store.name} className={mobileEdgeBannerClass} />
-                  </section>
-                );
-              }
-              return (
-                <section key={section} id="vendor-reviews">
-                  <VendorReviewsSection
-                    storeId={store.id}
-                    initialRatingAvg={store.rating_avg}
-                    initialRatingCount={store.rating_count}
-                  />
-                </section>
-              );
-            })}
-          </div>
-        </section>
-      </main>
-      </>
-    );
-  }
-
-  // Default: grocery promo
-  return (
-    <>
-    <script
-      type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(storeJsonLd) }}
-    />
-    <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 bg-slate-50 px-0 py-0 sm:px-6 sm:pb-6 sm:pt-0">
-      <StoreHero
-        store={store}
-        primaryColor={primaryColor}
-        nicheNames={nicheNames}
-        isLoggedIn={Boolean(session?.user?.id)}
-        activeUserId={session?.user?.id ?? null}
-        isFollowing={isFollowing}
-        storeUrl={storeUrl}
-        heroTitle={config.hero_title}
-        heroSubtitle={config.hero_subtitle}
-        template={template}
-      />
-      <div className={`px-2 pt-2 sm:px-0 sm:pt-4 ${bodyMotionClass}`}>{storefrontControls}</div>
-
-      {sectionsOrder.map((section) => {
-        if (section === "featured_products") {
-          return (
-            <section key={section} className="space-y-4">
-              <div className="flex items-center justify-between gap-2">
-                <h3 className="text-lg font-semibold text-slate-900">Top products</h3>
-                <Link href="/" className="text-sm font-medium text-emerald-700 hover:underline">
-                  Back home
-                </Link>
-              </div>
-              <div className={bodyMotionClass}>
-                <ProductGrid products={filteredProducts} store={store} template={template} />
-              </div>
-            </section>
-          );
-        }
-        if (section === "promo_strip") {
-          return (
-            <section key={section} className="mx-0 space-y-3 rounded-none border border-slate-200 bg-white p-4 shadow-sm sm:rounded-xl lg:hidden">
-              <p className="text-sm font-semibold text-slate-800">{config.promo_text}</p>
-              <BannerCarousel banners={bannerUrls} storeName={store.name} className={mobileEdgeBannerClass} />
-            </section>
-          );
-        }
-        return (
-          <section key={section} id="vendor-reviews">
-            <VendorReviewsSection
-              storeId={store.id}
-              initialRatingAvg={store.rating_avg}
-              initialRatingCount={store.rating_count}
-            />
-          </section>
-        );
-      })}
-    </main>
-    </>
-  );
+  if (template === "fashion_editorial") return <EditorialTemplate {...props} />;
+  if (template === "lifestyle_showcase") return <ShowcaseTemplate {...props} />;
+  if (template === "modern_grid") return <GridTemplate {...props} />;
+  return <MarketTemplate {...props} />;
 }
