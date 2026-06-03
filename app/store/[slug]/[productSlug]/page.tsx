@@ -11,7 +11,7 @@ import { StarRating } from "@/components/store/star-rating";
 import { formatNaira, formatProductPathSegment, parseProductPathSegment } from "@/lib/format";
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
 import type { ProductRecord, StoreRecord } from "@/types";
-import { ArrowLeftIcon } from "lucide-react";
+import { ArrowLeftIcon, PackageCheck, Share2, Store } from "lucide-react";
 
 type ProductPageProps = {
   params: Promise<{ slug: string; productSlug: string }>;
@@ -80,9 +80,7 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
   return {
     title: `${product?.name || "Product"} | ${label}`,
     description: desc,
-    alternates: {
-      canonical,
-    },
+    alternates: { canonical },
     openGraph: {
       title: `${product?.name || "Product"} | ${label} | Sellee`,
       description: desc,
@@ -113,7 +111,6 @@ export default async function StoreProductPage({ params, searchParams }: Product
     .maybeSingle<StoreRecord>();
 
   if (!store) {
-    console.log("Product page debug: store not found", { slug, productSlug, parsedPath });
     notFound();
   }
 
@@ -141,9 +138,9 @@ export default async function StoreProductPage({ params, searchParams }: Product
   }
 
   if (!product) {
-    console.log("Product page debug: product not found", { slug, productSlug, parsedPath });
     notFound();
   }
+
   const canonicalProductRef = formatProductPathSegment({
     id: product.id,
     slug: product.slug,
@@ -183,7 +180,6 @@ export default async function StoreProductPage({ params, searchParams }: Product
 
   const vendorProducts = (vendorProductsData ?? []) as ProductRecord[];
   const relatedProductsRaw = (relatedProductsData ?? []) as ProductRecord[];
-
   const relatedStoreIds = [...new Set(relatedProductsRaw.map((item) => item.store_id))];
 
   const { data: relatedStoresData } = relatedStoreIds.length
@@ -217,10 +213,6 @@ export default async function StoreProductPage({ params, searchParams }: Product
     .filter((item): item is ProductWithStore => item !== null)
     .slice(0, 8);
 
-  const textTitleClass = "text-slate-900";
-  const textMutedClass = "text-slate-600";
-  const articleClass = "overflow-hidden rounded-1xl border border-slate-200 bg-white shadow-sm";
-  const storeLocation = [store.city, store.state, store.country].filter(Boolean).join(", ");
   const appBaseUrl = (process.env.NEXTAUTH_URL || "http://localhost:3000").replace(/\/$/, "");
   const storeUrl = `${appBaseUrl}/store/${store.slug}`;
   const productPathRef = formatProductPathSegment({
@@ -229,6 +221,8 @@ export default async function StoreProductPage({ params, searchParams }: Product
     name: product.name,
   });
   const productUrl = `${appBaseUrl}/store/${store.slug}/${productPathRef}`;
+  const storeLocation = [store.city, store.state, store.country].filter(Boolean).join(", ");
+
   const productJsonLd = {
     "@context": "https://schema.org",
     "@type": "Product",
@@ -236,16 +230,16 @@ export default async function StoreProductPage({ params, searchParams }: Product
     description: product.description || undefined,
     image: [product.image_url, ...(product.image_urls ?? [])].filter(Boolean),
     category: product.category || undefined,
-    brand: {
-      "@type": "Brand",
-      name: store.name,
-    },
+    brand: { "@type": "Brand", name: store.name },
     offers: {
       "@type": "Offer",
       url: productUrl,
       priceCurrency: "NGN",
       price: Number(product.price),
-      availability: product.stock_count > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+      availability:
+        product.stock_count > 0
+          ? "https://schema.org/InStock"
+          : "https://schema.org/OutOfStock",
     },
     aggregateRating:
       typeof product.rating_avg === "number" && product.rating_count > 0
@@ -260,55 +254,163 @@ export default async function StoreProductPage({ params, searchParams }: Product
   const from = Array.isArray(query.from) ? query.from[0] : query.from;
   const backTarget =
     from === "home"
-      ? { href: "/", label: "Back to home" }
+      ? { href: "/", label: "Home" }
       : from === "marketplace"
-        ? { href: "/marketplace", label: "Back to marketplace" }
+        ? { href: "/marketplace", label: "Marketplace" }
         : from === "vendors"
-          ? { href: "/vendors", label: "Back to vendors" }
-          : { href: `/store/${store.slug}`, label: "Back to store" };
+          ? { href: "/vendors", label: "Vendors" }
+          : { href: `/store/${store.slug}`, label: store.name };
+
+  const isInStock = product.stock_count > 0;
 
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 bg-slate-50 px-2 py-6 sm:px-4 sm:py-8">
+    <main className="min-h-screen bg-[#f8f7f5]">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }}
       />
-      <section className="grid gap-6 lg:grid-cols-[1.35fr_0.9fr]">
-        <article className={articleClass}>
-          <ProductMediaGallery
-            name={product.name}
-            imageUrl={product.image_url}
-            imageUrls={product.image_urls}
-          />
-          
-        </article>
 
-        <div className="lg:sticky lg:top-6 lg:self-start">
-          <div className="space-y-4 p-5 sm:p-6">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div className="space-y-2">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">
-                  {product.category || "Featured Product"}
-                </p>
-                <h1 className={`text-2xl font-black tracking-tight sm:text-3xl ${textTitleClass}`}>{product.name}</h1>
+      {/* ── Breadcrumb bar ── */}
+      <div className="border-b border-stone-200 bg-white">
+        <div className="mx-auto flex max-w-7xl items-center gap-1.5 px-4 py-3 text-xs text-stone-500 sm:px-6">
+          <Link href={backTarget.href} className="flex items-center gap-1 font-medium text-stone-700 transition-colors hover:text-emerald-700">
+            <ArrowLeftIcon className="h-3.5 w-3.5" />
+            {backTarget.label}
+          </Link>
+          <span className="text-stone-300">/</span>
+          {product.category && (
+            <>
+              <span className="text-stone-500">{product.category}</span>
+              <span className="text-stone-300">/</span>
+            </>
+          )}
+          <span className="max-w-[180px] truncate font-medium text-stone-800 sm:max-w-xs">{product.name}</span>
+        </div>
+      </div>
+
+      {/* ── Hero product section ── */}
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-12">
+        <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:gap-14 xl:gap-20">
+
+          {/* Left — Media gallery */}
+          <div className="relative">
+            <div className="overflow-hidden rounded-2xl bg-white shadow-[0_4px_32px_rgba(0,0,0,0.08)] ring-1 ring-stone-100">
+              <ProductMediaGallery
+                name={product.name}
+                imageUrl={product.image_url}
+                imageUrls={product.image_urls}
+              />
+            </div>
+            {/* Floating category pill on image */}
+            {product.category && (
+              <span className="absolute left-4 top-4 z-10 rounded-full bg-white/90 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-emerald-700 shadow-sm backdrop-blur-sm ring-1 ring-emerald-100">
+                {product.category}
+              </span>
+            )}
+          </div>
+
+          {/* Right — Product info */}
+          <div className="flex flex-col gap-0 lg:sticky lg:top-8 lg:self-start">
+
+            {/* Store chip */}
+            <div className="mb-4 flex items-center justify-between">
+              <Link
+                href={`/store/${store.slug}`}
+                className="group flex items-center gap-2 rounded-full border border-stone-200 bg-white px-3 py-1.5 shadow-sm transition-all hover:border-emerald-300 hover:shadow-md"
+              >
+                {store.logo_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={store.logo_url} alt={store.name} className="h-5 w-5 rounded-full object-cover" />
+                ) : (
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-100">
+                    <Store className="h-3 w-3 text-emerald-700" />
+                  </span>
+                )}
+                <span className="text-xs font-semibold text-stone-700 group-hover:text-emerald-700">{store.name}</span>
+                {storeLocation && (
+                  <span className="hidden text-[10px] text-stone-400 sm:inline">· {storeLocation}</span>
+                )}
+              </Link>
+
+              {/* Share + Wishlist actions */}
+              <div className="flex items-center gap-2">
+                <WishlistButton productId={product.id} />
+                <SocialShareActions
+                  mode="menu"
+                  url={productUrl}
+                  title={`${product.name} - ${store.name}`}
+                  text={`Found this on Sellee: ${product.name} at ${store.name}.`}
+                  compact
+                  align="right"
+                  triggerLabel="Share"
+                />
               </div>
-              <p className="rounded-full bg-slate-100 px-4 py-2 text-lg font-semibold text-slate-800">
+            </div>
+
+            {/* Product name */}
+            <h1 className="text-3xl font-black tracking-tight text-stone-900 sm:text-4xl lg:text-[2.6rem] lg:leading-[1.1]">
+              {product.name}
+            </h1>
+
+            {/* Rating row */}
+            <div className="mt-3 flex items-center gap-3">
+              <StarRating value={product.rating_avg} count={product.rating_count} size="md" accent="yellow" />
+              {product.rating_count > 0 && (
+                <span className="text-xs text-stone-400">({product.rating_count} reviews)</span>
+              )}
+            </div>
+
+            {/* Price */}
+            <div className="mt-5 flex items-baseline gap-3">
+              <span className="text-4xl font-black tracking-tight text-stone-900">
                 {formatNaira(Number(product.price))}
-              </p>
+              </span>
             </div>
-            {/* Wishlist button */}
-            <div className="shrink-0">
-              <WishlistButton productId={product.id} />
+
+            {/* Divider */}
+            <div className="my-5 h-px bg-gradient-to-r from-stone-200 via-stone-100 to-transparent" />
+
+            {/* Description */}
+            <p className="text-sm leading-relaxed text-stone-600">
+              {product.description ?? "No description added for this product yet."}
+            </p>
+
+            {/* Stock + badge row */}
+            <div className="mt-5 flex flex-wrap items-center gap-2">
+              <span
+                className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold ${
+                  isInStock
+                    ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200"
+                    : "bg-red-50 text-red-600 ring-1 ring-red-200"
+                }`}
+              >
+                <PackageCheck className="h-3.5 w-3.5" />
+                {isInStock ? `${product.stock_count} in stock` : "Out of stock"}
+              </span>
+              <span className="rounded-full bg-stone-100 px-3 py-1.5 text-xs font-medium text-stone-600 ring-1 ring-stone-200">
+                WhatsApp order
+              </span>
             </div>
-            <StarRating
-              value={product.rating_avg}
-              count={product.rating_count}
-              size="md"
-              accent="yellow"
-            />
-            <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-              <div className="flex items-start justify-between gap-3">
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Vendor</p>
+
+            {/* Vendor mini-card */}
+            <div className="mt-5 overflow-hidden rounded-xl border border-stone-100 bg-white shadow-sm">
+              <div className="flex items-center justify-between px-4 py-3">
+                <div className="flex items-center gap-3">
+                  {store.logo_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={store.logo_url} alt={store.name} className="h-9 w-9 rounded-full object-cover ring-2 ring-stone-100" />
+                  ) : (
+                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-50 ring-2 ring-stone-100">
+                      <Store className="h-4 w-4 text-emerald-700" />
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-sm font-bold text-stone-800">{store.name}</p>
+                    <div className="mt-0.5">
+                      <StarRating value={store.rating_avg} count={store.rating_count} size="sm" accent="yellow" />
+                    </div>
+                  </div>
+                </div>
                 <SocialShareActions
                   mode="menu"
                   url={storeUrl}
@@ -319,127 +421,130 @@ export default async function StoreProductPage({ params, searchParams }: Product
                   triggerLabel="Share store"
                 />
               </div>
-              <p className={`text-sm ${textMutedClass}`}>{store.name}</p>
-              {storeLocation ? <p className={`mt-1 text-xs ${textMutedClass}`}>{storeLocation}</p> : null}
-              <div className="mt-1">
-                <StarRating
-                  value={store.rating_avg}
-                  count={store.rating_count}
-                  size="sm"
-                  accent="yellow"
-                />
-              </div>
             </div>
-            <p className={`text-sm leading-6 ${textMutedClass}`}>
-              {product.description ?? "No description added for this product yet."}
-            </p>
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs text-slate-600">
-                Stock: {product.stock_count}
-              </span>
-              <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs text-slate-600">
-                Ready for WhatsApp order
-              </span>
-            </div>
-            <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-              <div className="flex items-start justify-between gap-3">
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
-                  Share Product
-                </p>
-                <SocialShareActions
-                  mode="menu"
-                  url={productUrl}
-                  title={`${product.name} - ${store.name}`}
-                  text={`Found this on Sellee: ${product.name} at ${store.name}.`}
-                  compact
-                  align="right"
-                  triggerLabel="Share product"
-                />
-              </div>
+
+            {/* CTA */}
+            <div className="mt-5">
+              <OrderButton
+                storeId={store.id}
+                productId={product.id}
+                productName={product.name}
+                productPrice={Number(product.price)}
+                storeName={store.name}
+                whatsappNumber={store.whatsapp_number}
+              />
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <OrderButton
-              storeId={store.id}
+        </div>
+      </div>
+
+      {/* ── Reviews ── */}
+      <div className="mx-auto max-w-7xl px-4 pb-2 sm:px-6">
+        <div className="rounded-2xl border border-stone-200 bg-white shadow-sm">
+          {/* Section header */}
+          <div className="border-b border-stone-100 px-5 py-5 sm:px-7">
+            <h2 className="text-lg font-bold text-stone-900">Customer Reviews</h2>
+          </div>
+          {/* Reviews content — constrained width so it doesn't sprawl */}
+          <div className="px-5 py-6 sm:px-7 lg:max-w-3xl">
+            <ProductReviewsSection
               productId={product.id}
-              productName={product.name}
-              productPrice={Number(product.price)}
-              storeName={store.name}
-              whatsappNumber={store.whatsapp_number}
+              initialRatingAvg={product.rating_avg}
+              initialRatingCount={product.rating_count}
             />
           </div>
         </div>
-      </section>
+      </div>
 
-      <ProductReviewsSection
-        productId={product.id}
-        initialRatingAvg={product.rating_avg}
-        initialRatingCount={product.rating_count}
-      />
-
-      <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-base font-bold text-slate-900 sm:text-xl">More From {store.name}</h2>
-          <Link href={`/store/${store.slug}`} className="text-xs font-semibold text-emerald-700 hover:underline sm:text-sm">
-            View store
-          </Link>
-        </div>
-        {vendorProducts.length === 0 ? (
-          <p className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-            No other products from this vendor yet.
-          </p>
-        ) : (
-          <div className="-mx-1 flex snap-x snap-mandatory gap-3 overflow-x-auto px-1 pb-2">
-            {vendorProducts.map((item) => (
-              <div
-                key={item.id}
-                className="w-[46%] min-w-[170px] max-w-[220px] shrink-0 snap-start sm:w-full sm:max-w-[320px]"
-              >
-                <ProductShowcaseCard
-                  product={item}
-                  store={{
-                    name: store.name,
-                    slug: store.slug,
-                    logo_url: store.logo_url,
-                    rating_avg: store.rating_avg,
-                    rating_count: store.rating_count,
-                  }}
-                  variant="store"
-                />
-              </div>
-            ))}
+      {/* ── More from this vendor ── */}
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+        <div className="rounded-2xl border border-stone-200 bg-white shadow-sm">
+          <div className="flex items-center justify-between border-b border-stone-100 px-5 py-5 sm:px-7">
+            <div>
+              <h2 className="text-lg font-bold text-stone-900">More from {store.name}</h2>
+              <p className="mt-0.5 text-xs text-stone-400">Other products by this vendor</p>
+            </div>
+            <Link
+              href={`/store/${store.slug}`}
+              className="rounded-full border border-stone-200 px-4 py-1.5 text-xs font-semibold text-stone-600 transition-all hover:border-emerald-300 hover:text-emerald-700"
+            >
+              View store
+            </Link>
           </div>
-        )}
-      </section>
 
-      <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-base font-bold text-slate-900 sm:text-xl">Related Products</h2>
-          <Link href="/marketplace" className="text-xs font-semibold text-emerald-700 hover:underline sm:text-sm">
-            Explore marketplace
-          </Link>
-        </div>
-        {relatedProducts.length === 0 ? (
-          <p className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-            Related products will appear here as more vendors list this category.
-          </p>
-        ) : (
-          <div className="-mx-1 flex snap-x snap-mandatory gap-3 overflow-x-auto px-1 pb-2">
-            {relatedProducts.map((item) => (
-              <div
-                key={item.id}
-                className="w-[46%] min-w-[170px] max-w-[220px] shrink-0 snap-start sm:w-full sm:max-w-[320px]"
-              >
-                <ProductShowcaseCard
-                  product={item}
-                  store={item.store}
-                  variant="marketplace"
-                />
+          <div className="p-4 sm:p-6">
+            {vendorProducts.length === 0 ? (
+              <p className="rounded-xl border border-dashed border-stone-200 bg-stone-50 px-5 py-6 text-center text-sm text-stone-400">
+                No other products from this vendor yet.
+              </p>
+            ) : (
+              <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                {vendorProducts.map((item) => (
+                  <div
+                    key={item.id}
+                    className="w-[47%] min-w-[160px] max-w-[210px] shrink-0 snap-start sm:max-w-[240px]"
+                  >
+                    <ProductShowcaseCard
+                      product={item}
+                      store={{
+                        name: store.name,
+                        slug: store.slug,
+                        logo_url: store.logo_url,
+                        rating_avg: store.rating_avg,
+                        rating_count: store.rating_count,
+                      }}
+                      variant="store"
+                    />
+                  </div>
+                ))}
               </div>
-            ))}
+            )}
           </div>
-        )}
-      </section>
+        </div>
+      </div>
+
+      {/* ── Related products ── */}
+      <div className="mx-auto max-w-7xl px-4 pb-14 sm:px-6">
+        <div className="rounded-2xl border border-stone-200 bg-white shadow-sm">
+          <div className="flex items-center justify-between border-b border-stone-100 px-5 py-5 sm:px-7">
+            <div>
+              <h2 className="text-lg font-bold text-stone-900">You may also like</h2>
+              {product.category && (
+                <p className="mt-0.5 text-xs text-stone-400">More in {product.category}</p>
+              )}
+            </div>
+            <Link
+              href="/marketplace"
+              className="rounded-full border border-stone-200 px-4 py-1.5 text-xs font-semibold text-stone-600 transition-all hover:border-emerald-300 hover:text-emerald-700"
+            >
+              Marketplace
+            </Link>
+          </div>
+
+          <div className="p-4 sm:p-6">
+            {relatedProducts.length === 0 ? (
+              <p className="rounded-xl border border-dashed border-stone-200 bg-stone-50 px-5 py-6 text-center text-sm text-stone-400">
+                Related products will appear here as more vendors list this category.
+              </p>
+            ) : (
+              <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                {relatedProducts.map((item) => (
+                  <div
+                    key={item.id}
+                    className="w-[47%] min-w-[160px] max-w-[210px] shrink-0 snap-start sm:max-w-[240px]"
+                  >
+                    <ProductShowcaseCard
+                      product={item}
+                      store={item.store}
+                      variant="marketplace"
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
     </main>
   );
 }

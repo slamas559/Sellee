@@ -111,6 +111,19 @@ export async function sendWelcomeEmail({
       }),
     });
 
+    // Development-only debug logging to surface Resend responses without
+    // affecting production behavior. Keeps the function non-blocking.
+    if (process.env.NODE_ENV === "development") {
+      try {
+        // Use console.debug so logs can be filtered; include both data and
+        // error for easier troubleshooting during local testing.
+        // eslint-disable-next-line no-console
+        console.debug("[sendWelcomeEmail] resend response:", { data, error });
+      } catch (logErr) {
+        // Swallow logging errors to avoid interfering with email flow.
+      }
+    }
+
     if (error) {
       return { success: false, error };
     }
