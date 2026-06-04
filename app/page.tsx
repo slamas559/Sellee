@@ -197,11 +197,13 @@ async function getMarketplaceData(q?: string, category?: string, nicheParam?: st
     );
   }
 
-  // If a niche slug is provided, resolve its categories and filter products
+  // If a niche id or slug is provided, resolve its categories and filter products
   if (nicheParam) {
-    const selectedNiche = (niches ?? []).find(
-      (n) => String(n.slug ?? "").toLowerCase() === String(nicheParam).toLowerCase(),
-    );
+    const selectedNiche = (niches ?? []).find((n) => {
+      const idMatch = String(n.id ?? "").toLowerCase() === String(nicheParam).toLowerCase();
+      const slugMatch = String(n.slug ?? "").toLowerCase() === String(nicheParam).toLowerCase();
+      return idMatch || slugMatch;
+    });
     if (selectedNiche) {
       const categoriesInSelectedNiche = ((nicheCategories ?? []) as Array<{ niche_id: string; name: string }>)
         .filter((row) => row.niche_id === selectedNiche.id)
@@ -360,55 +362,53 @@ export default async function Home({ searchParams }: HomeProps) {
       {botNumber ? <WhatsAppBotAccess botNumber={botNumber} /> : null}
 
       <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
-        <div className="flex items-center justify-between mb-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-lg font-bold text-slate-900 sm:text-xl">Browse Categories</h2>
-          {category ? (
-            <Link href={q ? `/?q=${encodeURIComponent(q)}` : "/"} className="text-sm font-medium text-emerald-700 hover:underline">
-              Clear filter
+          {niche ? (
+            <Link href={q ? `/search?q=${encodeURIComponent(q)}` : `/search`} className="text-sm font-medium text-emerald-700 hover:underline">
+              Clear niche
             </Link>
           ) : (
-            <Link href="/marketplace" className="text-sm font-medium text-emerald-700 hover:underline">
-              View all
+            <Link href="/search" className="text-sm font-medium text-emerald-700 hover:underline">
+              Browse marketplace
             </Link>
           )}
         </div>
-
-        <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8">
+        <div className="mt-4 -mx-1 flex snap-x snap-mandatory no-scrollbar gap-2 overflow-x-auto px-1 pb-1 sm:mx-0 sm:px-0">
           {categories.map((item) => {
+            const nicheObj = (niches ?? []).find((n) => String(n.name ?? "").toLowerCase() === String(item).toLowerCase());
+            const nicheId = nicheObj?.id ?? nicheObj?.slug ?? item;
             const href = q
-              ? `/?q=${encodeURIComponent(q)}&category=${encodeURIComponent(item)}`
-              : `/?category=${encodeURIComponent(item)}`;
-            const isActive = category?.toLowerCase() === item.toLowerCase();
+              ? `/search?q=${encodeURIComponent(q)}&niche=${encodeURIComponent(nicheId)}&title=${encodeURIComponent(item)}`
+              : `/search?niche=${encodeURIComponent(nicheId)}&title=${encodeURIComponent(item)}`;
+            const isActive = niche?.toLowerCase() === String(nicheId).toLowerCase();
 
             return (
               <Link
                 key={item}
                 href={href}
-                className={`group flex flex-col items-center gap-2.5 rounded-2xl border p-3 pb-2.5 text-center transition ${
+                className={`group inline-flex shrink-0 snap-start items-center gap-2 rounded-2xl border px-2.5 py-2 pr-3 text-sm font-semibold transition ${
                   isActive
-                    ? "border-emerald-500 bg-emerald-50"
-                    : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
+                    ? "border-emerald-600 bg-emerald-600 text-white shadow-sm"
+                    : "border-slate-200 bg-white text-slate-700 hover:border-emerald-200 hover:bg-emerald-50"
                 }`}
               >
-                <span className="relative h-12 w-12 overflow-hidden rounded-xl">
+                <span className={`relative h-8 w-8 overflow-hidden rounded-xl ring-1 ${isActive ? "ring-white/40" : "ring-slate-200"}`}>
                   <Image
                     src={categoryImageUrl(item)}
                     alt={`${item} category`}
                     fill
                     className="object-cover transition group-hover:scale-105"
-                    sizes="48px"
+                    sizes="32px"
                     unoptimized
                   />
                 </span>
-                <p className={`text-xs font-medium leading-tight ${isActive ? "text-emerald-700" : "text-slate-700"}`}>
-                  {item}
-                </p>
+                {item}
               </Link>
             );
           })}
         </div>
       </section>
-
       <NearbyVendors
         initialVendors={stores.slice(0, 8).map((store) => ({
           ...store,

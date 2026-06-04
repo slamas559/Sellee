@@ -289,7 +289,7 @@ export default async function StoreProductPage({ params, searchParams }: Product
       </div>
 
       {/* ── Hero product section ── */}
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-12">
+      <div className="mx-auto max-w-7xl px-2 py-2 sm:px-6 sm:py-12">
         <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:gap-14 xl:gap-20">
 
           {/* Left — Media gallery */}
@@ -312,84 +312,86 @@ export default async function StoreProductPage({ params, searchParams }: Product
           {/* Right — Product info */}
           <div className="flex flex-col gap-0 lg:sticky lg:top-8 lg:self-start">
 
-            {/* Store chip */}
-            <div className="mb-4 flex items-center justify-between">
-              <Link
-                href={`/store/${store.slug}`}
-                className="group flex items-center gap-2 rounded-full border border-stone-200 bg-white px-3 py-1.5 shadow-sm transition-all hover:border-emerald-300 hover:shadow-md"
-              >
-                {store.logo_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={store.logo_url} alt={store.name} className="h-5 w-5 rounded-full object-cover" />
-                ) : (
-                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-100">
-                    <Store className="h-3 w-3 text-emerald-700" />
-                  </span>
-                )}
-                <span className="text-xs font-semibold text-stone-700 group-hover:text-emerald-700">{store.name}</span>
-                {storeLocation && (
-                  <span className="hidden text-[10px] text-stone-400 sm:inline">· {storeLocation}</span>
-                )}
-              </Link>
+            <div className="p-2">
+              {/* Store chip */}
+              <div className="mb-4 flex items-center justify-between">
+                <Link
+                  href={`/store/${store.slug}`}
+                  className="group flex items-center gap-2 rounded-full border border-stone-200 bg-white px-3 py-1.5 shadow-sm transition-all hover:border-emerald-300 hover:shadow-md"
+                >
+                  {store.logo_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={store.logo_url} alt={store.name} className="h-5 w-5 rounded-full object-cover" />
+                  ) : (
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-100">
+                      <Store className="h-3 w-3 text-emerald-700" />
+                    </span>
+                  )}
+                  <span className="text-xs font-semibold text-stone-700 group-hover:text-emerald-700">{store.name}</span>
+                  {storeLocation && (
+                    <span className="hidden text-[10px] text-stone-400 sm:inline">· {storeLocation}</span>
+                  )}
+                </Link>
 
-              {/* Share + Wishlist actions */}
-              <div className="flex items-center gap-2">
-                <WishlistButton productId={product.id} />
-                <SocialShareActions
-                  mode="menu"
-                  url={productUrl}
-                  title={`${product.name} - ${store.name}`}
-                  text={`Found this on Sellee: ${product.name} at ${store.name}.`}
-                  compact
-                  align="right"
-                  triggerLabel="Share"
-                />
+                {/* Share + Wishlist actions */}
+                <div className="flex items-center gap-2">
+                  <WishlistButton productId={product.id} />
+                  <SocialShareActions
+                    mode="menu"
+                    url={productUrl}
+                    title={`${product.name} - ${store.name}`}
+                    text={`Found this on Sellee: ${product.name} at ${store.name}.`}
+                    compact
+                    align="right"
+                    triggerLabel="Share"
+                  />
+                </div>
               </div>
-            </div>
 
-            {/* Product name */}
-            <h1 className="text-3xl font-black tracking-tight text-stone-900 sm:text-4xl lg:text-[2.6rem] lg:leading-[1.1]">
-              {product.name}
-            </h1>
+              {/* Product name */}
+              <h1 className="text-3xl font-black tracking-tight text-stone-900 sm:text-4xl lg:text-[2.6rem] lg:leading-[1.1]">
+                {product.name}
+              </h1>
 
-            {/* Rating row */}
-            <div className="mt-3 flex items-center gap-3">
-              <StarRating value={product.rating_avg} count={product.rating_count} size="md" accent="yellow" />
-              {product.rating_count > 0 && (
-                <span className="text-xs text-stone-400">({product.rating_count} reviews)</span>
-              )}
-            </div>
+              {/* Rating row */}
+              <div className="mt-3 flex items-center gap-3">
+                <StarRating value={product.rating_avg} count={product.rating_count} size="md" accent="yellow" />
+                {product.rating_count > 0 && (
+                  <span className="text-xs text-stone-400">({product.rating_count} reviews)</span>
+                )}
+              </div>
 
-            {/* Price */}
-            <div className="mt-5 flex items-baseline gap-3">
-              <span className="text-4xl font-black tracking-tight text-stone-900">
-                {formatNaira(Number(product.price))}
-              </span>
-            </div>
+              {/* Price */}
+              <div className="mt-5 flex items-baseline gap-3">
+                <span className="text-4xl font-black tracking-tight text-stone-900">
+                  {formatNaira(Number(product.price))}
+                </span>
+              </div>
 
-            {/* Divider */}
-            <div className="my-5 h-px bg-gradient-to-r from-stone-200 via-stone-100 to-transparent" />
+              {/* Divider */}
+              <div className="my-5 h-px bg-gradient-to-r from-stone-200 via-stone-100 to-transparent" />
 
-            {/* Description */}
-            <p className="text-sm leading-relaxed text-stone-600">
-              {product.description ?? "No description added for this product yet."}
-            </p>
+              {/* Description */}
+              <p className="text-sm leading-relaxed text-stone-600">
+                {product.description ?? "No description added for this product yet."}
+              </p>
 
-            {/* Stock + badge row */}
-            <div className="mt-5 flex flex-wrap items-center gap-2">
-              <span
-                className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold ${
-                  isInStock
-                    ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200"
-                    : "bg-red-50 text-red-600 ring-1 ring-red-200"
-                }`}
-              >
-                <PackageCheck className="h-3.5 w-3.5" />
-                {isInStock ? `${product.stock_count} in stock` : "Out of stock"}
-              </span>
-              <span className="rounded-full bg-stone-100 px-3 py-1.5 text-xs font-medium text-stone-600 ring-1 ring-stone-200">
-                WhatsApp order
-              </span>
+              {/* Stock + badge row */}
+              <div className="mt-5 flex flex-wrap items-center gap-2">
+                <span
+                  className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold ${
+                    isInStock
+                      ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200"
+                      : "bg-red-50 text-red-600 ring-1 ring-red-200"
+                  }`}
+                >
+                  <PackageCheck className="h-3.5 w-3.5" />
+                  {isInStock ? `${product.stock_count} in stock` : "Out of stock"}
+                </span>
+                <span className="rounded-full bg-stone-100 px-3 py-1.5 text-xs font-medium text-stone-600 ring-1 ring-stone-200">
+                  WhatsApp order
+                </span>
+              </div>
             </div>
 
             {/* Vendor mini-card */}
@@ -439,7 +441,7 @@ export default async function StoreProductPage({ params, searchParams }: Product
       </div>
 
       {/* ── Reviews ── */}
-      <div className="mx-auto max-w-7xl px-4 pb-2 sm:px-6">
+      <div className="mx-auto max-w-7xl px-2 pb-2 sm:px-6">
         <div className="rounded-2xl border border-stone-200 bg-white shadow-sm">
           {/* Section header */}
           <div className="border-b border-stone-100 px-5 py-5 sm:px-7">
@@ -457,7 +459,7 @@ export default async function StoreProductPage({ params, searchParams }: Product
       </div>
 
       {/* ── More from this vendor ── */}
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+      <div className="mx-auto max-w-7xl px-2 py-8 sm:px-6">
         <div className="rounded-2xl border border-stone-200 bg-white shadow-sm">
           <div className="flex items-center justify-between border-b border-stone-100 px-5 py-5 sm:px-7">
             <div>
@@ -468,7 +470,7 @@ export default async function StoreProductPage({ params, searchParams }: Product
               href={`/store/${store.slug}`}
               className="rounded-full border border-stone-200 px-4 py-1.5 text-xs font-semibold text-stone-600 transition-all hover:border-emerald-300 hover:text-emerald-700"
             >
-              View store
+              More
             </Link>
           </div>
 
@@ -478,11 +480,11 @@ export default async function StoreProductPage({ params, searchParams }: Product
                 No other products from this vendor yet.
               </p>
             ) : (
-              <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              <div className="flex snap-x snap-mandatory gap-2 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 {vendorProducts.map((item) => (
                   <div
                     key={item.id}
-                    className="w-[47%] min-w-[160px] max-w-[210px] shrink-0 snap-start sm:max-w-[240px]"
+                    className="w-[47%] min-w-[160px] max-w-[240px] shrink-0 snap-start sm:max-w-[250px]"
                   >
                     <ProductShowcaseCard
                       product={item}
@@ -504,7 +506,7 @@ export default async function StoreProductPage({ params, searchParams }: Product
       </div>
 
       {/* ── Related products ── */}
-      <div className="mx-auto max-w-7xl px-4 pb-14 sm:px-6">
+      <div className="mx-auto max-w-7xl px-2 pb-14 sm:px-6">
         <div className="rounded-2xl border border-stone-200 bg-white shadow-sm">
           <div className="flex items-center justify-between border-b border-stone-100 px-5 py-5 sm:px-7">
             <div>
@@ -527,11 +529,11 @@ export default async function StoreProductPage({ params, searchParams }: Product
                 Related products will appear here as more vendors list this category.
               </p>
             ) : (
-              <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              <div className="flex snap-x snap-mandatory gap-2 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 {relatedProducts.map((item) => (
                   <div
                     key={item.id}
-                    className="w-[47%] min-w-[160px] max-w-[210px] shrink-0 snap-start sm:max-w-[240px]"
+                    className="w-[47%] min-w-[160px] max-w-[220px] shrink-0 snap-start sm:max-w-[250px]"
                   >
                     <ProductShowcaseCard
                       product={item}

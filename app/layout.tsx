@@ -21,7 +21,7 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://sellee.store"),
   title: {
     default: "Sellee",
-    template: "Sellee | %s",
+    template: "%s | Sellee",
   },
   description:
     "Sellee is a local marketplace with WhatsApp-powered selling workflows for vendors and customers.",

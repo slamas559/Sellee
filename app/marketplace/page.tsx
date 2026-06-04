@@ -16,12 +16,14 @@ import MarketplaceFilterForm from "@/components/marketplace/marketplace-filter-f
 
 export const metadata: Metadata = {
   title: "Marketplace",
+  description: "Discover products from vendors across various categories and niches. Search for and browse unique items.",
 };
 
 type MarketplacePageProps = {
   searchParams: Promise<{
     q?: string;
     niche?: string;
+    title?: string;
     category?: string;
     sort?: "latest" | "price_asc" | "price_desc" | "distance";
     min_price?: string;
@@ -83,6 +85,7 @@ type SearchState = {
   q: string;
   niche: string;
   category: string;
+  title: string;
   sort: "latest" | "price_asc" | "price_desc" | "distance";
   min_price: number | null;
   max_price: number | null;
@@ -116,6 +119,7 @@ export function parseSearchState(raw: Awaited<MarketplacePageProps["searchParams
 
   return {
     q: raw.q?.trim() ?? "",
+    title: raw.title?.trim() ?? "",
     niche: raw.niche?.trim() ?? "",
     category: raw.category?.trim() ?? "",
     sort,
@@ -413,7 +417,7 @@ export default async function MarketplacePage({ searchParams }: MarketplacePageP
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">Marketplace</p>
-            <h1 className="mt-1 text-3xl font-black tracking-tight text-slate-900">Discover Products from Nearby Vendors</h1>
+            <h1 className="mt-1 text-3xl font-black tracking-tight text-slate-900">Discover Products from Vendors</h1>
           </div>
           <Link href="/" className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">Back Home</Link>
         </div>
@@ -424,7 +428,7 @@ export default async function MarketplacePage({ searchParams }: MarketplacePageP
 
         {/* bigger screen filter */}
       <div className="grid gap-6 lg:grid-cols-[300px_1fr]">
-        <aside className="sticky top-25 hidden h-fit rounded-3xl border border-emerald-200/80 bg-white/90 p-5 shadow-[0_18px_45px_-28px_rgba(16,185,129,0.35)] backdrop-blur lg:block">
+        <aside className="top-25 hidden h-fit rounded-3xl border border-emerald-200/80 bg-white/90 p-5 shadow-[0_18px_45px_-28px_rgba(16,185,129,0.35)] backdrop-blur lg:block">
           <div className="mb-4 border-b border-slate-100 pb-4">
             <p className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-3.5 w-3.5" aria-hidden="true">

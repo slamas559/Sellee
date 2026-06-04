@@ -56,7 +56,7 @@ export function ProductShowcaseCard({
   const hasManyImages = images.length > 1;
   const activeImage = images[index] ?? null;
   const isCompact = variant === "home" || variant === "marketplace";
-  const headlineClass = isCompact ? "text-base sm:text-lg" : "text-base sm:text-lg lg:text-xl";
+  const headlineClass = isCompact ? "text-sm" : "text-base text-sm sm:text-lg lg:text-sm";
   const imageHeightClass = isCompact ? "h-40 sm:h-52" : "h-36 sm:h-52";
   const contentWrapClass = isCompact
     ? "space-y-1.5 px-0.5 pb-1 pt-1.5 sm:space-y-2 sm:px-1 sm:pt-3"
@@ -73,7 +73,7 @@ export function ProductShowcaseCard({
   const metaClass = isBoldTemplate ? "text-slate-300" : "text-slate-500";
   const descriptionClass = isCompact
     ? `line-clamp-2 text-xs leading-4 ${metaClass}`
-    : `line-clamp-2 text-xs leading-4 sm:text-sm sm:leading-5 ${metaClass}`;
+    : `line-clamp-2 text-xs leading-4 sm:text-xs sm:leading-5 ${metaClass}`;
   const priceChipClass = isBoldTemplate
     ? "bg-slate-800 text-emerald-200"
     : "bg-slate-100 text-slate-900";
@@ -197,18 +197,6 @@ export function ProductShowcaseCard({
           <p className={`line-clamp-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${metaClass}`}>
             {store.name}
           </p>
-          {/* <SocialShareActions
-            mode="menu"
-            compact
-            align="right"
-            menuPosition="up"
-            url={productHref}
-            title={`${product.name} - ${store.name}`}
-            text={`Check out ${product.name} from ${store.name} on Sellee.`}
-            className="relative z-20 shrink-0"
-            triggerClassName="inline-flex h-6 w-6 items-center justify-center cursor-pointer rounded-full border border-slate-300/80 bg-white/90 text-slate-700 shadow-sm backdrop-blur hover:bg-white sm:h-8 sm:w-8"
-            triggerLabel={`Share ${product.name}`}
-          /> */}
         </div>
         <h3
           className={`line-clamp-2 font-black tracking-tight leading-tight ${titleClass} ${headlineClass}`}
@@ -230,7 +218,7 @@ export function ProductShowcaseCard({
 
         <div className="flex items-center justify-between gap-2 pt-1.5 [@media(max-width:360px)]:flex-wrap sm:pt-2">
           <span
-            className={`inline-flex whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-bold tabular-nums sm:px-3 sm:py-1.5 sm:text-base ${priceChipClass}`}
+            className={`inline-flex whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-bold tabular-nums sm:px-3 sm:py-1.5 sm:text-sm ${priceChipClass}`}
           >
             {formatNaira(Number(product.price))}
           </span>
