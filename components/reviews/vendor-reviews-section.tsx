@@ -166,7 +166,7 @@ export function VendorReviewsSection({
   }, [loadReviews]);
 
   return (
-    <section className="w-full border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+    <section className="w-full border border-slate-200 bg-white p-3 shadow-sm sm:p-4">
       {/* Header */}
       <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
         <div>

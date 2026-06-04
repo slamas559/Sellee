@@ -441,14 +441,14 @@ export default async function StoreProductPage({ params, searchParams }: Product
       </div>
 
       {/* ── Reviews ── */}
-      <div className="mx-auto max-w-7xl px-2 pb-2 sm:px-6">
+      <div className="mx-auto max-w-7xl px-2 pb-2 sm:px-4">
         <div className="rounded-2xl border border-stone-200 bg-white shadow-sm">
           {/* Section header */}
           <div className="border-b border-stone-100 px-5 py-5 sm:px-7">
             <h2 className="text-lg font-bold text-stone-900">Customer Reviews</h2>
           </div>
           {/* Reviews content — constrained width so it doesn't sprawl */}
-          <div className="px-5 py-6 sm:px-7 lg:max-w-3xl">
+          <div className="p-2 sm:px-5 lg:max-w-3xl">
             <ProductReviewsSection
               productId={product.id}
               initialRatingAvg={product.rating_avg}

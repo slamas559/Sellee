@@ -209,13 +209,13 @@ function MarketTemplate({
 
         {/* Banner carousel */}
         {bannerUrls.length > 0 && (
-          <div className="mx-auto max-w-7xl px-4 pt-4 sm:px-6">
+          <div className="mx-auto max-w-7xl px-2 pt-4 sm:px-4">
             <BannerCarousel banners={bannerUrls} storeName={store.name} className="h-44 rounded-2xl sm:h-56" />
           </div>
         )}
 
         {/* Products */}
-        <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
+        <div className="mx-auto max-w-7xl px-2 py-3 sm:px-4">
           <div className="mb-4">
             <StoreSearchBar slug={store.slug} query={query} selectedCategory={selectedCategory} categories={categories} />
           </div>
@@ -233,7 +233,7 @@ function MarketTemplate({
         </div>
 
         {/* Reviews */}
-        <div className="mx-auto max-w-7xl px-4 pb-12 sm:px-6" id="vendor-reviews">
+        <div className="mx-auto max-w-7xl px-2 pb-12 sm:px-4" id="vendor-reviews">
           <VendorReviewsSection storeId={store.id} initialRatingAvg={store.rating_avg} initialRatingCount={store.rating_count} />
         </div>
       </main>
@@ -276,7 +276,7 @@ function EditorialTemplate({
           <div className="absolute inset-0 bg-gradient-to-b from-slate-950/20 via-slate-950/50 to-slate-950" />
 
           {/* Top bar */}
-          <div className="relative flex items-center justify-between px-4 pt-5 sm:px-8">
+          <div className="relative flex items-center justify-between px-2 pt-5 sm:px-8">
             <div className="flex items-center gap-3">
               {store.logo_url ? (
                 <div className="relative h-9 w-9 overflow-hidden rounded-full border border-white/30">
@@ -292,7 +292,7 @@ function EditorialTemplate({
           </div>
 
           {/* Hero copy */}
-          <div className="relative flex mt-1 min-h-[340px] flex-col justify-end px-4 pb-10 sm:px-8 sm:pb-14">
+          <div className="relative flex mt-1 min-h-[340px] flex-col justify-end px-2 pb-10 sm:px-8 sm:pb-14">
             {nicheNames.length > 0 && (
               <div className="mb-3 flex flex-wrap gap-2">
                 {nicheNames.slice(0, 3).map((n) => (
@@ -312,7 +312,7 @@ function EditorialTemplate({
         {/* Promo label */}
         {config.promo_text && (
           <div className="border-y border-slate-100 bg-slate-50">
-            <div className="mx-auto flex max-w-7xl items-center gap-3 overflow-hidden px-4 py-3 sm:px-8">
+            <div className="mx-auto flex max-w-7xl items-center gap-3 overflow-hidden px-4 py-3 sm:px-6">
               <span className="shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-black uppercase tracking-widest text-white" style={{ backgroundColor: primaryColor }}>New</span>
               <div className="flex gap-8 overflow-hidden text-sm font-semibold text-slate-600">
                 {[config.promo_text, config.promo_text, config.promo_text].map((t, i) => (
@@ -325,7 +325,7 @@ function EditorialTemplate({
 
         {/* Featured horizontal scroll */}
         {featured.length > 0 && (
-          <div className="mx-auto max-w-7xl px-4 py-8 sm:px-8">
+          <div className="mx-auto max-w-7xl px-2 py-6 sm:px-4">
             <p className="mb-4 text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Featured</p>
             <div className="flex gap-4 overflow-x-auto pb-2 [scrollbar-width:none]">
               {featured.map((p) => (
@@ -345,7 +345,7 @@ function EditorialTemplate({
         )}
 
         {/* All products */}
-        <div className="mx-auto max-w-7xl px-4 pb-8 sm:px-8">
+        <div className="mx-auto max-w-7xl px-2 pb-8 sm:px-4">
           <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">{rest.length > 0 ? "All products" : "Products"}</p>
             <div className="w-full max-w-md">
@@ -366,7 +366,7 @@ function EditorialTemplate({
         </div>
 
         {/* Reviews */}
-        <div className="mx-auto max-w-7xl border-t border-slate-100 px-4 py-10 sm:px-8" id="vendor-reviews">
+        <div className="mx-auto max-w-7xl border-t border-slate-100 px-2 py-10 sm:px-4" id="vendor-reviews">
           <VendorReviewsSection storeId={store.id} initialRatingAvg={store.rating_avg} initialRatingCount={store.rating_count} />
         </div>
       </main>
@@ -400,7 +400,7 @@ function ShowcaseTemplate({
       <main className="min-h-screen" style={{ backgroundColor: surfaceColor }}>
 
         {/* Split-screen hero */}
-        <section className="mx-auto grid max-w-7xl px-4 py-8 sm:px-6 sm:py-12 lg:grid-cols-[1fr_1fr] lg:gap-8 lg:items-center">
+        <section className="mx-auto grid max-w-7xl px-2 py-4 sm:px-4 sm:py-10 lg:grid-cols-[1fr_1fr] lg:gap-8 lg:items-center">
           {/* Left: copy */}
           <div>
             <div className="flex flex-wrap items-center gap-3">
@@ -465,7 +465,7 @@ function ShowcaseTemplate({
 
         {/* Horizontal product scroll */}
         {products.length > 0 && (
-          <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+          <div className="mx-auto max-w-7xl px-2 py-4 sm:px-3">
             <div className="mb-4 flex items-center justify-between">
               <p className="font-bold text-slate-900">Products</p>
               <span className="text-sm text-slate-500">{products.length} items</span>
@@ -490,13 +490,13 @@ function ShowcaseTemplate({
 
         {/* Banner */}
         {bannerUrls.length > 0 && (
-          <div className="mx-auto max-w-7xl px-4 pb-6 sm:px-6">
+          <div className="mx-auto max-w-7xl px-2 pb-6 sm:px-4">
             <BannerCarousel banners={bannerUrls} storeName={store.name} className="h-44 rounded-3xl sm:h-60" />
           </div>
         )}
 
         {/* Reviews */}
-        <div className="mx-auto max-w-7xl px-4 pb-12 sm:px-6" id="vendor-reviews">
+        <div className="mx-auto max-w-7xl px-2 pb-12 sm:px-4" id="vendor-reviews">
           <VendorReviewsSection storeId={store.id} initialRatingAvg={store.rating_avg} initialRatingCount={store.rating_count} />
         </div>
       </main>
@@ -552,7 +552,7 @@ function GridTemplate({
           </div>
         </header>
 
-        <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:grid lg:grid-cols-[220px_1fr] lg:gap-6">
+        <div className="mx-auto max-w-7xl px-2 py-5 sm:px-4 lg:grid lg:grid-cols-[220px_1fr] lg:gap-6">
           {/* Sidebar */}
           <aside className="hidden lg:block">
             <div className="sticky top-20 space-y-4">
