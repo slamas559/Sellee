@@ -11,6 +11,12 @@ import {
 } from "@/lib/dashboard-data";
 import { formatNaira } from "@/lib/format";
 import { normalizeStoreTemplate } from "@/lib/storefront";
+import { RevenueChart } from "@/components/dashboard/revenue-chart";
+import { OrderStatusChart } from "@/components/dashboard/order-status-chart";
+import { 
+  generateRevenueChartData, 
+  generateOrderStatusData 
+} from "@/lib/chart-utils";
 
 export const metadata: Metadata = {
   title: "Dashboard",
@@ -20,7 +26,8 @@ export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
   const store = session?.user?.id ? await getVendorStore(session.user.id) : null;
   const products = session?.user?.id ? await getVendorProducts(session.user.id) : [];
-  const orders = session?.user?.id ? await getVendorOrders(session.user.id) : [];
+  // Fetch more orders for analytics
+  const orders = session?.user?.id ? await getVendorOrders(session.user.id, { limit: 100, offset: 0 }) : [];
   const whatsappLinkStatus = session?.user?.id
     ? await getVendorWhatsAppLinkStatus(session.user.id)
     : { linked: null, pending_code: null };
@@ -37,7 +44,10 @@ export default async function DashboardPage() {
     ? normalizeStoreTemplate(store.store_template).replace(/_/g, " ")
     : null;
 
-  
+  // Generate chart data
+  const revenueChartData = generateRevenueChartData(orders);
+  const orderStatusData = generateOrderStatusData(orders);
+
   if (!session?.user) {
     redirect("/login");
   }
@@ -89,6 +99,12 @@ export default async function DashboardPage() {
           </h2>
           <p className="mt-1 text-sm text-slate-600">Confirmed orders only.</p>
         </article>
+      </section>
+
+      {/* Charts Section */}
+      <section className="grid gap-4 lg:grid-cols-2">
+        {revenueChartData.length > 0 && <RevenueChart data={revenueChartData} />}
+        {orderStatusData.length > 0 && <OrderStatusChart data={orderStatusData} />}
       </section>
 
       <section className="grid gap-4 lg:grid-cols-2">

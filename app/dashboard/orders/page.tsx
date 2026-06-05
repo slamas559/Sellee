@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { getServerSession } from "next-auth";
 import { formatNaira } from "@/lib/format";
 import { authOptions } from "@/lib/auth";
@@ -25,9 +26,14 @@ function statusClass(status: string): string {
   return "bg-amber-100 text-amber-700";
 }
 
-export default async function DashboardOrdersPage() {
+export default async function DashboardOrdersPage({ searchParams }: { searchParams?: Promise<{ page?: string }> }) {
   const session = await getServerSession(authOptions);
-  const orders = session?.user?.id ? await getVendorOrders(session.user.id) : [];
+  const params = await searchParams;
+  const page = Number(params?.page ?? "1") || 1;
+  const limit = 10;
+  const offset = (page - 1) * limit;
+
+  const orders = session?.user?.id ? await getVendorOrders(session.user.id, { limit, offset }) : [];
   const linkStatus = session?.user?.id
     ? await getVendorWhatsAppLinkStatus(session.user.id)
     : { linked: null, pending_code: null };
@@ -143,10 +149,18 @@ export default async function DashboardOrdersPage() {
 
                 <div className="mt-3 border-t border-slate-100 pt-3">
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Items</p>
-                  <ul className="mt-2 space-y-1 text-sm text-slate-700">
+                  <ul className="mt-2 space-y-2">
                     {items.map((item, index) => (
-                      <li key={`${order.id}-${index}`}>
-                        {item.product_name} x{item.quantity} @ {formatNaira(item.unit_price)}
+                      <li key={`${order.id}-${index}`} className="flex items-center gap-3">
+                        {item.image_url ? (
+                          <img src={item.image_url} alt={item.product_name} className="h-12 w-12 rounded-md object-cover" />
+                        ) : (
+                          <div className="h-12 w-12 rounded-md bg-slate-100" />
+                        )}
+                        <div className="min-w-0">
+                          <p className="line-clamp-1 text-sm font-medium text-slate-900">{item.product_name} x{item.quantity}</p>
+                          <p className="text-xs text-slate-500">{formatNaira(item.unit_price * item.quantity)}</p>
+                        </div>
                       </li>
                     ))}
                   </ul>
@@ -156,6 +170,23 @@ export default async function DashboardOrdersPage() {
           </div>
         )}
       </section>
+
+      {/* Pagination */}
+      <div className="flex items-center justify-between">
+        <div />
+        <div className="flex gap-2">
+          {page > 1 ? (
+            <Link href={`/dashboard/orders?page=${page - 1}`} className="rounded-md border px-3 py-2 text-sm">Previous</Link>
+          ) : (
+            <button disabled className="rounded-md border px-3 py-2 text-sm text-slate-400">Previous</button>
+          )}
+          {orders.length === limit ? (
+            <Link href={`/dashboard/orders?page=${page + 1}`} className="rounded-md bg-emerald-600 px-3 py-2 text-sm font-semibold text-white">Next</Link>
+          ) : (
+            <button disabled className="rounded-md border px-3 py-2 text-sm text-slate-400">Next</button>
+          )}
+        </div>
+      </div>
     </section>
   );
 }

@@ -32,7 +32,7 @@ export function DashboardSidebar({ name, email }: DashboardSidebarProps) {
   const pathname = usePathname();
 
   return (
-    <aside className="hidden w-72 rounded-2xl border border-emerald-100 bg-white p-5 shadow-sm lg:sticky lg:top-6 lg:block lg:h-[calc(100vh-3rem)] lg:max-h-[calc(100vh-3rem)] lg:self-start">
+    <aside className="hidden w-72 rounded-2xl border border-emerald-100 bg-white p-5 shadow-sm lg:sticky lg:top-6 lg:block lg:h-[calc(100vh-7rem)] lg:max-h-[calc(100vh-7rem)] lg:self-start">
       <div className="flex h-full flex-col">
         <div>
           <Link href="/" className="inline-flex items-center">

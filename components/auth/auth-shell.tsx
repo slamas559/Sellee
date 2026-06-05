@@ -1,5 +1,7 @@
 import Link from "next/link";
+import Image from "next/image";
 import { Plus_Jakarta_Sans } from "next/font/google";
+import logo from "@/app/logos/image-text-logo.png";
 
 const jakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -14,7 +16,7 @@ type AuthShellProps = {
 };
 
 const SIDE_IMAGE =
-  "https://images.unsplash.com/photo-1488459716781-31db52582fe9?auto=format&fit=crop&w=1800&q=80";
+  "https://images.unsplash.com/photo-1556745753-b2904692b3cd?auto=format&fit=crop&w=1800&q=80";
   
 
 export function AuthShell({ mode, title, subtitle, children }: AuthShellProps) {
@@ -35,9 +37,14 @@ export function AuthShell({ mode, title, subtitle, children }: AuthShellProps) {
 
           <div className="relative z-10 flex h-full flex-col justify-between px-5 py-7 text-white sm:px-8 sm:py-9 lg:px-10 lg:py-9">
             <div className="max-w-xl space-y-3 sm:space-y-4">
-              <p className="inline-flex rounded-full border border-white/70 bg-white/20 px-3 py-1 text-xs font-semibold tracking-[0.18em] text-white">
-                SELLEE
-              </p>
+              <div className="inline-flex rounded-full border border-white/70 bg-white/20 px-3 py-1 backdrop-blur-sm">
+                <Image 
+                  src={logo} 
+                  alt="Sellee"
+                  className="h-7 w-auto" 
+                  priority 
+                />
+              </div>
               <h1 className="text-3xl font-extrabold leading-tight text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.4)] sm:text-4xl lg:text-5xl">
                 {isRegister
                   ? "Shop smart today or launch your store tomorrow."

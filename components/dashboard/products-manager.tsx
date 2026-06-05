@@ -48,6 +48,8 @@ export function ProductsManager({ initialProducts }: ProductsManagerProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const productsPerPage = 12;
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [form, setForm] = useState<ProductFormState>(initialForm);
   const [dragActive, setDragActive] = useState(false);
@@ -83,6 +85,7 @@ export function ProductsManager({ initialProducts }: ProductsManagerProps) {
 
       setProducts(payload.products ?? []);
       setAllowedCategories(payload.allowed_categories ?? []);
+      setCurrentPage(1);
     } catch {
       setError("Network error while loading products.");
     } finally {
@@ -601,56 +604,99 @@ export function ProductsManager({ initialProducts }: ProductsManagerProps) {
         ) : null}
 
         {!isLoading && products.length > 0 ? (
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {products.map((product) => (
-              <article key={product.id} className="rounded-lg border border-slate-200 p-4">
-                <div className="relative mb-3 h-40 w-full overflow-hidden rounded-md bg-slate-100">
-                  {product.image_url ? (
-                    <Image
-                      src={product.image_url}
-                      alt={product.name}
-                      fill
-                      className="object-cover"
-                      sizes="(max-width: 768px) 100vw, 33vw"
-                    />
-                  ) : (
-                    <div className="flex h-full items-center justify-center text-xs text-slate-500">
-                      No image
-                    </div>
-                  )}
-                </div>
+          <>
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              {products.slice((currentPage - 1) * productsPerPage, currentPage * productsPerPage).map((product) => (
+                <article key={product.id} className="rounded-lg border border-slate-200 p-4">
+                  <div className="relative mb-3 h-40 w-full overflow-hidden rounded-md bg-slate-100">
+                    {product.image_url ? (
+                      <Image
+                        src={product.image_url}
+                        alt={product.name}
+                        fill
+                        className="object-cover"
+                        sizes="(max-width: 768px) 100vw, 33vw"
+                      />
+                    ) : (
+                      <div className="flex h-full items-center justify-center text-xs text-slate-500">
+                        No image
+                      </div>
+                    )}
+                  </div>
 
-                <h3 className="text-base font-semibold text-slate-900">{product.name}</h3>
-                <p className="mt-1 text-sm font-medium text-slate-700">
-                  {formatNaira(Number(product.price))}
-                </p>
-                {product.category ? (
-                  <p className="mt-1 text-xs text-slate-500">Category: {product.category}</p>
-                ) : null}
-                <p className="mt-1 text-xs text-slate-500">Stock: {product.stock_count}</p>
-                <p className="mt-1 text-xs text-slate-500">
-                  Status: {product.is_available ? "Available" : "Unavailable"}
-                </p>
+                  <h3 className="text-base font-semibold text-slate-900">{product.name}</h3>
+                  <p className="mt-1 text-sm font-medium text-slate-700">
+                    {formatNaira(Number(product.price))}
+                  </p>
+                  {product.category ? (
+                    <p className="mt-1 text-xs text-slate-500">Category: {product.category}</p>
+                  ) : null}
+                  <p className="mt-1 text-xs text-slate-500">Stock: {product.stock_count}</p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    Status: {product.is_available ? "Available" : "Unavailable"}
+                  </p>
 
-                <div className="mt-4 flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => fillFormForEdit(product)}
-                    className="rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => void handleDelete(product.id)}
-                    className="rounded-md border border-red-300 bg-white px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-50"
-                  >
-                    Delete
-                  </button>
+                  <div className="mt-4 flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => fillFormForEdit(product)}
+                      className="rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void handleDelete(product.id)}
+                      className="rounded-md border border-red-300 bg-white px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-50"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </article>
+              ))}
+            </div>
+
+            {/* Pagination Controls */}
+            <div className="mt-6 flex items-center justify-between border-t border-slate-100 pt-4">
+              <div className="text-sm text-slate-600">
+                Showing {(currentPage - 1) * productsPerPage + 1} to {Math.min(currentPage * productsPerPage, products.length)} of {products.length}
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:text-slate-400"
+                >
+                  Previous
+                </button>
+                <div className="flex items-center gap-2">
+                  {Array.from({ length: Math.ceil(products.length / productsPerPage) }).map((_, i) => {
+                    const pageNum = i + 1;
+                    return (
+                      <button
+                        key={pageNum}
+                        onClick={() => setCurrentPage(pageNum)}
+                        className={`rounded-md px-3 py-2 text-sm font-semibold ${
+                          currentPage === pageNum
+                            ? "bg-emerald-600 text-white"
+                            : "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    );
+                  })}
                 </div>
-              </article>
-            ))}
-          </div>
+                <button
+                  onClick={() => setCurrentPage((prev) => Math.min(prev + 1, Math.ceil(products.length / productsPerPage)))}
+                  disabled={currentPage === Math.ceil(products.length / productsPerPage)}
+                  className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:text-slate-400"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          </>
         ) : null}
       </section>
     </div>

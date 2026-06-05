@@ -7,6 +7,7 @@ import { requireVerifiedPhone } from "@/lib/require-verified-phone";
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
 import { sendWhatsAppTextMessage } from "@/lib/whatsapp-cloud";
 import { waMessage, waTitle } from "@/lib/whatsapp-bot/message-format";
+import { sendOrderNotificationEmail } from "@/app/actions/emails";
 
 const createOrderSchema = z.object({
   store_id: z.string().uuid(),
@@ -54,7 +55,7 @@ export async function POST(request: Request) {
 
     const { data: store, error: storeError } = await supabase
       .from("stores")
-      .select("id, name, whatsapp_number, is_active")
+      .select("id, name, whatsapp_number, vendor_id, is_active")
       .eq("id", parsed.data.store_id)
       .eq("is_active", true)
       .maybeSingle();
@@ -146,6 +147,35 @@ export async function POST(request: Request) {
         });
       } catch (notifyError) {
         logDevError("orders.vendor-notify", notifyError, { orderId: order.id, vendorPhone });
+      }
+    }
+
+    // Send vendor email notification
+    const vendorId = (store as { vendor_id?: string | null }).vendor_id;
+    if (vendorId) {
+      try {
+        const { data: vendor, error: vendorError } = await supabase
+          .from("users")
+          .select("email")
+          .eq("id", vendorId)
+          .maybeSingle();
+
+        if (!vendorError && vendor?.email) {
+          await sendOrderNotificationEmail({
+            to: vendor.email,
+            storeName: store.name,
+            orderRef,
+            customerName,
+            customerWhatsApp: customerWhatsapp,
+            productName: product.name,
+            quantity,
+            unitPrice: Number(product.price),
+            totalAmount,
+            dashboardUrl: "https://sellee.store/dashboard/orders",
+          });
+        }
+      } catch (emailError) {
+        logDevError("orders.vendor-email", emailError, { orderId: order.id, vendorId });
       }
     }
 

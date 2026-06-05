@@ -6,6 +6,9 @@ import SupportTicketEmail, {
 } from "@/emails/SupportTicketEmail";
 import UpdateEmail, { type UpdateEmailProps } from "@/emails/UpdateEmail";
 import WelcomeEmail, { type WelcomeEmailProps } from "@/emails/WelcomeEmail";
+import OrderNotificationEmail, {
+  type OrderNotificationEmailProps,
+} from "@/emails/OrderNotificationEmail";
 
 const SYSTEM_FROM = "Sellee Team <hello@sellee.store>";
 const SUPPORT_FROM = "Sellee Support <support@sellee.store>";
@@ -29,6 +32,10 @@ export interface SendUpdateEmailInput extends UpdateEmailProps {
 }
 
 export interface SendSupportTicketEmailInput extends SupportTicketEmailProps {
+  to: string;
+}
+
+export interface SendOrderNotificationEmailInput extends OrderNotificationEmailProps {
   to: string;
 }
 
@@ -291,6 +298,57 @@ export async function submitHelpCenterTicket({
     });
 
     return { success: true, data: { ticketId, ...data } };
+  } catch (error) {
+    return { success: false, error: normalizeError(error) };
+  }
+}
+
+export async function sendOrderNotificationEmail({
+  to,
+  storeName,
+  orderRef,
+  customerName,
+  customerWhatsApp,
+  productName,
+  quantity,
+  unitPrice,
+  totalAmount,
+  dashboardUrl = appUrl("/dashboard/orders"),
+}: SendOrderNotificationEmailInput): Promise<EmailActionResult> {
+  try {
+    const resend = getResendClient();
+    const { data, error } = await resend.emails.send({
+      from: SYSTEM_FROM,
+      to,
+      replyTo: SUPPORT_REPLY_TO,
+      subject: `New Order Received - ${orderRef}`,
+      react: OrderNotificationEmail({
+        storeName,
+        orderRef,
+        customerName,
+        customerWhatsApp,
+        productName,
+        quantity,
+        unitPrice,
+        totalAmount,
+        dashboardUrl,
+      }),
+    });
+
+    if (process.env.NODE_ENV === "development") {
+      try {
+        // eslint-disable-next-line no-console
+        console.debug("[sendOrderNotificationEmail] resend response:", { data, error });
+      } catch (logErr) {
+        // Swallow logging errors
+      }
+    }
+
+    if (error) {
+      return { success: false, error };
+    }
+
+    return { success: true, data };
   } catch (error) {
     return { success: false, error: normalizeError(error) };
   }

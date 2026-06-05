@@ -54,7 +54,9 @@ export async function getVendorProducts(vendorId: string): Promise<ProductRecord
 export type VendorOrderView = {
   order: OrderRecord;
   items: Array<{
+    product_id?: string;
     product_name: string;
+    image_url?: string | null;
     quantity: number;
     unit_price: number;
   }>;
@@ -136,7 +138,10 @@ export type VendorBroadcastHistoryItem = {
   created_at: string;
 };
 
-export async function getVendorOrders(vendorId: string): Promise<VendorOrderView[]> {
+export async function getVendorOrders(
+  vendorId: string,
+  opts?: { limit?: number; offset?: number },
+): Promise<VendorOrderView[]> {
   const store = await getVendorStore(vendorId);
 
   if (!store) {
@@ -145,11 +150,17 @@ export async function getVendorOrders(vendorId: string): Promise<VendorOrderView
 
   const supabase = createAdminSupabaseClient();
 
+  const limit = opts?.limit ?? 20;
+  const offset = opts?.offset ?? 0;
+  const from = offset;
+  const to = offset + limit - 1;
+
   const { data: orders } = await supabase
     .from("orders")
     .select("id, store_id, customer_name, customer_whatsapp, status, total_amount, payment_method, created_at")
     .eq("store_id", store.id)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .range(from, to);
 
   const typedOrders = ((orders as OrderRecord[]) ?? []);
 
@@ -161,7 +172,7 @@ export async function getVendorOrders(vendorId: string): Promise<VendorOrderView
 
   const { data: orderItems } = await supabase
     .from("order_items")
-    .select("order_id, quantity, unit_price, product:product_id(name)")
+    .select("order_id, quantity, unit_price, product:product_id(id,name,image_url)")
     .in("order_id", orderIds);
 
   const itemsByOrderId = new Map<string, VendorOrderView["items"]>();
@@ -172,15 +183,23 @@ export async function getVendorOrders(vendorId: string): Promise<VendorOrderView
     // ensure productName is a string (fallback to 'Unknown product')
     const rawProductField = (row as { product?: unknown })?.product;
     let _productName: string | undefined;
+    let _productId: string | undefined;
+    let _imageUrl: string | null | undefined;
     if (rawProductField && Array.isArray(rawProductField)) {
       _productName = (rawProductField as Array<{ name?: string }>)[0]?.name;
+      _productId = (rawProductField as Array<{ id?: string }>)[0]?.id;
+      _imageUrl = (rawProductField as Array<{ image_url?: string | null }>)[0]?.image_url;
     } else {
       _productName = (rawProductField as { name?: string } | undefined)?.name;
+      _productId = (rawProductField as { id?: string } | undefined)?.id;
+      _imageUrl = (rawProductField as { image_url?: string | null } | undefined)?.image_url;
     }
     const productName: string = _productName ?? "Unknown product";
 
     current.push({
+      product_id: _productId,
       product_name: productName,
+      image_url: _imageUrl ?? null,
       quantity: Number((row as { quantity: number }).quantity),
       unit_price: Number((row as { unit_price: number }).unit_price),
     });
@@ -199,12 +218,14 @@ export async function getVendorWhatsAppLinkStatus(
 ): Promise<VendorWhatsAppLinkStatus> {
   const supabase = createAdminSupabaseClient();
 
-  const { data: linked } = await supabase
-    .from("whatsapp_vendor_links")
-    .select("whatsapp_number, linked_at, is_active")
-    .eq("vendor_id", vendorId)
+  // Check if user's phone is verified (this determines if bot is "linked")
+  const { data: user } = await supabase
+    .from("users")
+    .select("phone, phone_verified_at")
+    .eq("id", vendorId)
     .maybeSingle();
 
+  // Get pending link code if any
   const { data: pendingCode } = await supabase
     .from("whatsapp_link_codes")
     .select("code, expires_at")
@@ -215,14 +236,30 @@ export async function getVendorWhatsAppLinkStatus(
     .limit(1)
     .maybeSingle();
 
+  // Get vendor's linked WhatsApp number if it exists
+  const { data: linkedRecord } = await supabase
+    .from("whatsapp_vendor_links")
+    .select("whatsapp_number, linked_at, is_active")
+    .eq("vendor_id", vendorId)
+    .maybeSingle();
+
+  // Linked status is based on phone verification, not the whatsapp_vendor_links table
+  const isPhoneVerified = user?.phone_verified_at != null;
+
   return {
-    linked: linked
+    linked: isPhoneVerified && linkedRecord
       ? {
-          whatsapp_number: String(linked.whatsapp_number),
-          linked_at: String(linked.linked_at),
-          is_active: Boolean(linked.is_active),
+          whatsapp_number: String(linkedRecord.whatsapp_number),
+          linked_at: String(linkedRecord.linked_at),
+          is_active: Boolean(linkedRecord.is_active),
         }
-      : null,
+      : isPhoneVerified
+        ? {
+            whatsapp_number: user?.phone ?? "Unknown",
+            linked_at: user?.phone_verified_at ?? new Date().toISOString(),
+            is_active: true,
+          }
+        : null,
     pending_code: pendingCode
       ? {
           code: String(pendingCode.code),

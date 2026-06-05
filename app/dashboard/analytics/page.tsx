@@ -3,6 +3,16 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { getVendorOrders, getVendorProducts } from "@/lib/dashboard-data";
 import { formatNaira } from "@/lib/format";
+import { RevenueChart } from "@/components/dashboard/revenue-chart";
+import { OrderStatusChart } from "@/components/dashboard/order-status-chart";
+import { OrderTrendsChart } from "@/components/dashboard/order-trends-chart";
+import { ProductPerformanceChart } from "@/components/dashboard/product-performance-chart";
+import {
+  generateRevenueChartData,
+  generateOrderStatusData,
+  generateOrderTrendsData,
+  generateProductPerformanceData,
+} from "@/lib/chart-utils";
 
 export const metadata: Metadata = {
   title: "Analytics",
@@ -18,7 +28,8 @@ function calcGrowth(current: number, previous: number): string {
 export default async function DashboardAnalyticsPage() {
   const session = await getServerSession(authOptions);
   const products = session?.user?.id ? await getVendorProducts(session.user.id) : [];
-  const orders = session?.user?.id ? await getVendorOrders(session.user.id) : [];
+  // Fetch more orders for detailed analytics
+  const orders = session?.user?.id ? await getVendorOrders(session.user.id, { limit: 200, offset: 0 }) : [];
 
   const now = new Date();
   const thisMonth = now.getMonth();
@@ -56,6 +67,12 @@ export default async function DashboardAnalyticsPage() {
   );
 
   const lowStock = products.filter((product) => product.stock_count <= 2).length;
+
+  // Generate chart data
+  const revenueChartData = generateRevenueChartData(orders);
+  const orderStatusData = generateOrderStatusData(orders);
+  const orderTrendsData = generateOrderTrendsData(orders);
+  const productPerformanceData = generateProductPerformanceData(orders);
 
   return (
     <section className="space-y-4">
@@ -100,6 +117,17 @@ export default async function DashboardAnalyticsPage() {
         </article>
       </section>
 
+      {/* Charts Grid */}
+      <section className="grid gap-4 lg:grid-cols-2">
+        {revenueChartData.length > 0 && <RevenueChart data={revenueChartData} />}
+        {orderStatusData.length > 0 && <OrderStatusChart data={orderStatusData} />}
+      </section>
+
+      <section className="grid gap-4 lg:grid-cols-2">
+        {orderTrendsData.length > 0 && <OrderTrendsChart data={orderTrendsData} />}
+        {productPerformanceData.length > 0 && <ProductPerformanceChart data={productPerformanceData} />}
+      </section>
+
       <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
         <p className="text-sm font-medium text-emerald-700">Top Recent Orders</p>
         {orders.length === 0 ? (
@@ -125,4 +153,5 @@ export default async function DashboardAnalyticsPage() {
     </section>
   );
 }
+
 

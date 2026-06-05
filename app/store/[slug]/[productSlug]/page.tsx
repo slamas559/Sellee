@@ -397,22 +397,24 @@ export default async function StoreProductPage({ params, searchParams }: Product
             {/* Vendor mini-card */}
             <div className="mt-5 overflow-hidden rounded-xl border border-stone-100 bg-white shadow-sm">
               <div className="flex items-center justify-between px-4 py-3">
-                <div className="flex items-center gap-3">
-                  {store.logo_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={store.logo_url} alt={store.name} className="h-9 w-9 rounded-full object-cover ring-2 ring-stone-100" />
-                  ) : (
-                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-50 ring-2 ring-stone-100">
-                      <Store className="h-4 w-4 text-emerald-700" />
-                    </div>
-                  )}
-                  <div>
-                    <p className="text-sm font-bold text-stone-800">{store.name}</p>
-                    <div className="mt-0.5">
-                      <StarRating value={store.rating_avg} count={store.rating_count} size="sm" accent="yellow" />
+                <Link href={storeUrl} className="flex items-center gap-3">
+                  <div className="flex items-center gap-3">
+                    {store.logo_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={store.logo_url} alt={store.name} className="h-9 w-9 rounded-full object-cover ring-2 ring-stone-100" />
+                    ) : (
+                      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-50 ring-2 ring-stone-100">
+                        <Store className="h-4 w-4 text-emerald-700" />
+                      </div>
+                    )}
+                    <div>
+                      <p className="text-sm font-bold text-stone-800">{store.name}</p>
+                      <div className="mt-0.5">
+                        <StarRating value={store.rating_avg} count={store.rating_count} size="sm" accent="yellow" />
+                      </div>
                     </div>
                   </div>
-                </div>
+                </Link>
                 <SocialShareActions
                   mode="menu"
                   url={storeUrl}
@@ -470,7 +472,7 @@ export default async function StoreProductPage({ params, searchParams }: Product
               href={`/store/${store.slug}`}
               className="rounded-full border border-stone-200 px-4 py-1.5 text-xs font-semibold text-stone-600 transition-all hover:border-emerald-300 hover:text-emerald-700"
             >
-              More
+              view store
             </Link>
           </div>
 

@@ -74,10 +74,13 @@ export default function SiteHeader() {
   }, []);
 
   // ── All hooks have run — now it is safe to conditionally return ──
+  // Check if we're on the vendor store listing page (not product details)
+  const pathSegments = pathname.split("/").filter(Boolean);
+  const isStoreListingPage = pathSegments[0] === "store" && pathSegments.length === 2;
+
   const shouldHide =
     HIDDEN_ON_ROUTES.some((route) => pathname.startsWith(route)) ||
-    // pathname === "/store" ||
-    // pathname.startsWith("/store/") ||
+    isStoreListingPage ||
     pathname === "/login" ||
     pathname.startsWith("/login/") ||
     pathname === "/register" ||
