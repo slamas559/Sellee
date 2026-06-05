@@ -6,6 +6,7 @@ import { formatNaira } from "@/lib/format";
 import { haversineDistanceKm } from "@/lib/geo";
 import MarketplaceFilterForm from "@/components/marketplace/marketplace-filter-form";
 import { parseSearchState, getMarketplaceResults } from "@/app/marketplace/page";
+import { FilterButton } from "@/components/marketplace/filter-button";
 
 export async function generateMetadata({ searchParams }: { searchParams: any }) {
   const state = parseSearchState(await searchParams as any);
@@ -36,12 +37,13 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">Catalog</p>
             <h1 className="mt-1 text-3xl font-black tracking-tight text-slate-900">{pageTitle}</h1>
-            {state.q ? <p className="mt-1 text-sm text-slate-600">{state.q}</p> : null}
           </div>
           <Link href="/" className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">Back Home</Link>
         </div>
       </header>
-
+      {/* mobile device filter */}
+      
+      <FilterButton state={state} categories={categories} grouped_categories={grouped_categories} hasLocationFilter={hasLocationFilter} activeFilters={activeFilters.map((f) => f.label)} />
       <div className="grid gap-6 lg:grid-cols-[300px_1fr]">
         <aside className="top-25 hidden h-fit rounded-3xl border border-emerald-200/80 bg-white/90 p-5 shadow-[0_18px_45px_-28px_rgba(16,185,129,0.35)] backdrop-blur lg:block">
           <div className="mb-4 border-b border-slate-100 pb-4">

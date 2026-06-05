@@ -347,7 +347,7 @@ export default async function Home({ searchParams }: HomeProps) {
             </div>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="sm:grid gap-3 sm:grid-cols-2 hidden">
             
             <div className="sm:col-span-2 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
               <p className="text-sm text-slate-600">Featured Search</p>
@@ -369,8 +369,8 @@ export default async function Home({ searchParams }: HomeProps) {
               Clear niche
             </Link>
           ) : (
-            <Link href="/search" className="text-sm font-medium text-emerald-700 hover:underline">
-              Browse marketplace
+            <Link href="/marketplace" className="text-sm font-medium">
+              <span className="text-emerald-700 hover:underline">Browse marketplace</span>
             </Link>
           )}
         </div>
@@ -387,7 +387,7 @@ export default async function Home({ searchParams }: HomeProps) {
               <Link
                 key={item}
                 href={href}
-                className={`group inline-flex shrink-0 snap-start items-center gap-2 rounded-2xl border px-2.5 py-2 pr-3 text-sm font-semibold transition ${
+                className={`group inline-flex shrink-0 snap-start items-center gap-2 rounded-2xl border px-2.5 py-2 pr-3 text-xs sm:text-sm font-semibold transition ${
                   isActive
                     ? "border-emerald-600 bg-emerald-600 text-white shadow-sm"
                     : "border-slate-200 bg-white text-slate-700 hover:border-emerald-200 hover:bg-emerald-50"

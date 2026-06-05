@@ -123,7 +123,7 @@ create index if not exists idx_orders_customer_user_id on public.orders (custome
 create table if not exists public.order_items (
   id uuid primary key default gen_random_uuid(),
   order_id uuid not null references public.orders(id) on delete cascade,
-  product_id uuid not null references public.products(id) on delete restrict,
+  product_id uuid not null references public.products(id) on delete cascade,
   quantity integer not null check (quantity > 0),
   unit_price numeric(12, 2) not null check (unit_price >= 0)
 );
