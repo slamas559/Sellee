@@ -22,7 +22,8 @@ export function OrderStatusChart({ data }: { data: OrderStatusData[] }) {
             cx="50%"
             cy="50%"
             labelLine={false}
-            label={({ status, count }) => `${status}: ${count}`}
+            // Recharts passes your custom properties inside the 'payload' object
+            label={({ payload }) => `${payload.status}: ${payload.count}`}
             outerRadius={100}
             fill="#8884d8"
             dataKey="count"
