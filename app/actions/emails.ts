@@ -10,8 +10,8 @@ import OrderNotificationEmail, {
   type OrderNotificationEmailProps,
 } from "@/emails/OrderNotificationEmail";
 
-const SYSTEM_FROM = "Sellee Team <hello@sellee.store>";
-const SUPPORT_FROM = "Sellee Support <support@sellee.store>";
+const SYSTEM_FROM = "Sellee <hello@sellee.store>";
+const SUPPORT_FROM = "Sellee <support@sellee.store>";
 const SUPPORT_REPLY_TO = "support@sellee.store";
 const DEFAULT_APP_URL = "https://sellee.store";
 
