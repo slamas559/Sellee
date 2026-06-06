@@ -56,6 +56,8 @@ export function NearbyVendorCard({
   return (
     <Link
       href={`/store/${vendor.slug}`}
+      target="_blank" 
+      rel="noopener noreferrer"
       prefetch
       className={`group relative overflow-hidden rounded-2xl border border-slate-200 bg-white transition hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-md ${cardShellClass}`}
     >

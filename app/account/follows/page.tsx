@@ -41,7 +41,7 @@ export default async function FollowedVendorsPage() {
                 <div className="h-12 w-12 rounded-md bg-slate-100" />
               )}
               <div>
-                <Link href={`/store/${store.slug}`} className="font-medium text-emerald-700 hover:underline">{store.name}</Link>
+                <Link href={`/store/${store.slug}`} target="_blank" rel="noopener noreferrer" className="font-medium text-emerald-700 hover:underline">{store.name}</Link>
                 <p className="text-xs text-slate-500">{[store.city, store.state, store.country].filter(Boolean).join(", ")}</p>
               </div>
             </li>

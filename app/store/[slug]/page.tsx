@@ -42,11 +42,18 @@ export async function generateMetadata({ params }: StorePageProps): Promise<Meta
     `Browse products from ${label} on Sellee and order through WhatsApp-powered workflows.`;
   const imageUrl = config.hero_image_url || store?.logo_url || "https://sellee.store/opengraph-image.png";
   const canonical = `/store/${slug}`;
+  const logoUrl = store?.logo_url ?? null;
 
   return {
     title: `${label} Store`,
     description,
     alternates: { canonical },
+    icons: logoUrl
+      ? {
+          icon: logoUrl,
+          apple: logoUrl,
+        }
+      : undefined,
     openGraph: {
       title: `${label} Store | Sellee`,
       description,

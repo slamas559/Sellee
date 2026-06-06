@@ -194,9 +194,11 @@ export function ProductShowcaseCard({
 
       <div className={contentWrapClass}>
         <div className="flex items-start justify-between gap-2">
-          <p className={`line-clamp-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${metaClass}`}>
-            {store.name}
-          </p>
+          <Link href={`/store/${store.slug}`} target="_blank" rel="noopener noreferrer">
+            <p className={`line-clamp-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${metaClass}`}>
+              {store.name}
+            </p>
+          </Link>
         </div>
         <h3
           className={`line-clamp-2 font-black tracking-tight leading-tight ${titleClass} ${headlineClass}`}
