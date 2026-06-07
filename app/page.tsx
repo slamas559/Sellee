@@ -306,7 +306,7 @@ export default async function Home({ searchParams }: HomeProps) {
   };
 
   return (
-    <main className="mx-auto flex w-full max-w-[1200px] flex-1 flex-col gap-5 px-2 py-4 sm:px-3 sm:py-6 lg:gap-9 lg:py-7">
+    <main className="mx-auto flex w-full max-w-[1400px] flex-1 flex-col gap-5 px-2 py-4 sm:px-3 sm:py-6 lg:gap-9 lg:py-7">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }}
@@ -430,12 +430,12 @@ export default async function Home({ searchParams }: HomeProps) {
             No products match this filter yet.
           </div>
         ) : (
-          <div className="mt-4 grid grid-cols-2 justify-items-center gap-1 [@media(max-width:320px)]:grid-cols-1 sm:mt-5 sm:gap-3 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="mt-4 grid grid-cols-2 justify-items-center gap-1 [@media(max-width:290px)]:grid-cols-1 sm:mt-5 sm:gap-3 lg:grid-cols-4 xl:grid-cols-5">
             {products.map((product) => {
               const store = storesById.get(product.store_id);
               if (!store) return null;
               return (
-                <div key={product.id} className="w-full max-w-[320px] space-y-2">
+                <div key={product.id} className="w-full max-w-[290px] space-y-2">
                   <ProductShowcaseCard
                     product={product}
                     store={store}

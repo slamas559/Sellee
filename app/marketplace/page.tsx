@@ -412,7 +412,7 @@ export default async function MarketplacePage({ searchParams }: MarketplacePageP
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-[1200px] flex-1 flex-col gap-6 px-2 py-6 sm:px-3 lg:py-8">
+    <main className="mx-auto flex w-full max-w-[1400px] flex-1 flex-col gap-6 px-2 py-6 sm:px-3 lg:py-8">
       <header className="rounded-3xl border border-emerald-100 bg-white p-5 shadow-sm sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
@@ -465,9 +465,9 @@ export default async function MarketplacePage({ searchParams }: MarketplacePageP
           {products.length === 0 ? (
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 text-sm text-slate-600">No products match your current filters.</div>
           ) : (
-            <div className="grid grid-cols-2 justify-items-center gap-2 [@media(max-width:320px)]:grid-cols-1 sm:gap-3 xl:grid-cols-3">
+            <div className="grid grid-cols-2 justify-items-center gap-2 [@media(max-width:240px)]:grid-cols-1 sm:gap-3 xl:grid-cols-4">
               {products.map((product) => (
-                <div key={product.id} className="w-full max-w-[320px] space-y-2">
+                <div key={product.id} className="w-full max-w-[280px] space-y-2">
                   <ProductShowcaseCard product={product} store={product.store} variant="marketplace" />
                   <div className="px-1">
                     <StoreLocation store={product.store} />
