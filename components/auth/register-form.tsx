@@ -66,6 +66,16 @@ export function RegisterForm() {
     password: "",
     confirmPassword: "",
   });
+  const [botCopied, setBotCopied] = useState(false);
+  const [commandCopied, setCommandCopied] = useState(false);
+  const [copyError, setCopyError] = useState<string | null>(null);
+  const botNumber = process.env.NEXT_PUBLIC_WHATSAPP_BOT_NUMBER?.trim() ?? "";
+  const cleanedNumber = useMemo(() => botNumber.replace(/\s+/g, ""), [botNumber]);
+  const displayNumber = useMemo(
+    () => (cleanedNumber.startsWith("+") ? cleanedNumber : `+${cleanedNumber}`),
+    [cleanedNumber],
+  );
+
   const [countryCode, setCountryCode] = useState("+234");
   const [challenge, setChallenge] = useState<RegisterStartResponse["challenge"] | null>(null);
   const [otp, setOtp] = useState("");
@@ -134,6 +144,22 @@ export function RegisterForm() {
       setError("Network error while checking status.");
     } finally {
       setIsCheckingStatus(false);
+    }
+  }
+
+  async function handleCopyNumber(text: string, numberType: "bot" | "command" = "bot") {
+    setCopyError(null);
+    try {
+      await navigator.clipboard.writeText(text);
+      if (numberType === "bot") {
+        setBotCopied(true);
+        setTimeout(() => setBotCopied(false), 1800);
+      } else {
+        setCommandCopied(true);
+        setTimeout(() => setCommandCopied(false), 1800);
+      }
+    } catch {
+      setCopyError(`Could not copy ${numberType === "bot" ? "bot number" : "command"}.`);
     }
   }
 
@@ -247,7 +273,14 @@ export function RegisterForm() {
         <div className="auth-stagger-2 rounded-xl border border-slate-200 bg-white p-3">
           <p className="text-sm font-semibold text-slate-900">Option 1: Verify on WhatsApp</p>
           <p className="mt-1 text-xs text-slate-600">
-            Open bot chat and send this command from the same number.
+            Open sellee bot chat <button
+              type="button"
+              onClick={copyError ? undefined : () => handleCopyNumber(displayNumber)}
+              disabled={isBusy}
+              className="rounded-full border border-slate-300 bg-white px-2 py-1 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 cursor-pointer"
+            >
+              {botCopied ? "Number Copied" : displayNumber}
+            </button> and send this command from the same number.
           </p>
           <code className="mt-2 block rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
             {challenge.command}
@@ -267,17 +300,17 @@ export function RegisterForm() {
             </a>
             <button
               type="button"
-              onClick={() => void navigator.clipboard.writeText(challenge.command)}
+              onClick={copyError ? undefined : () => handleCopyNumber(challenge.command, "command")}
               disabled={isBusy}
-              className="rounded-full border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+              className="rounded-full border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 cursor-pointer disabled:opacity-60"
             >
-              Copy Command
+              {commandCopied ? "Command Copied" : "Copy Command"}
             </button>
             <button
               type="button"
               onClick={() => void checkStatus()}
               disabled={isCheckingStatus}
-              className="rounded-full border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-60"
+              className="rounded-full border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 cursor-pointer disabled:opacity-60"
             >
               {isCheckingStatus ? "Checking..." : "I Have Verified"}
             </button>
@@ -370,7 +403,7 @@ export function RegisterForm() {
           value={form.full_name}
           onChange={(event) => setForm((prev) => ({ ...prev, full_name: event.target.value }))}
           className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none ring-emerald-300 transition placeholder:text-slate-400 focus:border-emerald-400 focus:ring-2"
-          placeholder="Abdul Salam"
+          placeholder="John Doe"
         />
       </div>
 
@@ -385,7 +418,7 @@ export function RegisterForm() {
           value={form.email}
           onChange={(event) => setForm((prev) => ({ ...prev, email: event.target.value }))}
           className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none ring-emerald-300 transition placeholder:text-slate-400 focus:border-emerald-400 focus:ring-2"
-          placeholder="you@example.com"
+          placeholder="johndoe@example.com"
         />
       </div>
 

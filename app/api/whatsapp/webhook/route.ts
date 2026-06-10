@@ -58,6 +58,16 @@ export async function POST(request: Request) {
       status_count: statusEvents.length,
     });
 
+    if (statusEvents.length > 0) {
+      logServerInfo("whatsapp.webhook.status_events", {
+        events: statusEvents.map((event) => ({
+          id: event.id ?? null,
+          status: event.status ?? null,
+          recipient_id: event.recipient_id ?? null,
+        })),
+      });
+    }
+    
     for (const message of messages) {
       const from = String(message.from);
       const body = String(message.text?.body);
