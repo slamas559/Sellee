@@ -1,9 +1,10 @@
-
 import { ImageResponse } from "next/og";
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
 import { parseProductPathSegment } from "@/lib/format";
 
-export const runtime = "edge";
+// FIX 1: Drop "edge". Node.js runtime has full ICU support for NGN Naira styling 
+// and removes the strict 50ms execution timeouts that drop WhatsApp bots.
+export const runtime = "nodejs"; 
 export const alt = "Product on Sellee";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
@@ -13,11 +14,7 @@ type Props = {
 };
 
 function formatNairaSimple(value: number): string {
-  return new Intl.NumberFormat("en-NG", {
-    style: "currency",
-    currency: "NGN",
-    maximumFractionDigits: 0,
-  }).format(value);
+  return `₦${Number(value).toLocaleString("en-NG", { maximumFractionDigits: 0 })}`;
 }
 
 export default async function ProductOGImage({ params }: Props) {
@@ -30,50 +27,43 @@ export default async function ProductOGImage({ params }: Props) {
   let storeName = "Store";
   let storeLogo: string | null = null;
   let themeColor = "#059669";
-  let inStock = true;
 
   try {
     const supabase = createAdminSupabaseClient();
+    const parsedPath = parseProductPathSegment(productSlug);
 
-    const { data: store } = await supabase
-      .from("stores")
-      .select("id, name, logo_url, theme_color, is_active")
-      .eq("slug", slug)
-      .eq("is_active", true)
-      .maybeSingle();
+    // FIX 2: Single query join instead of two sequential lookups to optimize response speeds
+    let productQuery = supabase
+      .from("products")
+      .select("id, name, price, image_url, category, slug, stores!inner(id, name, logo_url, theme_color, is_active)")
+      .eq("stores.slug", slug)
+      .eq("stores.is_active", true);
 
-    if (store) {
-      storeName = store.name ?? "Store";
-      storeLogo = store.logo_url ?? null;
-      themeColor = store.theme_color ?? "#059669";
+    if (parsedPath.id) {
+      productQuery = productQuery.eq("id", parsedPath.id);
+    } else if (parsedPath.isUuidOnly) {
+      productQuery = productQuery.eq("id", productSlug);
+    } else {
+      productQuery = productQuery.eq("slug", productSlug);
+    }
 
-      const parsedPath = parseProductPathSegment(productSlug);
+    const { data: product } = await productQuery.maybeSingle();
 
-      let productQuery = supabase
-        .from("products")
-        .select("id, name, price, image_url, category, stock_count, is_available")
-        .eq("store_id", store.id);
-
-      if (parsedPath.id) {
-        productQuery = productQuery.eq("id", parsedPath.id);
-      } else if (parsedPath.isUuidOnly) {
-        productQuery = productQuery.eq("id", productSlug);
-      } else {
-        productQuery = productQuery.eq("slug", productSlug);
-      }
-
-      const { data: product } = await productQuery.maybeSingle();
-
-      if (product) {
-        productName = product.name ?? "Product";
-        productPrice = product.price ? Number(product.price) : null;
-        productImage = product.image_url ?? null;
-        productCategory = product.category ?? null;
-        inStock = Boolean(product.is_available) && Number(product.stock_count ?? 0) > 0;
+    if (product) {
+      productName = product.name ?? "Product";
+      productPrice = product.price ? Number(product.price) : null;
+      productImage = product.image_url ?? null;
+      productCategory = product.category ?? null;
+      
+      const storeData = (product as any).stores;
+      if (storeData) {
+        storeName = storeData.name ?? "Store";
+        storeLogo = storeData.logo_url ?? null;
+        themeColor = storeData.theme_color ?? "#059669";
       }
     }
-  } catch {
-    // Use fallback values
+  } catch (e) {
+    // Graceful fallback values are retained if Supabase errors out
   }
 
   const storeInitial = storeName.charAt(0).toUpperCase();
@@ -96,18 +86,15 @@ export default async function ProductOGImage({ params }: Props) {
             width: "660px",
             height: "630px",
             position: "relative",
-            flexShrink: 0,
             display: "flex",
           }}
         >
           {productImage ? (
-            <>
+            <div style={{ width: "660px", height: "630px", display: "flex", position: "relative" }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={productImage}
                 alt={productName}
-                width={660}
-                height={630}
                 style={{
                   objectFit: "cover",
                   width: "660px",
@@ -131,9 +118,8 @@ export default async function ProductOGImage({ params }: Props) {
                     "linear-gradient(to bottom, rgba(15,26,20,0) 50%, rgba(15,26,20,0.6) 100%)",
                 }}
               />
-            </>
+            </div>
           ) : (
-            // Fallback when no product image
             <div
               style={{
                 width: "660px",
@@ -173,7 +159,6 @@ export default async function ProductOGImage({ params }: Props) {
                 alignItems: "center",
                 justifyContent: "center",
                 overflow: "hidden",
-                flexShrink: 0,
               }}
             >
               {storeLogo ? (
@@ -181,9 +166,7 @@ export default async function ProductOGImage({ params }: Props) {
                 <img
                   src={storeLogo}
                   alt={storeName}
-                  width={44}
-                  height={44}
-                  style={{ objectFit: "cover", width: "100%", height: "100%" }}
+                  style={{ objectFit: "cover", width: "44px", height: "44px" }}
                 />
               ) : (
                 <span style={{ fontSize: "22px", fontWeight: 900, color: themeColor }}>
@@ -192,14 +175,7 @@ export default async function ProductOGImage({ params }: Props) {
               )}
             </div>
             <div style={{ display: "flex", flexDirection: "column" }}>
-              <span
-                style={{
-                  fontSize: "15px",
-                  color: "rgba(255,255,255,0.45)",
-                  fontWeight: 500,
-                  marginBottom: "2px",
-                }}
-              >
+              <span style={{ fontSize: "15px", color: "rgba(255,255,255,0.45)", fontWeight: 500, marginBottom: "2px" }}>
                 Sold by
               </span>
               <span style={{ fontSize: "17px", color: "rgba(255,255,255,0.85)", fontWeight: 700 }}>
@@ -210,14 +186,8 @@ export default async function ProductOGImage({ params }: Props) {
 
           {/* Middle: Product details */}
           <div style={{ display: "flex", flexDirection: "column", flex: 1, justifyContent: "center", paddingTop: "16px" }}>
-            {/* Category badge */}
             {productCategory && (
-              <div
-                style={{
-                  display: "flex",
-                  marginBottom: "16px",
-                }}
-              >
+              <div style={{ display: "flex", marginBottom: "16px" }}>
                 <span
                   style={{
                     background: `${themeColor}33`,
@@ -236,15 +206,9 @@ export default async function ProductOGImage({ params }: Props) {
               </div>
             )}
 
-            {/* Product name */}
             <h1
               style={{
-                fontSize:
-                  productName.length > 30
-                    ? "32px"
-                    : productName.length > 20
-                    ? "38px"
-                    : "44px",
+                fontSize: productName.length > 30 ? "32px" : productName.length > 20 ? "38px" : "44px",
                 fontWeight: 900,
                 color: "white",
                 margin: "0 0 20px 0",
@@ -255,84 +219,15 @@ export default async function ProductOGImage({ params }: Props) {
               {productName}
             </h1>
 
-            {/* Price */}
             {productPrice !== null && (
-              <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
-                <span
-                  style={{
-                    fontSize: "42px",
-                    fontWeight: 900,
-                    color: themeColor,
-                    letterSpacing: "-1px",
-                  }}
-                >
-                  {formatNairaSimple(productPrice)}
-                </span>
-                <span
-                  style={{
-                    background: inStock ? "rgba(16,185,129,0.15)" : "rgba(239,68,68,0.15)",
-                    color: inStock ? "#34d399" : "#f87171",
-                    border: `1px solid ${inStock ? "rgba(16,185,129,0.3)" : "rgba(239,68,68,0.3)"}`,
-                    borderRadius: "100px",
-                    padding: "6px 14px",
-                    fontSize: "14px",
-                    fontWeight: 700,
-                  }}
-                >
-                  {inStock ? "In stock" : "Out of stock"}
-                </span>
+              <div style={{ display: "flex", fontSize: "36px", fontWeight: 800, color: themeColor }}>
+                {formatNairaSimple(productPrice)}
               </div>
             )}
-          </div>
-
-          {/* Bottom: CTA strip */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              paddingTop: "20px",
-              borderTop: "1px solid rgba(255,255,255,0.1)",
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <div
-                style={{
-                  width: "22px",
-                  height: "22px",
-                  borderRadius: "50%",
-                  background: "#25D366",
-                }}
-              />
-              <span style={{ color: "rgba(255,255,255,0.6)", fontSize: "15px" }}>
-                Order via WhatsApp
-              </span>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <div
-                style={{
-                  width: "22px",
-                  height: "22px",
-                  borderRadius: "5px",
-                  background: "white",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: "12px",
-                  fontWeight: 900,
-                  color: themeColor,
-                }}
-              >
-                S
-              </div>
-              <span style={{ color: "rgba(255,255,255,0.45)", fontSize: "15px" }}>
-                sellee.store
-              </span>
-            </div>
           </div>
         </div>
       </div>
     ),
-    { ...size },
+    { ...size }
   );
 }
