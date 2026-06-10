@@ -317,7 +317,7 @@ export function RegisterForm() {
           </div>
         </div>
 
-        <div className="auth-stagger-3 rounded-xl border border-slate-200 bg-white p-3">
+        {/* <div className="auth-stagger-3 rounded-xl border border-slate-200 bg-white p-3">
           <p className="text-sm font-semibold text-slate-900">Option 2: Verify by OTP</p>
           <p className="mt-1 text-xs text-slate-600">
             Send OTP to your WhatsApp number, then enter it below.
@@ -349,7 +349,7 @@ export function RegisterForm() {
               {isVerifyingOtp ? "Verifying..." : "Verify OTP"}
             </button>
           </div>
-        </div>
+        </div> */}
 
         <button
           type="button"

@@ -294,7 +294,7 @@ export function AccountProfileForm() {
           <div className="mt-6 rounded-lg border border-slate-200 bg-slate-50 p-4">
             <p className="text-sm font-semibold text-slate-900">Change WhatsApp Number</p>
             <p className="mt-1 text-xs text-slate-600">
-              Choose country code and verify via VERIFY command or OTP before update is applied.
+              Choose country code and verify via VERIFY command before update is applied.
             </p>
 
             <div className="mt-3 flex gap-2">
@@ -360,7 +360,7 @@ export function AccountProfileForm() {
                   </button>
                 </div>
 
-                <div className="flex flex-wrap gap-2">
+                {/* <div className="flex flex-wrap gap-2">
                   <button
                     type="button"
                     onClick={() => void sendOtp()}
@@ -386,7 +386,7 @@ export function AccountProfileForm() {
                   >
                     {isVerifyingOtp ? "Verifying..." : "Verify OTP"}
                   </button>
-                </div>
+                </div> */}
               </div>
             ) : null}
           </div>

@@ -47,7 +47,7 @@ export default function OrderNotificationEmail({
       <Preview>New order received at {storeName}</Preview>
       <Tailwind>
         <Body className="m-0 bg-slate-100 px-3 py-8 font-sans text-slate-700">
-          <Container className="mx-auto w-full max-w-[600px] overflow-hidden rounded-[24px] bg-white shadow-sm">
+          <Container className="mx-auto w-full max-w-[400px] overflow-hidden rounded-[24px] bg-white shadow-sm">
             <Section className="bg-emerald-600 px-6 py-8 text-white">
               <Text className="m-0 text-xs font-bold uppercase tracking-[0.18em] text-emerald-50">
                 New Order Alert
@@ -75,14 +75,14 @@ export default function OrderNotificationEmail({
 
                 <div className="mt-4 space-y-3">
                   <div className="flex justify-between">
-                    <Text className="m-0 text-[14px] text-slate-600">Customer:</Text>
+                    <Text className="m-0 text-[14px] text-slate-600">Customer: </Text>
                     <Text className="m-0 text-[14px] font-semibold text-slate-900">
                       {customerName}
                     </Text>
                   </div>
 
                   <div className="flex justify-between">
-                    <Text className="m-0 text-[14px] text-slate-600">WhatsApp:</Text>
+                    <Text className="m-0 text-[14px] text-slate-600">WhatsApp: </Text>
                     <Text className="m-0 text-[14px] font-semibold text-slate-900">
                       {customerWhatsApp}
                     </Text>
@@ -91,21 +91,21 @@ export default function OrderNotificationEmail({
                   <Hr className="my-2 border-emerald-200" />
 
                   <div className="flex justify-between">
-                    <Text className="m-0 text-[14px] text-slate-600">Product:</Text>
+                    <Text className="m-0 text-[14px] text-slate-600">Product: </Text>
                     <Text className="m-0 text-[14px] font-semibold text-slate-900">
                       {productName}
                     </Text>
                   </div>
 
                   <div className="flex justify-between">
-                    <Text className="m-0 text-[14px] text-slate-600">Quantity:</Text>
+                    <Text className="m-0 text-[14px] text-slate-600">Quantity: </Text>
                     <Text className="m-0 text-[14px] font-semibold text-slate-900">
                       {quantity}x
                     </Text>
                   </div>
 
                   <div className="flex justify-between">
-                    <Text className="m-0 text-[14px] text-slate-600">Unit Price:</Text>
+                    <Text className="m-0 text-[14px] text-slate-600">Unit Price: </Text>
                     <Text className="m-0 text-[14px] font-semibold text-slate-900">
                       ₦{unitPrice.toLocaleString("en-NG")}
                     </Text>
