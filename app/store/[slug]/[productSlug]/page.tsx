@@ -76,7 +76,7 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
       })
     : productSlug;
   const canonical = `/store/${slug}/${canonicalRef}`;
-  const image = `https://www.sellee.store/store/${slug}/${canonicalRef}/opengraph-image.png`;
+  const image = `https://www.sellee.store/store/${slug}/${productSlug}/opengraph-image`;
 
 
   return {
