@@ -44,9 +44,7 @@ export default function WelcomeEmail({
               <Img
                 src="https://sellee.store/icon2.png"
                 alt="Sellee"
-                width={36}
-                height={36}
-                className="mb-4"
+                className="mb-4 h-8 w-auto"
               />
               <Text className="m-0 text-xs font-bold uppercase tracking-[0.18em] text-emerald-50">
                 Hi, {firstName}
