@@ -67,7 +67,7 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
   const desc =
     product?.description?.replace(/\s+/g, " ").trim() ||
     `Check out this product from ${label} on Sellee.`;
-  const image = product?.image_url || "https://sellee.store/opengraph-image.png";
+  // const image = product?.image_url || "https://sellee.store/opengraph-image.png";
   const canonicalRef = product
     ? formatProductPathSegment({
         id: String((product as { id: string }).id),
@@ -76,6 +76,8 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
       })
     : productSlug;
   const canonical = `/store/${slug}/${canonicalRef}`;
+  const image = `https://sellee.store/store/${canonical}/opengraph-image`;
+
 
   return {
     title: `${product?.name || "Product"} | ${label}`,
@@ -86,7 +88,13 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
       description: desc,
       url: `https://sellee.store${canonical}`,
       type: "website",
-      images: [{ url: image }],
+      images: [{ 
+        url: image,
+        width: 1200,
+        height: 630,
+        alt: product?.name || "Product image",
+        type: image.endsWith(".png") ? "image/png" : "image/jpeg",
+      }],
     },
     twitter: {
       card: "summary_large_image",
