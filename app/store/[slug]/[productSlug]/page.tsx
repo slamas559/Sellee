@@ -76,23 +76,25 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
       })
     : productSlug;
   const canonical = `/store/${slug}/${canonicalRef}`;
-  const image = `https://sellee.store/store/${slug}/${canonicalRef}/opengraph-image`;
+  const image = `https://www.sellee.store/store/${slug}/${canonicalRef}/opengraph-image.png`;
 
 
   return {
+    metadataBase: new URL("https://www.sellee.store"),
     title: `${product?.name || "Product"} | ${label}`,
     description: desc,
     alternates: { canonical },
     openGraph: {
       title: `${product?.name || "Product"} | ${label} | Sellee`,
       description: desc,
-      url: `https://sellee.store${canonical}`,
+      url: `https://www.sellee.store${canonical}`,
       type: "website",
       images: [{ 
         url: image,
         width: 1200,
         height: 630,
         alt: product?.name || "Product image",
+        type: "image/png"
       }],
     },
     twitter: {
