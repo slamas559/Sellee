@@ -64,10 +64,11 @@ export async function POST(request: Request) {
           id: event.id ?? null,
           status: event.status ?? null,
           recipient_id: event.recipient_id ?? null,
+          errors: event.errors ?? null,
         })),
       });
     }
-    
+
     for (const message of messages) {
       const from = String(message.from);
       const body = String(message.text?.body);

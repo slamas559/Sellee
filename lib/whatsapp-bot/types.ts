@@ -10,6 +10,14 @@ export type WhatsAppStatusEvent = {
   id?: string;
   status?: string;
   recipient_id?: string;
+  errors?: Array<{
+    code?: number;
+    title?: string;
+    message?: string;
+    error_data?: {
+      details?: string;
+    };
+  }>;
 };
 
 export type WebhookPayload = {
