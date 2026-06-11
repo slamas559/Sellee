@@ -65,10 +65,10 @@ export function ProductShowcaseCard({
   const isMinimalTemplate = template === "minimal" || template === "fashion_editorial";
 
   const cardClass = isBoldTemplate
-    ? "border-slate-800 bg-slate-900 text-white shadow-[0_22px_55px_-30px_rgba(0,0,0,0.7)] hover:shadow-[0_30px_75px_-30px_rgba(5,150,105,0.5)]"
+    ? "border-slate-800 bg-slate-900 text-white  hover:shadow-[0_30px_75px_-30px_rgba(5,150,105,0.5)]"
     : isMinimalTemplate
-      ? "border-slate-100 bg-white shadow-[0_8px_30px_-20px_rgba(15,23,42,0.2)] hover:shadow-[0_16px_40px_-20px_rgba(16,185,129,0.25)]"
-      : "border-slate-200 bg-white shadow-[0_18px_45px_-30px_rgba(15,23,42,0.45)] hover:shadow-[0_28px_70px_-32px_rgba(16,185,129,0.55)]";
+      ? "border-slate-100 bg-white  hover:shadow-[0_16px_40px_-20px_rgba(16,185,129,0.25)]"
+      : "border-slate-200 bg-white  hover:shadow-[0_28px_70px_-32px_rgba(16,185,129,0.55)]";
   const titleClass = isBoldTemplate ? "text-white" : "text-slate-900";
   const metaClass = isBoldTemplate ? "text-slate-300" : "text-slate-500";
   const descriptionClass = isCompact
@@ -116,7 +116,7 @@ export function ProductShowcaseCard({
       onMouseEnter={prefetchProduct}
       onFocus={prefetchProduct}
       onTouchStart={prefetchProduct}
-      className={`group cursor-pointer overflow-hidden rounded-lg border sm:rounded-[1.75rem] transition hover:-translate-y-1 ${cardClass}`}
+      className={`group cursor-pointer overflow-hidden rounded-lg  sm:rounded-[1.75rem] transition hover:-translate-y-1 ${cardClass}`}
     >
       <div className="relative overflow-hidden rounded-lg sm:rounded-[1.25rem] bg-slate-100">
         <div className={`relative w-full ${imageHeightClass}`}>
