@@ -40,7 +40,7 @@ export async function generateMetadata({ params }: StorePageProps): Promise<Meta
   const description =
     config.hero_subtitle ||
     `Browse products from ${label} on Sellee and order through WhatsApp-powered workflows.`;
-  const imageUrl = config.hero_image_url || store?.logo_url || "https://sellee.store/opengraph-image.png";
+  const imageUrl = `https://sellee.store/store/${slug}/opengraph-image`;
   const canonical = `/store/${slug}`;
   const logoUrl = store?.logo_url ?? null;
 
