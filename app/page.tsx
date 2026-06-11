@@ -306,7 +306,7 @@ export default async function Home({ searchParams }: HomeProps) {
   };
 
   return (
-    <main className="mx-auto flex w-full max-w-[1400px] flex-1 flex-col gap-5 px-2 py-4 sm:px-3 sm:py-6 lg:gap-9 lg:py-7">
+    <main className="mx-auto flex w-full max-w-[1400px] flex-1 flex-col gap-5 px-0.5 py-3 sm:px-3 sm:py-6 lg:gap-9 lg:py-7">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }}
@@ -416,21 +416,13 @@ export default async function Home({ searchParams }: HomeProps) {
         }))}
       />
 
-      <section id="market" className="rounded-3xl border border-slate-200 bg-white p-3 shadow-sm sm:p-5">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">Marketplace</p>
-            <h2 className="mt-1 text-2xl font-bold text-slate-900">Popular Products</h2>
-          </div>
-          <p className="text-sm text-slate-600">{products.length} items found</p>
-        </div>
-
+      <section id="market" className="sm:rounded-3xl border border-slate-200 bg-white p-1.5 shadow-sm sm:p-5">
         {products.length === 0 ? (
           <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-6 text-sm text-slate-600">
             No products match this filter yet.
           </div>
         ) : (
-          <div className="mt-4 grid grid-cols-2 justify-items-center gap-1 [@media(max-width:290px)]:grid-cols-1 sm:mt-5 sm:gap-3 lg:grid-cols-4 xl:grid-cols-5">
+          <div className="mt-2 grid grid-cols-2 justify-items-center gap-1 [@media(max-width:290px)]:grid-cols-1 sm:mt-3 sm:gap-3 lg:grid-cols-4 xl:grid-cols-5">
             {products.map((product) => {
               const store = storesById.get(product.store_id);
               if (!store) return null;
