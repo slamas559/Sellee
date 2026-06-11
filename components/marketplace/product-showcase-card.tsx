@@ -116,9 +116,9 @@ export function ProductShowcaseCard({
       onMouseEnter={prefetchProduct}
       onFocus={prefetchProduct}
       onTouchStart={prefetchProduct}
-      className={`group cursor-pointer overflow-hidden rounded-lg  sm:rounded-[1.75rem] transition hover:-translate-y-1 ${cardClass}`}
+      className={`group cursor-pointer overflow-hidden rounded-t-lg  sm:rounded-t-[1.75rem] transition hover:-translate-y-1 ${cardClass}`}
     >
-      <div className="relative overflow-hidden rounded-lg sm:rounded-[1.25rem] bg-slate-100">
+      <div className="relative overflow-hidden rounded-t-lg sm:rounded-t-[1.25rem] bg-slate-100">
         <div className={`relative w-full ${imageHeightClass}`}>
           {activeImage ? (
             <Image
