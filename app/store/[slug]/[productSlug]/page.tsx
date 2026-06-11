@@ -94,7 +94,7 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
         width: 1200,
         height: 630,
         alt: product?.name || "Product image",
-        type: "image/png"
+        type: "image/jpeg"
       }],
     },
     twitter: {

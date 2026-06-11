@@ -18,7 +18,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://sellee.store"),
+  metadataBase: new URL("https://www.sellee.store"),
   title: {
     default: "Sellee",
     template: "%s | Sellee",
@@ -36,7 +36,7 @@ export const metadata: Metadata = {
     title: "Sellee",
     description:
       "Discover nearby vendors, compare products, and manage orders with WhatsApp-powered workflows.",
-    url: "https://sellee.store",
+    url: "https://www.sellee.store",
     siteName: "Sellee",
     type: "website",
   },

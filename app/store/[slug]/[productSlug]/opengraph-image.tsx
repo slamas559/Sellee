@@ -6,7 +6,7 @@ import { parseProductPathSegment } from "@/lib/format";
 export const runtime = "edge";
 export const alt = "Product on Sellee";
 export const size = { width: 1200, height: 630 };
-export const contentType = "image/png";
+export const contentType = "image/jpeg";
 
 type Props = {
   params: Promise<{ slug: string; productSlug: string }>;
@@ -333,6 +333,11 @@ export default async function ProductOGImage({ params }: Props) {
         </div>
       </div>
     ),
-    { ...size },
+    { ...size,
+      headers: {
+        "content-type": "image/jpeg",
+        "cache-control": "public, imutability, max-age=31536000", // Aggressive caching helps WhatsApp
+      },
+     },
   );
 }
