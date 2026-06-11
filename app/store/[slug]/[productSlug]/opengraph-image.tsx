@@ -336,7 +336,7 @@ export default async function ProductOGImage({ params }: Props) {
     { ...size,
       headers: {
         "content-type": "image/jpeg",
-        "cache-control": "public, immutability, max-age=31536000", // Aggressive caching helps WhatsApp
+        "cache-control": "public, immutable, max-age=31536000", // Aggressive caching helps WhatsApp
       },
      },
   );
