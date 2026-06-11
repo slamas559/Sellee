@@ -13,13 +13,13 @@ type Props = {
 };
 
 function formatNairaSimple(value: number): string {
-  return new Intl.NumberFormat("en-NG", {
-    style: "currency",
-    currency: "NGN",
-    maximumFractionDigits: 0,
-  }).format(value);
+  return (
+    "NGN " +
+    new Intl.NumberFormat("en-NG", {
+      maximumFractionDigits: 0,
+    }).format(value)
+  );
 }
-
 export default async function ProductOGImage({ params }: Props) {
   const { slug, productSlug } = await params;
 
@@ -336,7 +336,7 @@ export default async function ProductOGImage({ params }: Props) {
     { ...size,
       headers: {
         "content-type": "image/jpeg",
-        "cache-control": "public, imutability, max-age=31536000", // Aggressive caching helps WhatsApp
+        "cache-control": "public, immutability, max-age=31536000", // Aggressive caching helps WhatsApp
       },
      },
   );
