@@ -8,6 +8,8 @@ export const alt = "Product on Sellee";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/jpeg";
 
+export const revalidate = 86400;
+
 type Props = {
   params: Promise<{ slug: string; productSlug: string }>;
 };
@@ -35,24 +37,30 @@ export default async function ProductOGImage({ params }: Props) {
   try {
     const supabase = createAdminSupabaseClient();
 
-    const { data: store } = await supabase
-      .from("stores")
-      .select("id, name, logo_url, theme_color, is_active")
-      .eq("slug", slug)
-      .eq("is_active", true)
-      .maybeSingle();
+    const result = await Promise.race([
+        (async () => {
+          const { data: store } = await supabase
+            .from("stores")
+            .select("id, name, logo_url, theme_color, is_active")
+            .eq("slug", slug)
+            .eq("is_active", true)
+            .maybeSingle();
+          return store;
+        })(),
+        new Promise<null>((resolve) => setTimeout(() => resolve(null), 3000)),
+      ]);
 
-    if (store) {
-      storeName = store.name ?? "Store";
-      storeLogo = store.logo_url ?? null;
-      themeColor = store.theme_color ?? "#059669";
+    if (result) {
+      storeName = result.name ?? "Store";
+      storeLogo = result.logo_url ?? null;
+      themeColor = result.theme_color ?? "#059669";
 
       const parsedPath = parseProductPathSegment(productSlug);
 
       let productQuery = supabase
         .from("products")
         .select("id, name, price, image_url, category, stock_count, is_available")
-        .eq("store_id", store.id);
+        .eq("store_id", result.id);
 
       if (parsedPath.id) {
         productQuery = productQuery.eq("id", parsedPath.id);
