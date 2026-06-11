@@ -56,11 +56,11 @@ export function ProductShowcaseCard({
   const hasManyImages = images.length > 1;
   const activeImage = images[index] ?? null;
   const isCompact = variant === "home" || variant === "marketplace";
-  const headlineClass = isCompact ? "text-sm" : "text-base text-sm sm:text-lg lg:text-sm";
-  const imageHeightClass = isCompact ? "h-40 sm:h-52" : "h-36 sm:h-52";
+  const headlineClass = isCompact ? "text-[13px]" : "text-base text-[13px] sm:text-[14px] lg:text-[13px]";
+  const imageHeightClass = isCompact ? "h-50 sm:h-62" : "h-46 sm:h-62";
   const contentWrapClass = isCompact
-    ? "space-y-1.5 px-0.5 pb-1 pt-1.5 sm:space-y-2 sm:px-1 sm:pt-3"
-    : "space-y-2 px-0.5 pb-1 pt-2 sm:px-1 sm:pt-3";
+    ? "space-y-1.5 px-1.5 pb-1 pt-1.5 sm:space-y-2 sm:px-2.5 sm:pt-3"
+    : "space-y-2 px-1.5 pb-1 pt-2 sm:px-2.5 sm:pt-3";
   const isBoldTemplate = template === "bold" || template === "modern_grid";
   const isMinimalTemplate = template === "minimal" || template === "fashion_editorial";
 
@@ -72,8 +72,8 @@ export function ProductShowcaseCard({
   const titleClass = isBoldTemplate ? "text-white" : "text-slate-900";
   const metaClass = isBoldTemplate ? "text-slate-300" : "text-slate-500";
   const descriptionClass = isCompact
-    ? `line-clamp-2 text-xs leading-4 ${metaClass}`
-    : `line-clamp-2 text-xs leading-4 sm:text-xs sm:leading-5 ${metaClass}`;
+    ? `line-clamp-2 text-[11px] leading-4 ${metaClass}`
+    : `line-clamp-2 text-[11px] leading-4 sm:text-xs sm:leading-5 ${metaClass}`;
   const priceChipClass = isBoldTemplate
     ? "bg-slate-800 text-emerald-200"
     : "bg-slate-100 text-slate-900";
@@ -116,7 +116,7 @@ export function ProductShowcaseCard({
       onMouseEnter={prefetchProduct}
       onFocus={prefetchProduct}
       onTouchStart={prefetchProduct}
-      className={`group cursor-pointer overflow-hidden rounded-xl border p-1 sm:rounded-[1.75rem] sm:p-3 transition hover:-translate-y-1 ${cardClass}`}
+      className={`group cursor-pointer overflow-hidden rounded-xl border sm:rounded-[1.75rem] transition hover:-translate-y-1 ${cardClass}`}
     >
       <div className="relative overflow-hidden rounded-xl sm:rounded-[1.25rem] bg-slate-100">
         <div className={`relative w-full ${imageHeightClass}`}>
@@ -209,7 +209,7 @@ export function ProductShowcaseCard({
           {product.description || "Quality product from a verified local vendor."}
         </p>
 
-        <div className="pt-1">
+        <div className="">
           <StarRating
             value={product.rating_avg}
             count={product.rating_count}
@@ -218,7 +218,7 @@ export function ProductShowcaseCard({
           />
         </div>
 
-        <div className="flex items-center justify-between gap-2 pt-1.5 [@media(max-width:360px)]:flex-wrap sm:pt-2">
+        <div className="flex items-center justify-between gap-2 [@media(max-width:360px)]:flex-wrap sm:pt-2">
           <span
             className={`inline-flex whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-bold tabular-nums sm:px-3 sm:py-1.5 sm:text-sm ${priceChipClass}`}
           >
