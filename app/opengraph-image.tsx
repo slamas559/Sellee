@@ -8,7 +8,7 @@ import { ImageResponse } from "next/og";
 export const runtime = "edge";
 export const alt = "Sellee — Discover Local Vendors and Products";
 export const size = { width: 1200, height: 630 };
-export const contentType = "image/png";
+export const contentType = "image/jpeg";
 
 export default function OGImage() {
   return new ImageResponse(
@@ -179,6 +179,11 @@ export default function OGImage() {
         </div>
       </div>
     ),
-    { ...size },
+    { ...size,
+      headers: {
+      "content-type": "image/jpeg",
+      "cache-control": "public, immutable, max-age=31536000",
+    },
+     },
   );
 }

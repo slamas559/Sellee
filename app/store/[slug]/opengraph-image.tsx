@@ -5,7 +5,7 @@ import { createAdminSupabaseClient } from "@/lib/supabase-admin";
 export const runtime = "edge";
 export const alt = "Store on Sellee";
 export const size = { width: 1200, height: 630 };
-export const contentType = "image/png";
+export const contentType = "image/jpeg";
 
 type Props = {
   params: Promise<{ slug: string }>;
@@ -274,6 +274,11 @@ export default async function StoreOGImage({ params }: Props) {
         </div>
       </div>
     ),
-    { ...size },
+    { ...size,
+      headers: {
+      "content-type": "image/jpeg",
+      "cache-control": "public, immutable, max-age=31536000",
+    },
+     },
   );
 }
