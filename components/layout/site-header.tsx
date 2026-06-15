@@ -29,6 +29,8 @@ export default function SiteHeader() {
   const [isSearchFocused, setIsSearchFocused] = useState(false);
 
   const wrapperRef = useRef<HTMLDivElement | null>(null);
+  const mobileWrapperRef = useRef<HTMLDivElement | null>(null);
+
   const desktopInputRef = useRef<HTMLInputElement | null>(null);
 
   // Sync with URL — all hooks must be declared before any conditional return
@@ -63,15 +65,18 @@ export default function SiteHeader() {
 
   // Close suggestions on outside click
   useEffect(() => {
-    function onDoc(e: MouseEvent) {
-      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
-        setShowSuggestions(false);
-        setIsSearchFocused(false);
-      }
+  function onDoc(e: MouseEvent) {
+    const target = e.target as Node;
+    const insideDesktop = wrapperRef.current?.contains(target);
+    const insideMobile = mobileWrapperRef.current?.contains(target);
+    if (!insideDesktop && !insideMobile) {
+      setShowSuggestions(false);
+      setIsSearchFocused(false);
     }
-    document.addEventListener("mousedown", onDoc);
-    return () => document.removeEventListener("mousedown", onDoc);
-  }, []);
+  }
+  document.addEventListener("mousedown", onDoc);
+  return () => document.removeEventListener("mousedown", onDoc);
+}, []);
 
   // ── All hooks have run — now it is safe to conditionally return ──
   // Check if we're on the vendor store listing page (not product details)
@@ -287,7 +292,7 @@ export default function SiteHeader() {
 
       {/* ── Mobile search bar ── */}
       <div className="sm:hidden border-t border-slate-100 px-4 py-2.5 bg-white">
-        <div ref={wrapperRef} className="relative">
+        <div ref={mobileWrapperRef} className="relative">
           <form action="/search" onSubmit={handleSubmit} className={formClass}>
             <Search className="shrink-0 h-4 w-4 text-slate-400" />
             <input
