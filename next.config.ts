@@ -2,6 +2,7 @@ import type { NextConfig } from "next";
 
 const ngrokOrigin = process.env.NEXTAUTH_URL;
 
+
 const nextConfig: NextConfig = {
   allowedDevOrigins: [
     "http://localhost:3000",
@@ -22,6 +23,23 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  async headers() {
+    return [
+      {
+        source: "/:path*/opengraph-image",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=86400, stale-while-revalidate=604800",
+          },
+          {
+            key: "Access-Control-Allow-Origin", 
+            value: "*",
+          },
+        ],
+      },
+    ];
+  }
 };
 
 export default nextConfig;

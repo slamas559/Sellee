@@ -489,6 +489,11 @@ export async function POST(request: Request) {
 
       const [storeWithNiches] = await attachNichesToStores([data as StoreRow]);
       revalidatePublicCacheForStore(data.slug);
+
+      // After revalidatePublicCacheForStore(slug)
+      const appUrl = process.env.NEXTAUTH_URL || "https://sellee.store";
+      fetch(`${appUrl}/store/${data.slug}/opengraph-image`).catch(() => {});
+
       if (existingStore?.slug && existingStore.slug !== data.slug) {
         revalidateTag(CACHE_TAGS.storefrontBySlug(existingStore.slug), "max");
       }
@@ -549,6 +554,9 @@ export async function POST(request: Request) {
 
     const [storeWithNiches] = await attachNichesToStores([data as StoreRow]);
     revalidatePublicCacheForStore(data.slug);
+
+    const appUrl = process.env.NEXTAUTH_URL || "https://sellee.store";
+    fetch(`${appUrl}/store/${data.slug}/opengraph-image`).catch(() => {});
 
     const { data: promotedRows, error: roleError } = await supabase
       .from("users")

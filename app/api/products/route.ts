@@ -287,6 +287,8 @@ export async function POST(request: Request) {
     }
 
     revalidatePublicCacheForStore(store.slug);
+    const appUrl = process.env.NEXTAUTH_URL || "https://sellee.store";
+    fetch(`${appUrl}/store/${store.slug}/opengraph-image`).catch(() => {});
 
     return NextResponse.json({ product: data, message: `${data.name} (${formatNaira(Number(data.price))}) added.` });
   } catch (error) {

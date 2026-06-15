@@ -47,7 +47,7 @@ export default async function ProductOGImage({ params }: Props) {
             .maybeSingle();
           return store;
         })(),
-        new Promise<null>((resolve) => setTimeout(() => resolve(null), 3000)),
+        new Promise<null>((resolve) => setTimeout(() => resolve(null), 1500)),
       ]);
 
     if (result) {

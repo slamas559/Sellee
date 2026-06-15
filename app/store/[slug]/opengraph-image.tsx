@@ -7,6 +7,8 @@ export const alt = "Store on Sellee";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/jpeg";
 
+export const revalidate = 86400;
+
 type Props = {
   params: Promise<{ slug: string }>;
 };
@@ -24,31 +26,39 @@ export default async function StoreOGImage({ params }: Props) {
   let nicheNames: string[] = [];
 
   try {
-    const supabase = createAdminSupabaseClient();
+    const result = await Promise.race([
+      (async () => {
+        const supabase = createAdminSupabaseClient();
+        const { data: store } = await supabase
+          .from("stores")
+          .select("id, name, logo_url, city, state, country, theme_color, is_active")
+          .eq("slug", slug)
+          .eq("is_active", true)
+          .maybeSingle();
+        
+        if (!store) return null;
+        
+        const { data: storeNiches } = await supabase
+          .from("store_niches")
+          .select("niche:niche_id(name)")
+          .eq("store_id", store.id)
+          .limit(3);
+        
+        return { store, storeNiches };
+      })(),
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), 1500)),
+    ]);
+    
+    if (result?.store) {
+      storeName = result.store.name ?? "Store";
+      logoUrl = result.store.logo_url ?? null;
+      city = result.store.city ?? null;
+      state = result.store.state ?? null;
+      country = result.store.country ?? null;
+      themeColor = result.store.theme_color ?? "#059669";
 
-    const { data: store } = await supabase
-      .from("stores")
-      .select("id, name, logo_url, city, state, country, theme_color, is_active")
-      .eq("slug", slug)
-      .eq("is_active", true)
-      .maybeSingle();
-
-    if (store) {
-      storeName = store.name ?? "Store";
-      logoUrl = store.logo_url ?? null;
-      city = store.city ?? null;
-      state = store.state ?? null;
-      country = store.country ?? null;
-      themeColor = store.theme_color ?? "#059669";
-
-      // Fetch niches for the store
-      const { data: storeNiches } = await supabase
-        .from("store_niches")
-        .select("niche:niche_id(name)")
-        .eq("store_id", store.id)
-        .limit(3);
-
-      nicheNames = (storeNiches ?? [])
+      
+      nicheNames = (result.storeNiches ?? [])
         .map((row: any) => row.niche?.name)
         .filter(Boolean) as string[];
     }
