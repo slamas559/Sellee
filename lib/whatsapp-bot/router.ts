@@ -1,4 +1,10 @@
 import { logServerInfo } from "@/lib/logger";
+import { classifyIntentWithAI } from "@/lib/whatsapp-bot/ai-intent";
+import {
+  getPendingBroadcastConfirm,
+  handleBroadcastConfirmReply,
+  savePendingBroadcastConfirm,
+} from "@/lib/whatsapp-bot/broadcast-confirm";
 import { waList, waMessage, waTitle } from "@/lib/whatsapp-bot/message-format";
 import { verifyByWhatsAppCommand } from "@/lib/phone-verification";
 import { handleMorePagination } from "@/lib/whatsapp-bot/pagination";
@@ -93,23 +99,93 @@ function toCanonicalVendorBody(command: BotCommand, body: string): string {
   return body;
 }
 
-export async function routeIncomingText(from: string, body: string): Promise<WebhookDebugResult> {
-  const command = inferCommand(body);
+export async function routeIncomingText(from: string, rawBody: string): Promise<WebhookDebugResult> {
+  const initialCommand = inferCommand(rawBody);
 
   logServerInfo("whatsapp.webhook.inferred", {
     from,
-    command,
-    body: body.slice(0, 120),
+    command: initialCommand,
+    body: rawBody.slice(0, 120),
   });
 
   const pendingReview = await getPendingReview(from);
   if (pendingReview) {
-    const handled = await handleReviewReply(from, body, pendingReview);
+    const handled = await handleReviewReply(from, rawBody, pendingReview);
     if (handled) {
-      return result(from, body, "REVIEW_REPLY", "customer", pendingReview.store_id);
+      return {
+        from,
+        body: rawBody,
+        inferred_command: "REVIEW_REPLY",
+        role: "customer",
+        scope_store_id: pendingReview.store_id ?? null,
+        status: "ok",
+      };
     }
   }
-    
+
+  const pendingBroadcastConfirm = await getPendingBroadcastConfirm(from);
+  if (pendingBroadcastConfirm) {
+    await handleBroadcastConfirmReply(from, rawBody, pendingBroadcastConfirm);
+    return {
+      from,
+      body: rawBody,
+      inferred_command: "BROADCAST_CONFIRM_REPLY",
+      role: "vendor",
+      scope_store_id: pendingBroadcastConfirm.storeId,
+      status: "ok",
+    };
+  }
+
+  // AI intent fallback (Sprint D): only kicks in when the deterministic
+  // parser found nothing at all. It never overrides a real match, an
+  // ambiguous match, LINK/VERIFY, or any other already-handled case - it
+  // only gets a shot at messages that would otherwise just show a HELP menu.
+  let command: BotCommand = initialCommand;
+  let body = rawBody;
+  let aiAssisted = false;
+
+  if (initialCommand === "UNKNOWN") {
+    const canonical = await classifyIntentWithAI(rawBody);
+    if (canonical) {
+      command = inferCommand(canonical);
+      body = canonical;
+      aiAssisted = true;
+
+      logServerInfo("whatsapp.webhook.ai_reinterpreted", {
+        from,
+        original: rawBody.slice(0, 120),
+        canonical,
+        command,
+      });
+    }
+  }
+
+  function result(
+    body: string,
+    command: string,
+    role: "vendor" | "customer" | "system",
+    scopeStoreId?: string | null,
+  ): WebhookDebugResult {
+    return {
+      from,
+      body: rawBody,
+      inferred_command: command,
+      role,
+      scope_store_id: scopeStoreId ?? null,
+      status: "ok",
+      ...(aiAssisted ? { ai_interpreted_as: body } : {}),
+    };
+  }
+
+  if (aiAssisted) {
+    // Transparency notice: the user should always know when we guessed at
+    // intent, so they can correct us if the guess was wrong.
+    await sendWhatsAppTextMessage({
+      to: from,
+      message: `🤖 Got it — reading that as: *${body}*`,
+    });
+  }
+
   if (command === "AMBIGUOUS") {
     await sendWhatsAppTextMessage({
       to: from,
@@ -128,12 +204,12 @@ export async function routeIncomingText(from: string, body: string): Promise<Web
         ]),
       ),
     });
-    return result(from, body, command, "system");
+    return result(body, command, "system");
   }
 
   if (command === "LINK") {
     await handleLinkCommand(from, body);
-    return result(from, body, command, "vendor");
+    return result(body, command, "vendor");
   }
 
   if (command === "VERIFY") {
@@ -147,7 +223,7 @@ export async function routeIncomingText(from: string, body: string): Promise<Web
           "Example: VERIFY 123456",
         ),
       });
-      return result(from, body, command, "system");
+      return result(body, command, "system");
     }
 
     const verifyResult = await verifyByWhatsAppCommand({
@@ -162,7 +238,7 @@ export async function routeIncomingText(from: string, body: string): Promise<Web
         verifyResult.message,
       ),
     });
-    return result(from, body, command, "system");
+    return result(body, command, "system");
   }
 
   if (command === "MORE") {
@@ -177,12 +253,12 @@ export async function routeIncomingText(from: string, body: string): Promise<Web
         ),
       });
     }
-    return result(from, body, command, "system");
+    return result(body, command, "system");
   }
 
   const customerResult = await handleCustomerCommand(from, body, command);
   if (customerResult.handled) {
-    return result(from, body, command, "customer", customerResult.scopeStoreId);
+    return result(body, command, "customer", customerResult.scopeStoreId);
   }
 
   const store = await resolveVendorStoreByPhone(from);
@@ -191,66 +267,91 @@ export async function routeIncomingText(from: string, body: string): Promise<Web
     switch (command) {
       case "CONFIRM":
         await handleConfirmReject("CONFIRM", body, from, store);
-        return result(from, body, command, "vendor", store.id);
+        return result(body, command, "vendor", store.id);
 
       case "REJECT":
         await handleConfirmReject("REJECT", body, from, store);
-        return result(from, body, command, "vendor", store.id);
+        return result(body, command, "vendor", store.id);
 
       case "LIST ORDERS":
         await handleListOrders(from, store);
-        return result(from, body, command, "vendor", store.id);
+        return result(body, command, "vendor", store.id);
 
       case "SALES TODAY":
         await handleSalesToday(from, store);
-        return result(from, body, command, "vendor", store.id);
+        return result(body, command, "vendor", store.id);
 
       case "LOW STOCK":
         await handleLowStock(from, store);
-        return result(from, body, command, "vendor", store.id);
+        return result(body, command, "vendor", store.id);
 
-      case "BROADCAST":
-        await handleBroadcast(from, toCanonicalVendorBody(command, body), store);
-        return result(from, body, command, "vendor", store.id);
+      case "BROADCAST": {
+        const canonicalBody = toCanonicalVendorBody(command, body);
+        if (aiAssisted) {
+          await savePendingBroadcastConfirm({
+            phone: from,
+            storeId: store.id,
+            command: "BROADCAST",
+            canonicalBody,
+            originalMessage: rawBody,
+          });
+          await sendWhatsAppTextMessage({
+            to: from,
+            message: waMessage(
+              waTitle("Confirm Broadcast"),
+              `This will message all followers of *${store.name}*:`,
+              `"${canonicalBody.slice("BROADCAST ".length)}"`,
+              waList(["Reply YES to send", "Reply NO to cancel"]),
+            ),
+          });
+          return result(canonicalBody, command, "vendor", store.id);
+        }
+        await handleBroadcast(from, canonicalBody, store);
+        return result(body, command, "vendor", store.id);
+      }
 
       case "BROADCAST STATUS":
         await handleBroadcastStatus(from, store);
-        return result(from, body, command, "vendor", store.id);
+        return result(body, command, "vendor", store.id);
 
-      case "SCHEDULE BROADCAST":
-        await handleScheduleBroadcast(from, toCanonicalVendorBody(command, body), store);
-        return result(from, body, command, "vendor", store.id);
+      case "SCHEDULE BROADCAST": {
+        const canonicalBody = toCanonicalVendorBody(command, body);
+        if (aiAssisted) {
+          await savePendingBroadcastConfirm({
+            phone: from,
+            storeId: store.id,
+            command: "SCHEDULE BROADCAST",
+            canonicalBody,
+            originalMessage: rawBody,
+          });
+          await sendWhatsAppTextMessage({
+            to: from,
+            message: waMessage(
+              waTitle("Confirm Scheduled Broadcast"),
+              `This will schedule a message to followers of *${store.name}*:`,
+              `"${canonicalBody.slice("SCHEDULE BROADCAST ".length)}"`,
+              waList(["Reply YES to schedule", "Reply NO to cancel"]),
+            ),
+          });
+          return result(canonicalBody, command, "vendor", store.id);
+        }
+        await handleScheduleBroadcast(from, canonicalBody, store);
+        return result(body, command, "vendor", store.id);
+      }
 
       case "MARK DELIVERED":
         await handleMarkDelivered(from, body, store);
-        return result(from, body, command, "vendor", store.id);
+        return result(body, command, "vendor", store.id);
 
       case "HELP":
       case "UNKNOWN":
       default:
         await sendWhatsAppTextMessage({ to: from, message: VENDOR_HELP });
-        return result(from, body, command, "vendor", store.id);
+        return result(body, command, "vendor", store.id);
     }
   }
 
   logServerInfo("whatsapp.webhook.unlinked", { from, command });
   await sendWhatsAppTextMessage({ to: from, message: UNLINKED_HELP });
-  return result(from, body, command, "system");
-}
-
-function result(
-  from: string,
-  body: string,
-  command: string,
-  role: "vendor" | "customer" | "system",
-  scopeStoreId?: string | null,
-): WebhookDebugResult {
-  return {
-    from,
-    body,
-    inferred_command: command,
-    role,
-    scope_store_id: scopeStoreId ?? null,
-    status: "ok",
-  };
+  return result(body, command, "system");
 }

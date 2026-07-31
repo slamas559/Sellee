@@ -130,21 +130,38 @@ Expand WhatsApp from vendor-only command utility into a dual-role assistant for:
 
 ---
 
-## Sprint D: AI Intent Layer (Optional)
+## Sprint D: AI Intent Layer
 
-### Planned Features
-- Natural language mapping for both vendor and customer prompts
-- Keep strict command fallback always available
-- D-lite shipped:
-  - Alias intent mapping with ambiguity-safe replies
-  - Greeting intro (`HI`, `HELLO`, etc.)
-  - Customer `SEARCH <product>`
-  - Customer `MY STATUS`
-  - Vendor `BROADCAST STATUS`
+### Status
+- [x] D-lite: Alias intent mapping, greeting intro, `SEARCH`, `MY STATUS`, `BROADCAST STATUS` (deterministic, no AI)
+- [x] D1. AI fallback classifier added (`lib/whatsapp-bot/ai-intent.ts`)
+- [ ] D2. Set `GROQ_API_KEY` / `OPENROUTER_API_KEY` in deployed environment
+- [ ] D3. Smoke-test free-text messages against a live vendor + customer number
+- [ ] D4. Decide whether to persist `ai_assisted` on `whatsapp_message_logs` (currently only logged via `logServerInfo`, not the DB)
 
-### Planned Files
-- `lib/whatsapp-bot/intent.ts` (new)
-- `lib/whatsapp-bot/router.ts` (intent-first then fallback)
+### How it works
+1. `inferCommand(body)` (deterministic, `lib/whatsapp-bot/parse.ts`) always runs first — free, instant, zero external calls.
+2. Only when that returns `UNKNOWN` does `classifyIntentWithAI(body)` get called. It asks an LLM to translate the message into ONE line of Sellee's existing canonical command syntax (e.g. `"when will my order get to me abc123"` → `"TRACK abc123"`).
+3. The AI's output is re-validated through the same `inferCommand()` parser before anything happens — if it doesn't map to a real, non-ambiguous command, the AI's answer is discarded and the bot falls back to the normal HELP message.
+4. If the AI's answer is used, the bot first replies with a one-line transparency notice ("🤖 Got it — reading that as: ...") before executing, so the person can see exactly what was inferred.
+5. Provider order: Groq first (fast + generous free tier), OpenRouter's `openrouter/free` auto-router as fallback if Groq is unset/unavailable/errors. Both are skipped gracefully if no API key is set — bot behaves exactly as before (Sprint A-C) with no AI configured.
+
+### New/changed files
+- `lib/whatsapp-bot/ai-intent.ts` (new) — provider calls, prompt, JSON validation (zod), re-validation against `inferCommand`
+- `lib/whatsapp-bot/router.ts` — AI fallback wired in right after the deterministic `inferCommand` call, only on `UNKNOWN`
+- `lib/whatsapp-bot/types.ts` — `WebhookDebugResult.ai_interpreted_as?: string` added for debug visibility
+
+### Env vars (new, optional — feature no-ops if unset)
+- `GROQ_API_KEY`
+- `GROQ_MODEL` (defaults to `llama-3.3-70b-versatile`)
+- `OPENROUTER_API_KEY`
+- `OPENROUTER_MODEL` (defaults to `openrouter/free`, the auto-router — avoids hardcoding a `:free` model id that could get delisted)
+
+### Safety notes
+- The AI never executes anything directly — it only proposes a canonical command string, which must pass the same deterministic parser as any human-typed command.
+- Because vendor-only commands (e.g. `BROADCAST`) still require `resolveVendorStoreByPhone(from)` to resolve a real store, a customer's message can never accidentally trigger a vendor action even if the AI mis-guesses.
+- 6s timeout per provider call so a slow/rate-limited model can't hang the webhook response.
+- **Confirm-before-broadcast guard**: when the AI (not the deterministic parser) infers `BROADCAST` or `SCHEDULE BROADCAST`, the message is NOT sent immediately. It's parked in `bot_conversations` (state `awaiting_broadcast_confirm`, reusing the same table pagination already uses) and the vendor must reply YES/NO within 10 minutes. Explicitly-typed `BROADCAST <message>` from a vendor is unaffected — that's already a deliberate action and still sends immediately. New file: `lib/whatsapp-bot/broadcast-confirm.ts`.
 
 ---
 

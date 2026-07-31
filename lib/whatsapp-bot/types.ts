@@ -45,4 +45,6 @@ export type WebhookDebugResult = {
   scope_store_id?: string | null;
   status: "ok" | "error";
   error?: string;
+  /** Present only when the AI intent layer translated the raw message into this canonical command. */
+  ai_interpreted_as?: string;
 };
