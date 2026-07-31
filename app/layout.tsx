@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/app/providers";
+import { ConditionalAiAssistant } from "@/components/layout/conditional-ai-assistant";
 import { ConditionalFooter } from "@/components/layout/conditional-footer";
 import SiteHeader from "@/components/layout/site-header";
 import { Suspense } from "react";
@@ -88,6 +89,7 @@ export default function RootLayout({
             </div>
             <ConditionalFooter />
           </div>
+          <ConditionalAiAssistant />
         </Providers>
       </body>
     </html>
