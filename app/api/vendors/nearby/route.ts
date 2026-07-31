@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { haversineDistanceKm } from "@/lib/geo";
 import { logDevError } from "@/lib/logger";
-import { createAdminSupabaseClient } from "@/lib/supabase-admin";
+import { searchStores } from "@/lib/store-search";
 
 const nearbyQuerySchema = z.object({
   lat: z.coerce.number().min(-90).max(90).optional(),
@@ -12,24 +11,6 @@ const nearbyQuerySchema = z.object({
   category: z.string().trim().max(50).optional(),
   limit: z.coerce.number().int().min(1).max(100).default(24),
 });
-
-type VendorRow = {
-  id: string;
-  vendor_id: string;
-  name: string;
-  slug: string;
-  logo_url: string | null;
-  city: string | null;
-  state: string | null;
-  country: string | null;
-  latitude: number | null;
-  longitude: number | null;
-  theme_color: string | null;
-  rating_avg: number;
-  rating_count: number;
-  follower_count?: number;
-  niche_names?: string[];
-};
 
 export async function GET(request: Request) {
   try {
@@ -41,131 +22,11 @@ export async function GET(request: Request) {
     }
 
     const { lat, lng, radius_km, q, category, limit } = parsed.data;
-    const supabase = createAdminSupabaseClient();
-
-    const { data: stores, error: storesError } = await supabase
-      .from("stores")
-      .select(
-        "id, vendor_id, name, slug, logo_url, city, state, country, latitude, longitude, theme_color, rating_avg, rating_count",
-      )
-      .eq("is_active", true)
-      .order("created_at", { ascending: false })
-      .limit(500);
-
-    if (storesError) {
-      logDevError("vendors.nearby.stores", storesError);
-      return NextResponse.json({ error: "Could not load vendors." }, { status: 500 });
-    }
-
-    const typedStores = ((stores as VendorRow[] | null) ?? []);
-    const storeIds = typedStores.map((store) => store.id);
-    const nichesByStoreId = new Map<string, string[]>();
-    if (storeIds.length > 0) {
-      const { data: storeNiches, error: storeNichesError } = await supabase
-        .from("store_niches")
-        .select("store_id, niche:niche_id(name)")
-        .in("store_id", storeIds);
-
-      if (storeNichesError) {
-        logDevError("vendors.nearby.store-niches", storeNichesError);
-      } else {
-        for (const row of (storeNiches ??
-          []) as Array<{ store_id: string; niche?: { name?: string } | null }>) {
-          const nicheName = row.niche?.name?.trim();
-          if (!nicheName) continue;
-          const current = nichesByStoreId.get(row.store_id) ?? [];
-          current.push(nicheName);
-          nichesByStoreId.set(row.store_id, current);
-        }
-      }
-    }
-
-    const followerCountByStoreId = new Map<string, number>();
-    if (storeIds.length > 0) {
-      const { data: followsData } = await supabase
-        .from("customer_store_follows")
-        .select("store_id")
-        .in("store_id", storeIds);
-      for (const row of (followsData ?? []) as Array<{ store_id: string }>) {
-        followerCountByStoreId.set(
-          row.store_id,
-          (followerCountByStoreId.get(row.store_id) ?? 0) + 1,
-        );
-      }
-    }
-
-    let allowedStoreIds: Set<string> | null = null;
-    if (category) {
-      const { data: categoryProducts, error: categoryError } = await supabase
-        .from("products")
-        .select("store_id")
-        .eq("is_available", true)
-        .eq("category", category);
-
-      if (categoryError) {
-        logDevError("vendors.nearby.category", categoryError, { category });
-        return NextResponse.json({ error: "Could not filter vendors by category." }, { status: 500 });
-      }
-
-      allowedStoreIds = new Set((categoryProducts ?? []).map((row) => String(row.store_id)));
-    }
-
-    const qLower = q?.toLowerCase() ?? null;
-
-    const vendors = typedStores
-      .filter((store) => {
-        if (allowedStoreIds && !allowedStoreIds.has(store.id)) {
-          return false;
-        }
-
-        if (!qLower) {
-          return true;
-        }
-
-        const searchText = `${store.name} ${store.city ?? ""} ${store.state ?? ""} ${store.country ?? ""}`.toLowerCase();
-        return searchText.includes(qLower);
-      })
-      .map((store) => {
-        let distanceKm: number | null = null;
-
-        if (
-          typeof lat === "number" &&
-          typeof lng === "number" &&
-          store.latitude !== null &&
-          store.longitude !== null
-        ) {
-          distanceKm = haversineDistanceKm(lat, lng, Number(store.latitude), Number(store.longitude));
-        }
-
-        return {
-          ...store,
-          niche_names: Array.from(new Set(nichesByStoreId.get(store.id) ?? [])),
-          follower_count: followerCountByStoreId.get(store.id) ?? 0,
-          distance_km: distanceKm,
-        };
-      })
-      .filter((store) => {
-        if (typeof lat !== "number" || typeof lng !== "number") {
-          return true;
-        }
-
-        return store.distance_km !== null && store.distance_km <= radius_km;
-      })
-      .sort((a, b) => {
-        if (a.distance_km === null && b.distance_km === null) return 0;
-        if (a.distance_km === null) return 1;
-        if (b.distance_km === null) return -1;
-        return a.distance_km - b.distance_km;
-      })
-      .slice(0, limit);
+    const response = await searchStores({ lat, lng, radius_km, q, category, limit });
 
     return NextResponse.json({
-      vendors,
-      meta: {
-        count: vendors.length,
-        radius_km: radius_km,
-        has_location_filter: typeof lat === "number" && typeof lng === "number",
-      },
+      vendors: response.stores,
+      meta: response.meta,
     });
   } catch (error) {
     logDevError("vendors.nearby.unhandled", error);

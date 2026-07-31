@@ -5,6 +5,7 @@ import { createAdminSupabaseClient } from "@/lib/supabase-admin";
 export type ProductSearchParams = {
   q?: string;
   category?: string;
+  store_id?: string;
   lat?: number;
   lng?: number;
   radius_km?: number;
@@ -73,6 +74,7 @@ export async function searchProducts(
   const {
     q,
     category,
+    store_id,
     lat,
     lng,
     radius_km = 25,
@@ -100,7 +102,7 @@ export async function searchProducts(
     storesById.set(store.id, store);
   }
 
-  const allStoreIds = [...storesById.keys()];
+  const allStoreIds = store_id ? [store_id].filter((id) => storesById.has(id)) : [...storesById.keys()];
   if (allStoreIds.length === 0) {
     return { products: [], meta: { count: 0, radius_km, has_location_filter: false } };
   }

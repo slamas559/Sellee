@@ -11,6 +11,12 @@ const chatMessageSchema = z.object({
 
 const chatRequestSchema = z.object({
   messages: z.array(chatMessageSchema).min(1).max(20),
+  store: z
+    .object({
+      id: z.string().uuid(),
+      name: z.string().trim().min(1).max(200),
+    })
+    .optional(),
 });
 
 function getClientIp(request: Request): string {
@@ -44,7 +50,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid chat request." }, { status: 400 });
     }
 
-    const result = await getShoppingAssistantReply(parsed.data.messages);
+    const result = await getShoppingAssistantReply(parsed.data.messages, parsed.data.store);
     return NextResponse.json(result);
   } catch (error) {
     logDevError("ai.product_chat.unhandled", error);
