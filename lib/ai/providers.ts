@@ -130,7 +130,12 @@ async function callChatCompletions(params: {
     const message = data?.choices?.[0]?.message;
     if (!message) return null;
 
-    if (useTools && (message.tool_calls?.length ?? 0) === 0 && looksLikeMalformedToolCallText(message.content)) {
+    // Checked unconditionally, not just when tools were attached to this
+    // call: a model that's been "primed" by tool-calling context earlier in
+    // the conversation can still emit this syntax on a later text-only
+    // call (e.g. the final no-tools call made after exhausting tool
+    // rounds) - the leak isn't limited to calls where tools were offered.
+    if ((message.tool_calls?.length ?? 0) === 0 && looksLikeMalformedToolCallText(message.content)) {
       logServerInfo(`${params.logScope}.malformed_tool_call_text`, {
         provider: params.provider.name,
         snippet: String(message.content).slice(0, 200),
