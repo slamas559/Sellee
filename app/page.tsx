@@ -1,18 +1,19 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import { getServerSession } from "next-auth";
 import logoText from "@/app/logos/image-text-logo.png";
 import { NearbyVendors } from "@/components/landing/nearby-vendors";
 import { WhatsAppBotAccess } from "@/components/landing/whatsapp-bot-access";
 import { UserMenu } from "@/components/layout/user-menu";
+import { CategoryScrollRow } from "@/components/marketplace/category-scroll-row";
 import { ProductShowcaseCard } from "@/components/marketplace/product-showcase-card";
 import { authOptions } from "@/lib/auth";
 import {
   getHomeMarketplaceBaseDataCached,
+  getMarketplaceStatsCached,
   getStoreNichesAndFollowersCached,
 } from "@/lib/public-cache";
-import { Search, SearchIcon } from "lucide-react";
+import { MessageCircle, Package, Search, SearchIcon, Store } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Sellee | Discover Local Vendors and Products and Order via WhatsApp",
@@ -103,52 +104,6 @@ const FALLBACK_CATEGORIES = [
   "Beauty",
   "Home",
 ];
-
-const CATEGORY_IMAGE_SOURCES: Record<string, string> = {
-  // Exact niche name matches (case-insensitive key lookup below)
-  "groceries":           "https://images.unsplash.com/photo-1543168256-418811576931?auto=format&fit=crop&w=80&h=80&q=70",
-  "fashion":             "https://images.unsplash.com/photo-1445205170230-053b83016050?auto=format&fit=crop&w=80&h=80&q=70",
-  "electronics":         "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?auto=format&fit=crop&w=80&h=80&q=70",
-  "beauty":              "https://images.unsplash.com/photo-1596462502278-27bfdc403348?auto=format&fit=crop&w=80&h=80&q=70",
-  "home & living":       "https://images.unsplash.com/photo-1484101403633-562f891dc89a?auto=format&fit=crop&w=80&h=80&q=70",
-  "home-living":         "https://images.unsplash.com/photo-1484101403633-562f891dc89a?auto=format&fit=crop&w=80&h=80&q=70",
-  "health & fitness":    "https://images.unsplash.com/photo-1554284126-aa88f22d8a90?auto=format&fit=crop&w=80&h=80&q=70",
-  "health-fitness":      "https://images.unsplash.com/photo-1554284126-aa88f22d8a90?auto=format&fit=crop&w=80&h=80&q=70",
-  "baby & kids":         "https://images.unsplash.com/photo-1545558014-8692077e9b5c?auto=format&fit=crop&w=80&h=80&q=70",
-  "baby-kids":           "https://images.unsplash.com/photo-1545558014-8692077e9b5c?auto=format&fit=crop&w=80&h=80&q=70",
-  "furnitures":          "https://images.unsplash.com/photo-1484101403633-562f891dc89a?auto=format&fit=crop&w=80&h=80&q=70",
-  "automotive":          "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=80&h=80&q=70",
-  "food & drinks":       "https://images.unsplash.com/photo-1504754524776-8f4f37790ca0?auto=format&fit=crop&w=80&h=80&q=70",
-  "food-drinks":         "https://images.unsplash.com/photo-1504754524776-8f4f37790ca0?auto=format&fit=crop&w=80&h=80&q=70",
-  "books & stationery":  "https://images.unsplash.com/photo-1512820790803-83ca734da794?auto=format&fit=crop&w=80&h=80&q=70",
-  "books-stationery":    "https://images.unsplash.com/photo-1512820790803-83ca734da794?auto=format&fit=crop&w=80&h=80&q=70",
-  "gadgets & electronics":"https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=80&h=80&q=70",
-  "gadgets-electronics":  "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=80&h=80&q=70",
-  "sports":              "https://images.unsplash.com/photo-1508609349937-5ec4ae374ebf?auto=format&fit=crop&w=80&h=80&q=70",
-  "art & crafts":        "https://images.unsplash.com/photo-1513364776144-60967b0f800f?auto=format&fit=crop&w=80&h=80&q=70",
-  "art-crafts":          "https://images.unsplash.com/photo-1513364776144-60967b0f800f?auto=format&fit=crop&w=80&h=80&q=70",
-  "digital products":    "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=80&h=80&q=70",
-  "digital-products":    "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=80&h=80&q=70",
-  "thrift & vintage":    "https://images.unsplash.com/photo-1520975918642-1d0b45d9c6f9?auto=format&fit=crop&w=80&h=80&q=70",
-  "thrift-vintage":      "https://images.unsplash.com/photo-1520975918642-1d0b45d9c6f9?auto=format&fit=crop&w=80&h=80&q=70",
-  "jewelry":             "https://images.unsplash.com/photo-1617038260897-41a1f14a8ca0?auto=format&fit=crop&w=80&h=80&q=70",
-  "pets":                "https://images.unsplash.com/photo-1450778869180-41d0601e046e?auto=format&fit=crop&w=80&h=80&q=70",
-  "phones & accessories":"https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=80&h=80&q=70",
-  "phones-accessories":  "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=80&h=80&q=70",
-  "services":            "https://images.unsplash.com/photo-1521791136064-7986c2920216?auto=format&fit=crop&w=80&h=80&q=70",
-  "event & party":       "https://images.unsplash.com/photo-1530103862676-de8c9debad1d?auto=format&fit=crop&w=80&h=80&q=70",
-  "event-party":         "https://images.unsplash.com/photo-1530103862676-de8c9debad1d?auto=format&fit=crop&w=80&h=80&q=70",
-  "gaming":              "https://images.unsplash.com/photo-1493711662062-fa541adb3fc8?auto=format&fit=crop&w=80&h=80&q=70",
-};
-
-const CATEGORY_IMAGE_DEFAULT =
-  "https://images.unsplash.com/photo-1472851294608-062f824d29cc?auto=format&fit=crop&w=80&h=80&q=70";
-
-function categoryImageUrl(category: string): string {
-  return (
-    CATEGORY_IMAGE_SOURCES[category.toLowerCase().trim()] ?? CATEGORY_IMAGE_DEFAULT
-  );
-}
 
 async function getMarketplaceData(q?: string, category?: string, nicheParam?: string) {
   const { stores, products, categoryRows, niches, nicheCategories } =
@@ -281,6 +236,7 @@ export default async function Home({ searchParams }: HomeProps) {
 
   const niche = params.niche?.trim() || undefined;
   const { stores, products, categories, storesById, niches } = await getMarketplaceData(q, category, niche);
+  const { totalStores, totalProducts } = await getMarketplaceStatsCached();
   const isLoggedIn = Boolean(session?.user?.id);
   const isVendor = session?.user?.role === "vendor";
   const botNumber = process.env.NEXT_PUBLIC_WHATSAPP_BOT_NUMBER?.trim() ?? "";
@@ -347,17 +303,55 @@ export default async function Home({ searchParams }: HomeProps) {
             </div>
           </div>
 
-          <div className="sm:grid gap-3 sm:grid-cols-2 hidden">
-            
-            <div className="sm:col-span-2 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-              <p className="text-sm text-slate-600">Featured Search</p>
-              <p className="mt-1 text-base font-semibold text-emerald-700">
+          <div className="hidden gap-3 sm:grid sm:grid-cols-2">
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
+                <Store className="h-4.5 w-4.5" />
+              </span>
+              <p className="mt-3 text-2xl font-black text-slate-900">{totalStores}+</p>
+              <p className="mt-0.5 text-xs font-medium text-slate-500">Active Vendors</p>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-100 text-amber-700">
+                <Package className="h-4.5 w-4.5" />
+              </span>
+              <p className="mt-3 text-2xl font-black text-slate-900">{totalProducts}+</p>
+              <p className="mt-0.5 text-xs font-medium text-slate-500">Products Listed</p>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
+                <MessageCircle className="h-4.5 w-4.5" />
+              </span>
+              <p className="mt-3 text-sm font-bold text-slate-900">WhatsApp-Powered</p>
+              <p className="mt-0.5 text-xs leading-5 text-slate-500">Order directly through chat, no app to download.</p>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <p className="text-xs font-medium text-slate-500">Featured Search</p>
+              <p className="mt-1 text-sm font-bold text-emerald-700">
                 {q ? `Results for "${q}"` : "Trending in your marketplace now"}
               </p>
             </div>
           </div>
         </div>
       </section>
+
+      <div className="grid grid-cols-3 gap-2 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:hidden">
+        <div className="text-center">
+          <p className="text-lg font-black text-slate-900">{totalStores}+</p>
+          <p className="text-[10px] font-medium text-slate-500">Vendors</p>
+        </div>
+        <div className="border-x border-slate-100 text-center">
+          <p className="text-lg font-black text-slate-900">{totalProducts}+</p>
+          <p className="text-[10px] font-medium text-slate-500">Products</p>
+        </div>
+        <div className="text-center">
+          <p className="text-lg font-black text-slate-900">WhatsApp</p>
+          <p className="text-[10px] font-medium text-slate-500">Powered Orders</p>
+        </div>
+      </div>
 
       {botNumber ? <WhatsAppBotAccess botNumber={botNumber} /> : null}
 
@@ -374,39 +368,8 @@ export default async function Home({ searchParams }: HomeProps) {
             </Link>
           )}
         </div>
-        <div className="mt-4 -mx-1 flex snap-x snap-mandatory no-scrollbar gap-2 overflow-x-auto px-1 pb-1 sm:mx-0 sm:px-0">
-          {categories.map((item) => {
-            const nicheObj = (niches ?? []).find((n) => String(n.name ?? "").toLowerCase() === String(item).toLowerCase());
-            const nicheId = nicheObj?.id ?? nicheObj?.slug ?? item;
-            const href = q
-              ? `/search?q=${encodeURIComponent(q)}&niche=${encodeURIComponent(nicheId)}&title=${encodeURIComponent(item)}`
-              : `/search?niche=${encodeURIComponent(nicheId)}&title=${encodeURIComponent(item)}`;
-            const isActive = niche?.toLowerCase() === String(nicheId).toLowerCase();
-
-            return (
-              <Link
-                key={item}
-                href={href}
-                className={`group inline-flex shrink-0 snap-start items-center gap-2 rounded-2xl border px-2.5 py-2 pr-3 text-xs sm:text-sm font-semibold transition ${
-                  isActive
-                    ? "border-emerald-600 bg-emerald-600 text-white shadow-sm"
-                    : "border-slate-200 bg-white text-slate-700 hover:border-emerald-200 hover:bg-emerald-50"
-                }`}
-              >
-                <span className={`relative h-8 w-8 overflow-hidden rounded-xl ring-1 ${isActive ? "ring-white/40" : "ring-slate-200"}`}>
-                  <Image
-                    src={categoryImageUrl(item)}
-                    alt={`${item} category`}
-                    fill
-                    className="object-cover transition group-hover:scale-105"
-                    sizes="32px"
-                    unoptimized
-                  />
-                </span>
-                {item}
-              </Link>
-            );
-          })}
+        <div className="mt-4">
+          <CategoryScrollRow categories={categories} niches={niches ?? []} activeNiche={niche} q={q} />
         </div>
       </section>
       <NearbyVendors

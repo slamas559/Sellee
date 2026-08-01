@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import { signIn } from "next-auth/react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { PasswordInput } from "@/components/auth/password-input";
 
 function GoogleIcon() {
   return (
@@ -89,17 +91,21 @@ export function LoginForm() {
       </div>
 
       <div className="auth-stagger-2 space-y-2">
-        <label className="text-sm font-medium text-slate-700" htmlFor="password">
-          Password
-        </label>
-        <input
+        <div className="flex items-center justify-between">
+          <label className="text-sm font-medium text-slate-700" htmlFor="password">
+            Password
+          </label>
+          <Link href="/forgot-password" className="text-xs font-semibold text-emerald-700 hover:underline">
+            Forgot password?
+          </Link>
+        </div>
+        <PasswordInput
           id="password"
-          type="password"
+          value={password}
+          onChange={setPassword}
           required
           minLength={8}
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none ring-emerald-300 transition placeholder:text-slate-400 focus:border-emerald-400 focus:ring-2"
+          autoComplete="current-password"
           placeholder="Minimum 8 characters"
         />
       </div>

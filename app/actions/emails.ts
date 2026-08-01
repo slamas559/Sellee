@@ -1,11 +1,15 @@
 "use server";
 
 import { Resend } from "resend";
+import { appUrl } from "@/lib/app-url";
 import SupportTicketEmail, {
   type SupportTicketEmailProps,
 } from "@/emails/SupportTicketEmail";
 import UpdateEmail, { type UpdateEmailProps } from "@/emails/UpdateEmail";
 import WelcomeEmail, { type WelcomeEmailProps } from "@/emails/WelcomeEmail";
+import PasswordResetEmail, {
+  type PasswordResetEmailProps,
+} from "@/emails/PasswordResetEmail";
 import OrderNotificationEmail, {
   type OrderNotificationEmailProps,
 } from "@/emails/OrderNotificationEmail";
@@ -13,7 +17,6 @@ import OrderNotificationEmail, {
 const SYSTEM_FROM = "Sellee <hello@sellee.store>";
 const SUPPORT_FROM = "Sellee <support@sellee.store>";
 const SUPPORT_REPLY_TO = "support@sellee.store";
-const DEFAULT_APP_URL = "https://sellee.store";
 
 type EmailActionResult<TData = unknown> = {
   success: boolean;
@@ -22,6 +25,11 @@ type EmailActionResult<TData = unknown> = {
 };
 
 export interface SendWelcomeEmailInput extends WelcomeEmailProps {
+  to: string;
+  subject?: string;
+}
+
+export interface SendPasswordResetEmailInput extends PasswordResetEmailProps {
   to: string;
   subject?: string;
 }
@@ -65,15 +73,6 @@ function normalizeError(error: unknown) {
   }
 
   return error;
-}
-
-function appUrl(path = "/") {
-  const baseUrl =
-    process.env.NEXT_PUBLIC_APP_URL?.trim() ||
-    process.env.NEXTAUTH_URL?.trim() ||
-    DEFAULT_APP_URL;
-
-  return new URL(path, baseUrl).toString();
 }
 
 function makeTicketId() {
@@ -126,6 +125,41 @@ export async function sendWelcomeEmail({
         // error for easier troubleshooting during local testing.
         // eslint-disable-next-line no-console
         console.debug("[sendWelcomeEmail] resend response:", { data, error });
+      } catch (logErr) {
+        // Swallow logging errors to avoid interfering with email flow.
+      }
+    }
+
+    if (error) {
+      return { success: false, error };
+    }
+
+    return { success: true, data };
+  } catch (error) {
+    return { success: false, error: normalizeError(error) };
+  }
+}
+
+export async function sendPasswordResetEmail({
+  to,
+  subject = "Reset your Sellee password",
+  name,
+  resetUrl,
+}: SendPasswordResetEmailInput): Promise<EmailActionResult> {
+  try {
+    const resend = getResendClient();
+    const { data, error } = await resend.emails.send({
+      from: SYSTEM_FROM,
+      to,
+      replyTo: SUPPORT_REPLY_TO,
+      subject,
+      react: PasswordResetEmail({ name, resetUrl }),
+    });
+
+    if (process.env.NODE_ENV === "development") {
+      try {
+        // eslint-disable-next-line no-console
+        console.debug("[sendPasswordResetEmail] resend response:", { data, error });
       } catch (logErr) {
         // Swallow logging errors to avoid interfering with email flow.
       }

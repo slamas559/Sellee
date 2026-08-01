@@ -6,10 +6,11 @@ import Link from "next/link";
 import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import { Search, X } from "lucide-react";
 import logoText from "@/app/logos/image-text-logo.png";
+import { CategoriesMegaMenu } from "@/components/layout/categories-mega-menu";
 import { UserMenu } from "@/components/layout/user-menu";
 import { useSession } from "next-auth/react";
 
-const HIDDEN_ON_ROUTES = ["/login", "/register"];
+const HIDDEN_ON_ROUTES = ["/login", "/register", "/forgot-password", "/reset-password"];
 
 export default function SiteHeader() {
   const pathname = usePathname() || "/";
@@ -176,6 +177,8 @@ export default function SiteHeader() {
             <Image src={logoText} alt="Sellee" className="h-7 w-auto" priority />
           </Link>
 
+          <CategoriesMegaMenu />
+
           {/* Search */}
           <div ref={wrapperRef} className="relative flex-1 max-w-xl mx-auto">
             <form action="/search" onSubmit={handleSubmit} className={formClass}>
@@ -284,7 +287,8 @@ export default function SiteHeader() {
           >
             <Image src={logoText} alt="Sellee" className="h-6 w-auto" priority />
           </Link>
-          <div className="shrink-0">
+          <div className="flex shrink-0 items-center gap-2">
+            <CategoriesMegaMenu compact />
             <UserMenu isLoggedIn={isLoggedIn} isVendor={isVendor} />
           </div>
         </div>

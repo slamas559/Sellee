@@ -3,7 +3,7 @@
 import { usePathname } from "next/navigation";
 import { SiteFooter } from "@/components/layout/site-footer";
 
-const HIDDEN_FOOTER_ROUTES = ["/login", "/register"];
+const HIDDEN_FOOTER_ROUTES = ["/login", "/register", "/forgot-password", "/reset-password"];
 
 export function ConditionalFooter() {
   const pathname = usePathname();

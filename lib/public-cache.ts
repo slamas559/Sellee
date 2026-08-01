@@ -7,6 +7,7 @@ export const CACHE_TAGS = {
   marketplaceBase: "marketplace-base",
   marketplaceStoreNiches: "marketplace-store-niches",
   marketplaceProducts: "marketplace-products",
+  marketplaceStats: "marketplace-stats",
   storefrontPublic: "storefront-public",
   storefrontBySlug: (slug: string) => `storefront:${slug}`,
 } as const;
@@ -100,6 +101,29 @@ export const getHomeMarketplaceBaseDataCached = unstable_cache(
   getHomeMarketplaceBaseDataInternal,
   ["home-marketplace-base-v1"],
   { revalidate: 120, tags: [CACHE_TAGS.homeMarketplaceBase] },
+);
+
+const getMarketplaceStatsInternal = async () => {
+  const supabase = createAdminSupabaseClient();
+
+  // count: "exact", head: true - fetches only the count, not the rows, so
+  // this stays cheap even as the catalogue grows well past the 24-row caps
+  // used elsewhere on the homepage.
+  const [storesResult, productsResult] = await Promise.all([
+    supabase.from("stores").select("id", { count: "exact", head: true }).eq("is_active", true),
+    supabase.from("products").select("id", { count: "exact", head: true }).eq("is_available", true),
+  ]);
+
+  return {
+    totalStores: storesResult.count ?? 0,
+    totalProducts: productsResult.count ?? 0,
+  };
+};
+
+export const getMarketplaceStatsCached = unstable_cache(
+  getMarketplaceStatsInternal,
+  ["marketplace-stats-v1"],
+  { revalidate: 300, tags: [CACHE_TAGS.marketplaceStats] },
 );
 
 const getStoreNichesAndFollowersInternal = async (storeIds: string[]) => {
