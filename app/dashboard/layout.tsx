@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { DashboardMobileNav } from "@/components/dashboard/dashboard-mobile-nav";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { authOptions } from "@/lib/auth";
+import { AiVendorAssistant } from "@/components/dashboard/ai-vendor-assistant";
 
 type DashboardLayoutProps = {
   children: React.ReactNode;
@@ -26,6 +27,7 @@ export default async function DashboardLayout({ children }: DashboardLayoutProps
       <section className="min-w-0 flex-1 space-y-6">
         {children}
       </section>
+      <AiVendorAssistant />
     </main>
   );
 }

@@ -34,7 +34,11 @@ export function LoginForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const googleCallbackUrl = params.get("callbackUrl") ?? "/account?onboarding=google";
+  // Matches the credentials login default below ("/") - this is the LOGIN
+  // page, not registration, so an existing user signing in with Google
+  // should land back where they came from (or the homepage), not get
+  // funneled into the account onboarding flow.
+  const googleCallbackUrl = params.get("callbackUrl") ?? "/";
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
