@@ -139,7 +139,7 @@ export function CategoriesMegaMenu({ compact = false }: { compact?: boolean }) {
 
       {isOpen ? (
         <div className="fixed left-0 right-0 top-[62px] z-50 w-full border-slate-200 bg-white shadow-xl shadow-slate-200/60 sm:top-[62px] snap-x snap-mandatory no-scrollbar">
-          <div className="mx-auto sm:mx-8 max-h-[60vh] overflow-y-auto p-4">
+          <div className="mx-auto sm:mx-8 max-h-[70vh] overflow-y-auto p-4">
             {isLoading ? (
               <p className="px-2 py-6 text-center text-sm text-slate-500">Loading categories...</p>
             ) : error || !niches ? (
