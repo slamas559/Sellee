@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
+import { AiRefineButton } from "@/components/ai/ai-refine-button";
 import {
   DEFAULT_STOREFRONT_CONFIG,
   DEFAULT_STOREFRONT_SECTIONS_ORDER,
@@ -750,6 +751,11 @@ export function StoreSetupForm({ initialStore }: StoreSetupFormProps) {
             <label className="space-y-1.5 text-sm sm:col-span-2">
               <span className="font-medium text-slate-700">Hero subtitle</span>
               <textarea rows={2} value={form.hero_subtitle} onChange={(e) => updateFormField("hero_subtitle", e.target.value)} className="min-h-16 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none ring-emerald-300 transition focus:ring-2" />
+              <AiRefineButton
+                value={form.hero_subtitle}
+                kind="store_hero_subtitle"
+                onApply={(refined) => updateFormField("hero_subtitle", refined)}
+              />
             </label>
             <label className="space-y-1.5 text-sm">
               <span className="font-medium text-slate-700">CTA button text</span>

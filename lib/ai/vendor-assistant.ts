@@ -2,6 +2,13 @@ import { formatNaira } from "@/lib/format";
 import { VENDOR_ASSISTANT_NAME } from "@/lib/ai/vendor-assistant-config";
 import { logDevError, logServerInfo } from "@/lib/logger";
 import {
+  buildProviderList,
+  callWithFailover,
+  parseToolArgs,
+  type ProviderMessage,
+  type ToolDefinition,
+} from "@/lib/ai/providers";
+import {
   type LowStockItem,
   type SalesPeriod,
   type SalesSummary,
@@ -18,7 +25,8 @@ import {
  *
  * Same safety architecture as the customer-facing shopping assistant
  * (multi-provider failover, malformed-tool-call detection, deterministic
- * small-talk fast path). Two key differences from Ellie:
+ * small-talk fast path - all shared via lib/ai/providers.ts). Two key
+ * differences from Ellie:
  *
  * 1. Every read tool operates on a `storeId` that the CALLER (the API
  *    route) has already resolved server-side from the authenticated
@@ -68,8 +76,8 @@ export type VendorAssistantResult = {
 };
 
 const MAX_TOOL_ROUNDS = 2;
-const AI_TIMEOUT_MS = 12_000;
 const MAX_HISTORY_MESSAGES = 12;
+const LOG_SCOPE = "ai.vendor_assistant";
 
 // Verified against the actual dashboard - don't add anything here that
 // hasn't been confirmed to exist (e.g. there is no coupon/discount system).
@@ -99,7 +107,7 @@ Behavior:
 - Prices are in Nigerian Naira. Keep replies short and practical - this is a dashboard chat widget, not a report.
 - Never state a specific number (revenue, stock count, order count) unless it came from a tool result in this conversation.`;
 
-const GET_SALES_SUMMARY_TOOL = {
+const GET_SALES_SUMMARY_TOOL: ToolDefinition = {
   type: "function",
   function: {
     name: "get_sales_summary",
@@ -112,18 +120,18 @@ const GET_SALES_SUMMARY_TOOL = {
       required: [],
     },
   },
-} as const;
+};
 
-const GET_LOW_STOCK_TOOL = {
+const GET_LOW_STOCK_TOOL: ToolDefinition = {
   type: "function",
   function: {
     name: "get_low_stock",
     description: "List the vendor's own products that are low on stock (2 or fewer units) and currently available.",
     parameters: { type: "object", properties: {}, required: [] },
   },
-} as const;
+};
 
-const SEARCH_MY_PRODUCTS_TOOL = {
+const SEARCH_MY_PRODUCTS_TOOL: ToolDefinition = {
   type: "function",
   function: {
     name: "search_my_products",
@@ -137,9 +145,9 @@ const SEARCH_MY_PRODUCTS_TOOL = {
       required: [],
     },
   },
-} as const;
+};
 
-const GET_RECENT_ORDERS_TOOL = {
+const GET_RECENT_ORDERS_TOOL: ToolDefinition = {
   type: "function",
   function: {
     name: "get_recent_orders",
@@ -157,9 +165,9 @@ const GET_RECENT_ORDERS_TOOL = {
       required: [],
     },
   },
-} as const;
+};
 
-const PROPOSE_BROADCAST_TOOL = {
+const PROPOSE_BROADCAST_TOOL: ToolDefinition = {
   type: "function",
   function: {
     name: "propose_broadcast",
@@ -178,9 +186,9 @@ const PROPOSE_BROADCAST_TOOL = {
       required: ["message"],
     },
   },
-} as const;
+};
 
-const PROPOSE_PRODUCT_TOOL = {
+const PROPOSE_PRODUCT_TOOL: ToolDefinition = {
   type: "function",
   function: {
     name: "propose_product",
@@ -198,9 +206,9 @@ const PROPOSE_PRODUCT_TOOL = {
       required: ["name", "price", "stock_count"],
     },
   },
-} as const;
+};
 
-const ALL_TOOLS = [
+const ALL_TOOLS: ToolDefinition[] = [
   GET_SALES_SUMMARY_TOOL,
   GET_LOW_STOCK_TOOL,
   SEARCH_MY_PRODUCTS_TOOL,
@@ -208,164 +216,6 @@ const ALL_TOOLS = [
   PROPOSE_BROADCAST_TOOL,
   PROPOSE_PRODUCT_TOOL,
 ];
-
-type ToolCall = {
-  id: string;
-  function: { name: string; arguments: string | Record<string, unknown> };
-};
-
-type ProviderMessage = {
-  role: "system" | "user" | "assistant" | "tool";
-  content: string | null;
-  tool_calls?: ToolCall[];
-  tool_call_id?: string;
-};
-
-type ProviderConfig = {
-  name: string;
-  url: string;
-  apiKey: string;
-  model: string;
-};
-
-function parseToolArgs(raw: string | Record<string, unknown> | undefined): Record<string, unknown> {
-  if (!raw) return {};
-  if (typeof raw === "object") return raw;
-  try {
-    return JSON.parse(raw || "{}");
-  } catch {
-    return {};
-  }
-}
-
-function looksLikeMalformedToolCallText(content: string | null | undefined): boolean {
-  if (!content) return false;
-  return /<tool_call>|<\/tool_call>|<function=|<arg_key>|<arg_value>/i.test(content);
-}
-
-async function fetchWithRetry(url: string, init: RequestInit, timeoutMs: number): Promise<Response> {
-  const attempt = async (perAttemptTimeoutMs: number): Promise<Response> => {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), perAttemptTimeoutMs);
-    try {
-      return await fetch(url, { ...init, signal: controller.signal });
-    } finally {
-      clearTimeout(timeout);
-    }
-  };
-
-  try {
-    return await attempt(timeoutMs);
-  } catch (error) {
-    if (error instanceof Error && error.name === "AbortError") {
-      throw error;
-    }
-    logServerInfo("ai.vendor_assistant.network_retry", { url });
-    return attempt(Math.min(timeoutMs, 4_000));
-  }
-}
-
-async function callChatCompletions(params: {
-  provider: ProviderConfig;
-  messages: ProviderMessage[];
-  useTools: boolean;
-}): Promise<{ message: ProviderMessage } | null> {
-  try {
-    const response = await fetchWithRetry(
-      params.provider.url,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${params.provider.apiKey}`,
-        },
-        body: JSON.stringify({
-          model: params.provider.model,
-          temperature: 0.3,
-          max_tokens: 400,
-          messages: params.messages,
-          ...(params.useTools ? { tools: ALL_TOOLS, tool_choice: "auto" } : {}),
-        }),
-      },
-      AI_TIMEOUT_MS,
-    );
-
-    if (!response.ok) {
-      const bodyText = await response.text().catch(() => "");
-      logServerInfo("ai.vendor_assistant.provider_error", {
-        provider: params.provider.name,
-        status: response.status,
-        body: bodyText.slice(0, 300),
-      });
-      return null;
-    }
-
-    const data = await response.json();
-    const message = data?.choices?.[0]?.message;
-    if (!message) return null;
-
-    if (params.useTools && (message.tool_calls?.length ?? 0) === 0 && looksLikeMalformedToolCallText(message.content)) {
-      logServerInfo("ai.vendor_assistant.malformed_tool_call_text", {
-        provider: params.provider.name,
-        snippet: String(message.content).slice(0, 200),
-      });
-      return null;
-    }
-
-    return { message };
-  } catch (error) {
-    logDevError("ai.vendor_assistant.provider_exception", error, { provider: params.provider.name });
-    return null;
-  }
-}
-
-async function callWithFailover(
-  providers: ProviderConfig[],
-  messages: ProviderMessage[],
-  useTools: boolean,
-): Promise<{ message: ProviderMessage; providerName: string } | null> {
-  for (const provider of providers) {
-    const result = await callChatCompletions({ provider, messages, useTools });
-    if (result) {
-      return { message: result.message, providerName: provider.name };
-    }
-    logServerInfo("ai.vendor_assistant.provider_failed_trying_next", { failedProvider: provider.name });
-  }
-  return null;
-}
-
-function buildProviderList(): ProviderConfig[] {
-  const providers: ProviderConfig[] = [];
-
-  if (process.env.GROQ_API_KEY) {
-    providers.push({
-      name: "groq",
-      url: "https://api.groq.com/openai/v1/chat/completions",
-      apiKey: process.env.GROQ_API_KEY,
-      model: process.env.GROQ_MODEL ?? "llama-3.3-70b-versatile",
-    });
-  }
-
-  if (process.env.GEMINI_API_KEY) {
-    providers.push({
-      name: "gemini",
-      url: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
-      apiKey: process.env.GEMINI_API_KEY,
-      model: process.env.GEMINI_MODEL ?? "gemini-2.5-flash",
-    });
-  }
-
-  if (process.env.OPENROUTER_API_KEY) {
-    providers.push({
-      name: "openrouter",
-      url: "https://openrouter.ai/api/v1/chat/completions",
-      apiKey: process.env.OPENROUTER_API_KEY,
-      model: process.env.OPENROUTER_MODEL ?? "openrouter/free",
-    });
-  }
-
-  return providers;
-}
 
 function trimHistory(history: VendorChatMessage[]): VendorChatMessage[] {
   return history.slice(-MAX_HISTORY_MESSAGES);
@@ -462,7 +312,7 @@ export async function getVendorAssistantReply(
 
   const providers = buildProviderList();
   if (providers.length === 0) {
-    logServerInfo("ai.vendor_assistant.no_provider_configured", {});
+    logServerInfo(`${LOG_SCOPE}.no_provider_configured`, {});
     return emptyResult(FALLBACK_REPLY);
   }
 
@@ -475,7 +325,7 @@ export async function getVendorAssistantReply(
   const accumulated = emptyResult("");
 
   for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
-    const result = await callWithFailover(providers, messages, true);
+    const result = await callWithFailover(providers, messages, { tools: ALL_TOOLS, temperature: 0.3, logScope: LOG_SCOPE });
     if (!result) {
       return { ...accumulated, reply: FALLBACK_REPLY };
     }
@@ -563,7 +413,7 @@ export async function getVendorAssistantReply(
 
         messages.push({ role: "tool", tool_call_id: toolCall.id, content: JSON.stringify({ error: "Unknown tool" }) });
       } catch (error) {
-        logDevError("ai.vendor_assistant.tool_failed", error, { tool: name });
+        logDevError(`${LOG_SCOPE}.tool_failed`, error, { tool: name });
         messages.push({
           role: "tool",
           tool_call_id: toolCall.id,
@@ -573,6 +423,6 @@ export async function getVendorAssistantReply(
     }
   }
 
-  const finalResult = await callWithFailover(providers, messages, false);
+  const finalResult = await callWithFailover(providers, messages, { logScope: LOG_SCOPE });
   return { ...accumulated, reply: finalResult?.message.content ?? FALLBACK_REPLY };
 }

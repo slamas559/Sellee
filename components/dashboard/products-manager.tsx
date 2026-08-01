@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
+import { AiRefineButton } from "@/components/ai/ai-refine-button";
 import { formatNaira } from "@/lib/format";
 import type { ProductRecord } from "@/types";
 
@@ -330,6 +331,11 @@ export function ProductsManager({ initialProducts }: ProductsManagerProps) {
               }
               className="min-h-24 w-full rounded-md border border-slate-200 px-3 py-2 outline-none ring-emerald-300 focus:ring-2"
               placeholder="Short description for customers"
+            />
+            <AiRefineButton
+              value={form.description}
+              kind="product_description"
+              onApply={(refined) => setForm((prev) => ({ ...prev, description: refined }))}
             />
           </label>
 

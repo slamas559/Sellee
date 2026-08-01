@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { AiRefineButton } from "@/components/ai/ai-refine-button";
 import type { VendorBroadcastHistoryItem } from "@/lib/dashboard-data";
 
 type WhatsAppBroadcastsCardProps = {
@@ -223,6 +224,7 @@ export function WhatsAppBroadcastsCard({ initialBroadcasts }: WhatsAppBroadcasts
             placeholder="Example: Flash sale today - 10% off all items until 6PM."
             className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none ring-emerald-300 transition focus:ring-2"
           />
+          <AiRefineButton value={message} kind="broadcast_message" onApply={setMessage} className="mt-1.5" />
           <div className="mt-1 flex flex-wrap items-center justify-between gap-2">
             <p className="text-xs text-slate-500">{messageLength}/1000 characters</p>
             <button
@@ -351,4 +353,3 @@ export function WhatsAppBroadcastsCard({ initialBroadcasts }: WhatsAppBroadcasts
     </section>
   );
 }
-

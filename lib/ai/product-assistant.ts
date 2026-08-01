@@ -1,6 +1,13 @@
 import { formatNaira } from "@/lib/format";
 import { ASSISTANT_NAME } from "@/lib/ai/assistant-config";
 import { logDevError, logServerInfo } from "@/lib/logger";
+import {
+  buildProviderList,
+  callWithFailover,
+  parseToolArgs,
+  type ProviderMessage,
+  type ToolDefinition,
+} from "@/lib/ai/providers";
 import { type ProductSearchResult, searchProducts } from "@/lib/product-search";
 import { type StoreSearchResult, searchStores } from "@/lib/store-search";
 
@@ -15,15 +22,8 @@ import { type StoreSearchResult, searchStores } from "@/lib/store-search";
  * cart", no order creation, no order lookups) - this assistant is
  * read-only/advisory by design for v1.
  *
- * Multi-provider failover: free-tier LLM providers are individually
- * unreliable (rate limits, occasional malformed tool-call generations under
- * load - e.g. Groq's llama-3.3-70b-versatile sometimes wraps a tool call in
- * <function=...> tags instead of pure JSON, which the API rejects with a
- * 400 tool_use_failed). Rather than pick one provider for the whole
- * conversation, every individual API call tries each configured provider in
- * order and moves to the next on ANY failure (429, 400, timeout, network
- * error) - so one provider having a bad moment doesn't take the assistant
- * down mid-conversation.
+ * Multi-provider failover, retry, and malformed-tool-call handling live in
+ * lib/ai/providers.ts, shared across every AI feature in the app.
  */
 
 export type ChatMessage = {
@@ -68,8 +68,8 @@ export type AssistantResult = {
 };
 
 const MAX_TOOL_ROUNDS = 2;
-const AI_TIMEOUT_MS = 12_000;
 const MAX_HISTORY_MESSAGES = 12;
+const LOG_SCOPE = "ai.product_assistant";
 
 // Curated, factual site knowledge so the model answers "how does Sellee
 // work" / "how do I become a vendor" type questions accurately instead of
@@ -103,7 +103,7 @@ Behavior:
 - Prices are in Nigerian Naira. Keep replies short - this is a chat widget, not an essay.
 - Never claim a product/store exists, is in stock, or has a specific price/rating unless it came from a tool result in this conversation.`;
 
-const SEARCH_PRODUCTS_TOOL = {
+const SEARCH_PRODUCTS_TOOL: ToolDefinition = {
   type: "function",
   function: {
     name: "search_products",
@@ -135,9 +135,9 @@ const SEARCH_PRODUCTS_TOOL = {
       required: [],
     },
   },
-} as const;
+};
 
-const SEARCH_STORES_TOOL = {
+const SEARCH_STORES_TOOL: ToolDefinition = {
   type: "function",
   function: {
     name: "search_stores",
@@ -157,26 +157,9 @@ const SEARCH_STORES_TOOL = {
       required: [],
     },
   },
-} as const;
-
-type ToolCall = {
-  id: string;
-  function: { name: string; arguments: string | Record<string, unknown> };
 };
 
-type ProviderMessage = {
-  role: "system" | "user" | "assistant" | "tool";
-  content: string | null;
-  tool_calls?: ToolCall[];
-  tool_call_id?: string;
-};
-
-type ProviderConfig = {
-  name: string;
-  url: string;
-  apiKey: string;
-  model: string;
-};
+const ALL_TOOLS: ToolDefinition[] = [SEARCH_PRODUCTS_TOOL, SEARCH_STORES_TOOL];
 
 function toProductCard(product: ProductSearchResult): AssistantProductCard {
   return {
@@ -234,20 +217,6 @@ function toStoreModelSummary(store: StoreSearchResult) {
   };
 }
 
-// Different OpenAI-compatible providers don't all serialize tool call
-// arguments identically - most send a JSON-encoded string (per the OpenAI
-// spec), but not every compatibility layer is guaranteed to. Handle both
-// defensively rather than assuming.
-function parseToolArgs(raw: string | Record<string, unknown> | undefined): Record<string, unknown> {
-  if (!raw) return {};
-  if (typeof raw === "object") return raw;
-  try {
-    return JSON.parse(raw || "{}");
-  } catch {
-    return {};
-  }
-}
-
 async function runProductSearch(
   rawArgs: string | Record<string, unknown>,
   storeContext?: StoreContext,
@@ -288,157 +257,6 @@ async function runStoreSearch(
     cards: response.stores.map(toStoreCard),
     summaries: response.stores.map(toStoreModelSummary),
   };
-}
-
-// Some free/open models don't reliably populate the standard OpenAI
-// `tool_calls` field - instead they emit their OWN pseudo-tool-call syntax
-// as plain text content (e.g. Hermes/Qwen-style
-// "<tool_call>name<arg_key>...</arg_key>..." or Groq's "<function=...>").
-// If that leaks through, treat it as a failed call rather than showing raw
-// syntax to the user - the caller will move on to the next provider.
-function looksLikeMalformedToolCallText(content: string | null | undefined): boolean {
-  if (!content) return false;
-  return /<tool_call>|<\/tool_call>|<function=|<arg_key>|<arg_value>/i.test(content);
-}
-
-async function fetchWithRetry(url: string, init: RequestInit, timeoutMs: number): Promise<Response> {
-  const attempt = async (perAttemptTimeoutMs: number): Promise<Response> => {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), perAttemptTimeoutMs);
-    try {
-      return await fetch(url, { ...init, signal: controller.signal });
-    } finally {
-      clearTimeout(timeout);
-    }
-  };
-
-  try {
-    return await attempt(timeoutMs);
-  } catch (error) {
-    // One short retry for transient network-level failures (DNS hiccup, TLS
-    // reset, brief connectivity blip) - not for HTTP error responses, which
-    // land here as a normal `response` object, not a thrown error.
-    if (error instanceof Error && error.name === "AbortError") {
-      throw error; // already used the full time budget, don't retry
-    }
-    logServerInfo("ai.product_assistant.network_retry", { url });
-    return attempt(Math.min(timeoutMs, 4_000));
-  }
-}
-
-async function callChatCompletions(params: {
-  provider: ProviderConfig;
-  messages: ProviderMessage[];
-  useTools: boolean;
-}): Promise<{ message: ProviderMessage } | null> {
-  try {
-    const response = await fetchWithRetry(
-      params.provider.url,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${params.provider.apiKey}`,
-        },
-        body: JSON.stringify({
-          model: params.provider.model,
-          temperature: 0.4,
-          max_tokens: 400,
-          messages: params.messages,
-          ...(params.useTools ? { tools: [SEARCH_PRODUCTS_TOOL, SEARCH_STORES_TOOL], tool_choice: "auto" } : {}),
-        }),
-      },
-      AI_TIMEOUT_MS,
-    );
-
-    if (!response.ok) {
-      const bodyText = await response.text().catch(() => "");
-      logServerInfo("ai.product_assistant.provider_error", {
-        provider: params.provider.name,
-        status: response.status,
-        body: bodyText.slice(0, 300),
-      });
-      return null;
-    }
-
-    const data = await response.json();
-    const message = data?.choices?.[0]?.message;
-    if (!message) return null;
-
-    if (params.useTools && (message.tool_calls?.length ?? 0) === 0 && looksLikeMalformedToolCallText(message.content)) {
-      logServerInfo("ai.product_assistant.malformed_tool_call_text", {
-        provider: params.provider.name,
-        snippet: String(message.content).slice(0, 200),
-      });
-      return null;
-    }
-
-    return { message };
-  } catch (error) {
-    logDevError("ai.product_assistant.provider_exception", error, { provider: params.provider.name });
-    return null;
-  }
-}
-
-/**
- * Tries each configured provider in order for THIS SPECIFIC call, returning
- * the first success. Called once per round of the tool loop, so a provider
- * that fails partway through a conversation doesn't take the whole
- * conversation down - the next call just tries the next provider.
- */
-async function callWithFailover(
-  providers: ProviderConfig[],
-  messages: ProviderMessage[],
-  useTools: boolean,
-): Promise<{ message: ProviderMessage; providerName: string } | null> {
-  for (const provider of providers) {
-    const result = await callChatCompletions({ provider, messages, useTools });
-    if (result) {
-      return { message: result.message, providerName: provider.name };
-    }
-    logServerInfo("ai.product_assistant.provider_failed_trying_next", { failedProvider: provider.name });
-  }
-  return null;
-}
-
-function buildProviderList(): ProviderConfig[] {
-  const providers: ProviderConfig[] = [];
-
-  // Order matters: fastest/most reliable free tier first.
-  if (process.env.GROQ_API_KEY) {
-    providers.push({
-      name: "groq",
-      url: "https://api.groq.com/openai/v1/chat/completions",
-      apiKey: process.env.GROQ_API_KEY,
-      model: process.env.GROQ_MODEL ?? "llama-3.3-70b-versatile",
-    });
-  }
-
-  if (process.env.GEMINI_API_KEY) {
-    providers.push({
-      name: "gemini",
-      url: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
-      apiKey: process.env.GEMINI_API_KEY,
-      // Google's free-tier model naming has moved fast - if this default
-      // ever 404s/400s, check the current model list in Google AI Studio
-      // and override with GEMINI_MODEL.
-      model: process.env.GEMINI_MODEL ?? "gemini-3.6-flash",
-    });
-  }
-
-  if (process.env.OPENROUTER_API_KEY) {
-    providers.push({
-      name: "openrouter",
-      url: "https://openrouter.ai/api/v1/chat/completions",
-      apiKey: process.env.OPENROUTER_API_KEY,
-      // Auto-router to whatever :free model is currently available. Its
-      // tool-calling support is the least reliable of the three, which is
-      // fine here since it's only reached if both providers above failed.
-      model: process.env.OPENROUTER_MODEL ?? "openrouter/free",
-    });
-  }
-
-  return providers;
 }
 
 function trimHistory(history: ChatMessage[]): ChatMessage[] {
@@ -508,7 +326,7 @@ export async function getShoppingAssistantReply(
 
   const providers = buildProviderList();
   if (providers.length === 0) {
-    logServerInfo("ai.product_assistant.no_provider_configured", {});
+    logServerInfo(`${LOG_SCOPE}.no_provider_configured`, {});
     return FALLBACK_REPLY;
   }
 
@@ -522,7 +340,7 @@ export async function getShoppingAssistantReply(
   let lastStoreCards: AssistantStoreCard[] = [];
 
   for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
-    const result = await callWithFailover(providers, messages, true);
+    const result = await callWithFailover(providers, messages, { tools: ALL_TOOLS, logScope: LOG_SCOPE });
     if (!result) {
       // Every configured provider failed for this call.
       return { reply: FALLBACK_REPLY.reply, products: lastProductCards, stores: lastStoreCards };
@@ -548,7 +366,7 @@ export async function getShoppingAssistantReply(
             content: JSON.stringify({ results: summaries }).slice(0, 6000),
           });
         } catch (error) {
-          logDevError("ai.product_assistant.product_search_failed", error);
+          logDevError(`${LOG_SCOPE}.product_search_failed`, error);
           messages.push({
             role: "tool",
             tool_call_id: toolCall.id,
@@ -568,7 +386,7 @@ export async function getShoppingAssistantReply(
             content: JSON.stringify({ results: summaries }).slice(0, 6000),
           });
         } catch (error) {
-          logDevError("ai.product_assistant.store_search_failed", error);
+          logDevError(`${LOG_SCOPE}.store_search_failed`, error);
           messages.push({
             role: "tool",
             tool_call_id: toolCall.id,
@@ -587,7 +405,7 @@ export async function getShoppingAssistantReply(
   }
 
   // Ran out of rounds - ask once more without tools to force a final answer.
-  const finalResult = await callWithFailover(providers, messages, false);
+  const finalResult = await callWithFailover(providers, messages, { logScope: LOG_SCOPE });
   return {
     reply: finalResult?.message.content ?? FALLBACK_REPLY.reply,
     products: lastProductCards,
