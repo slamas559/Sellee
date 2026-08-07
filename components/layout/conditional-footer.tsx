@@ -17,4 +17,3 @@ export function ConditionalFooter() {
 
   return <SiteFooter />;
 }
-

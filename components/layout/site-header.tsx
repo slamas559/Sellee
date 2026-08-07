@@ -4,7 +4,7 @@ import React, { useEffect, useState, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useSearchParams, useRouter } from "next/navigation";
-import { Search, X } from "lucide-react";
+import { MapIcon, Search, X } from "lucide-react";
 import logoText from "@/app/logos/image-text-logo.png";
 import { CategoriesMegaMenu } from "@/components/layout/categories-mega-menu";
 import { UserMenu } from "@/components/layout/user-menu";
@@ -179,6 +179,14 @@ export default function SiteHeader() {
 
           <CategoriesMegaMenu />
 
+          <Link
+            href="/map"
+            className="flex shrink-0 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:border-emerald-200 hover:bg-emerald-50"
+          >
+            <MapIcon className="h-4 w-4" />
+            Map
+          </Link>
+
           {/* Search */}
           <div ref={wrapperRef} className="relative flex-1 max-w-xl mx-auto">
             <form action="/search" onSubmit={handleSubmit} className={formClass}>
@@ -289,6 +297,13 @@ export default function SiteHeader() {
           </Link>
           <div className="flex shrink-0 items-center gap-2">
             <CategoriesMegaMenu compact />
+            <Link
+              href="/map"
+              aria-label="Vendor map"
+              className="flex items-center justify-center rounded-xl border border-slate-200 bg-white p-2 text-slate-700 transition hover:border-emerald-200 hover:bg-emerald-50"
+            >
+              <MapIcon className="h-4 w-4" />
+            </Link>
             <UserMenu isLoggedIn={isLoggedIn} isVendor={isVendor} />
           </div>
         </div>
