@@ -330,6 +330,7 @@ export function StoreSetupForm({ initialStore }: StoreSetupFormProps) {
 
   const shareablePath = store?.slug ? `/store/${store.slug}` : null;
   const hasCoordinates = Boolean(form.latitude && form.longitude);
+  const shouldPrefillAccountPhone = !initialStore?.whatsapp_number?.trim();
   const botNumber = process.env.NEXT_PUBLIC_WHATSAPP_BOT_NUMBER?.trim() ?? "";
   const displayBotNumber = botNumber ? (botNumber.startsWith("+") ? botNumber : `+${botNumber}`) : "Sellee WhatsApp bot";
 
@@ -376,9 +377,9 @@ export function StoreSetupForm({ initialStore }: StoreSetupFormProps) {
   }, []);
 
   useEffect(() => {
+    if (!shouldPrefillAccountPhone) return;
     let ignore = false;
     async function loadAccountPhone() {
-      if (form.whatsapp_number.trim()) return;
       try {
         const response = await fetch("/api/me", { cache: "no-store" });
         const payload = (await response.json()) as MeResponse;
@@ -390,7 +391,7 @@ export function StoreSetupForm({ initialStore }: StoreSetupFormProps) {
     }
     void loadAccountPhone();
     return () => { ignore = true; };
-  }, [form.whatsapp_number]);
+  }, [shouldPrefillAccountPhone]);
 
   useEffect(() => {
     if (!message && !error) return;
@@ -688,7 +689,7 @@ export function StoreSetupForm({ initialStore }: StoreSetupFormProps) {
               ) : (
                 <div className="space-y-2">
                   <p className="text-xs text-slate-500">Not verified — orders will still work, but shoppers won&apos;t see a Verified badge on your store.</p>
-                  <button type="button" onClick={() => void startVerification()} disabled={!store || !form.whatsapp_number.trim()} className="rounded-lg border border-emerald-200 px-3 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50">Verify Now</button>
+                  <button type="button" onClick={() => void startVerification()} disabled={!store || !form.whatsapp_number.trim()} className="rounded-lg border border-emerald-200 px-3 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer">Verify Now</button>
                   {!store ? <p className="text-xs text-slate-500">Save your store first, then verify this number.</p> : null}
                 </div>
               )}
@@ -700,11 +701,11 @@ export function StoreSetupForm({ initialStore }: StoreSetupFormProps) {
                     <span className="text-slate-500">or copy the details below.</span>
                   </div>
                   <div className="grid gap-2 sm:grid-cols-2">
-                    <button type="button" onClick={() => void copyToClipboard(displayBotNumber, "number")} disabled={!botNumber} className="min-w-0 rounded-lg border border-emerald-200 bg-white px-3 py-2 text-left transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60">
+                    <button type="button" onClick={() => void copyToClipboard(displayBotNumber, "number")} disabled={!botNumber} className="min-w-0 rounded-lg border border-emerald-200 bg-white px-3 py-2 text-left transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer">
                       <span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-500">1. Bot number</span>
                       <span className="mt-0.5 block truncate font-semibold text-emerald-800">{copied === "number" ? "Copied!" : displayBotNumber}</span>
                     </button>
-                    <button type="button" onClick={() => void copyToClipboard(challenge.command, "command")} className="min-w-0 rounded-lg border border-emerald-200 bg-white px-3 py-2 text-left transition hover:bg-emerald-50">
+                    <button type="button" onClick={() => void copyToClipboard(challenge.command, "command")} className="min-w-0 rounded-lg border border-emerald-200 bg-white px-3 py-2 text-left transition hover:bg-emerald-50 cursor-pointer">
                       <span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-500">2. Verify command</span>
                       <code className="mt-0.5 block truncate font-semibold text-emerald-800">{copied === "command" ? "Copied!" : challenge.command}</code>
                     </button>
