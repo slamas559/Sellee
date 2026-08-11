@@ -297,6 +297,7 @@ export function StoreSetupForm({ initialStore }: StoreSetupFormProps) {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [challenge, setChallenge] = useState<VerificationChallenge | null>(null);
+  const [isCheckingVerification, setIsCheckingVerification] = useState(false);
   const [verifyMessage, setVerifyMessage] = useState<string | null>(null);
   const [verifyError, setVerifyError] = useState<string | null>(null);
   const [copied, setCopied] = useState<"number" | "command" | null>(null);
@@ -411,6 +412,48 @@ export function StoreSetupForm({ initialStore }: StoreSetupFormProps) {
       if (!response.ok || !payload.challenge) { setVerifyError(payload.error ?? "Could not start verification."); return; }
       setChallenge(payload.challenge); setVerifyMessage("Choose either option below to verify your store number.");
     } catch { setVerifyError("Network error while starting verification."); }
+  }
+
+  async function checkVerificationStatus() {
+    if (!challenge?.id) return;
+    setIsCheckingVerification(true);
+    setVerifyError(null);
+    try {
+      const response = await fetch(
+        `/api/vendor/whatsapp-verification/status?challenge_id=${challenge.id}`,
+        { cache: "no-store" },
+      );
+      const payload = (await response.json()) as {
+        error?: string;
+        status?: { status: "pending" | "completed" | "expired" | "cancelled" };
+      };
+      if (!response.ok) {
+        setVerifyError(payload.error ?? "Could not check verification status.");
+        return;
+      }
+
+      const status = payload.status?.status;
+      if (status === "completed") {
+        setChallenge(null);
+        setVerifyMessage("Your store's WhatsApp number is verified.");
+        setStore((prev) => prev ? {
+          ...prev,
+          whatsapp_verified_at: new Date().toISOString(),
+          whatsapp_number: form.whatsapp_number,
+        } : prev);
+        return;
+      }
+      if (status === "expired") {
+        setChallenge(null);
+        setVerifyError('Verification code expired. Click "Verify Now" to try again.');
+        return;
+      }
+      setVerifyMessage("Not verified yet. Send the VERIFY command in WhatsApp, then check again.");
+    } catch {
+      setVerifyError("Network error while checking verification status.");
+    } finally {
+      setIsCheckingVerification(false);
+    }
   }
 
   async function copyToClipboard(value: string, kind: "number" | "command") {
@@ -710,6 +753,14 @@ export function StoreSetupForm({ initialStore }: StoreSetupFormProps) {
                       <code className="mt-0.5 block truncate font-semibold text-emerald-800">{copied === "command" ? "Copied!" : challenge.command}</code>
                     </button>
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => void checkVerificationStatus()}
+                    disabled={isCheckingVerification}
+                    className="w-full cursor-pointer rounded-lg border border-emerald-300 bg-white px-3 py-2 text-center font-semibold text-emerald-700 transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {isCheckingVerification ? "Checking..." : "I've sent it — check status"}
+                  </button>
                   <p className="text-[11px] leading-4 text-slate-500">Open a chat with the Sellee bot, paste the command, then send it. Your store will be marked verified once the bot confirms it.</p>
                 </div>
               ) : null}

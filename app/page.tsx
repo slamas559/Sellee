@@ -13,7 +13,7 @@ import {
   getMarketplaceStatsCached,
   getStoreNichesAndFollowersCached,
 } from "@/lib/public-cache";
-import { MessageCircle, Package, Search, SearchIcon, Store } from "lucide-react";
+import { BadgeCheck, MessageCircle, Package, Search, SearchIcon, Store } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Sellee | Discover Local Vendors and Products and Order via WhatsApp",
@@ -238,6 +238,7 @@ export default async function Home({ searchParams }: HomeProps) {
   const niche = params.niche?.trim() || undefined;
   const { stores, products, categories, storesById, niches } = await getMarketplaceData(q, category, niche);
   const { totalStores, totalProducts } = await getMarketplaceStatsCached();
+  const showRealMarketplaceStats = totalStores >= 30 && totalProducts >= 100;
   const isLoggedIn = Boolean(session?.user?.id);
   const isVendor = session?.user?.role === "vendor";
   const botNumber = process.env.NEXT_PUBLIC_WHATSAPP_BOT_NUMBER?.trim() ?? "";
@@ -309,16 +310,34 @@ export default async function Home({ searchParams }: HomeProps) {
               <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
                 <Store className="h-4.5 w-4.5" />
               </span>
-              <p className="mt-3 text-2xl font-black text-slate-900">{totalStores}+</p>
-              <p className="mt-0.5 text-xs font-medium text-slate-500">Active Vendors</p>
+              {showRealMarketplaceStats ? (
+                <>
+                  <p className="mt-3 text-2xl font-black text-slate-900">{totalStores}+</p>
+                  <p className="mt-0.5 text-xs font-medium text-slate-500">Active Vendors</p>
+                </>
+              ) : (
+                <>
+                  <p className="mt-3 text-sm font-bold text-slate-900">Local Vendors</p>
+                  <p className="mt-0.5 text-xs leading-5 text-slate-500">Discover sellers near you.</p>
+                </>
+              )}
             </div>
 
             <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
               <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-100 text-amber-700">
-                <Package className="h-4.5 w-4.5" />
+                {showRealMarketplaceStats ? <Package className="h-4.5 w-4.5" /> : <BadgeCheck className="h-4.5 w-4.5" />}
               </span>
-              <p className="mt-3 text-2xl font-black text-slate-900">{totalProducts}+</p>
-              <p className="mt-0.5 text-xs font-medium text-slate-500">Products Listed</p>
+              {showRealMarketplaceStats ? (
+                <>
+                  <p className="mt-3 text-2xl font-black text-slate-900">{totalProducts}+</p>
+                  <p className="mt-0.5 text-xs font-medium text-slate-500">Products Listed</p>
+                </>
+              ) : (
+                <>
+                  <p className="mt-3 text-sm font-bold text-slate-900">Verified Storefronts</p>
+                  <p className="mt-0.5 text-xs leading-5 text-slate-500">Real vendors, real reviews.</p>
+                </>
+              )}
             </div>
 
             <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -341,15 +360,33 @@ export default async function Home({ searchParams }: HomeProps) {
 
       <div className="grid grid-cols-3 gap-2 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:hidden">
         <div className="text-center">
-          <p className="text-lg font-black text-slate-900">{totalStores}+</p>
-          <p className="text-[10px] font-medium text-slate-500">Vendors</p>
+          {showRealMarketplaceStats ? (
+            <>
+              <p className="text-lg font-black text-slate-900">{totalStores}+</p>
+              <p className="text-[10px] font-medium text-slate-500">Vendors</p>
+            </>
+          ) : (
+            <>
+              <p className="text-[13px] font-bold text-slate-900">Local</p>
+              <p className="text-[10px] font-medium text-slate-500">Vendors</p>
+            </>
+          )}
         </div>
         <div className="border-x border-slate-100 text-center">
-          <p className="text-lg font-black text-slate-900">{totalProducts}+</p>
-          <p className="text-[10px] font-medium text-slate-500">Products</p>
+          {showRealMarketplaceStats ? (
+            <>
+              <p className="text-lg font-black text-slate-900">{totalProducts}+</p>
+              <p className="text-[10px] font-medium text-slate-500">Products</p>
+            </>
+          ) : (
+            <>
+              <p className="text-[13px] font-bold text-slate-900">Verified</p>
+              <p className="text-[10px] font-medium text-slate-500">Storefronts</p>
+            </>
+          )}
         </div>
         <div className="text-center">
-          <p className="text-lg font-black text-slate-900">WhatsApp</p>
+          <p className="text-[15px] font-black text-slate-900">WhatsApp</p>
           <p className="text-[10px] font-medium text-slate-500">Powered Orders</p>
         </div>
       </div>

@@ -139,6 +139,7 @@ function MarketTemplate({
   store,
   products,
   nicheNames,
+  completedOrdersCount,
   primaryColor,
   config,
   categories,
@@ -197,8 +198,11 @@ function MarketTemplate({
                       ))}
                     </div>
                   )}
-                  <div className="mt-2">
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
                     <StarRating value={store.rating_avg} count={store.rating_count} accent="yellow" />
+                    {completedOrdersCount > 0 ? (
+                      <span className="text-xs font-medium text-white/80">· {completedOrdersCount} completed orders</span>
+                    ) : null}
                   </div>
                 </div>
               </div>
@@ -261,6 +265,7 @@ function EditorialTemplate({
   store,
   products,
   nicheNames,
+  completedOrdersCount,
   primaryColor,
   config,
   categories,
@@ -324,6 +329,9 @@ function EditorialTemplate({
             <div className="mt-4 flex flex-wrap items-center gap-3">
               <a href={`https://wa.me/${store.whatsapp_number}`} className="rounded-full px-5 py-2 text-sm font-bold text-white" style={{ backgroundColor: primaryColor }}><span className="text-white">{config.hero_cta_text || "Order now"}</span></a>
               <StarRating value={store.rating_avg} count={store.rating_count} accent="yellow" size="md" />
+              {completedOrdersCount > 0 ? (
+                <span className="text-sm font-medium text-white/70">{completedOrdersCount} completed orders</span>
+              ) : null}
             </div>
           </div>
         </section>
@@ -400,6 +408,7 @@ function ShowcaseTemplate({
   store,
   products,
   nicheNames,
+  completedOrdersCount,
   primaryColor,
   config,
   categories,
@@ -452,8 +461,11 @@ function ShowcaseTemplate({
               <FollowStoreButton storeId={store.id} storeSlug={store.slug} isLoggedIn={isLoggedIn} isOwner={Boolean(activeUserId && activeUserId === store.vendor_id)} initialFollowing={isFollowing} />
               <SocialShareActions mode="menu" compact url={storeUrl} title={store.name} text={`Shop at ${store.name}.`} triggerClassName="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 hover:bg-slate-50" triggerLabel="Share" />
             </div>
-            <div className="mt-5">
+            <div className="mt-5 flex flex-wrap items-center gap-2">
               <StarRating value={store.rating_avg} count={store.rating_count} accent="yellow" size="md" />
+              {completedOrdersCount > 0 ? (
+                <span className="text-sm font-medium text-slate-500">· {completedOrdersCount} completed orders</span>
+              ) : null}
             </div>
           </div>
 
@@ -534,6 +546,7 @@ function GridTemplate({
   store,
   products,
   nicheNames,
+  completedOrdersCount,
   primaryColor,
   config,
   categories,
@@ -568,6 +581,9 @@ function GridTemplate({
                   {store.whatsapp_verified_at ? <BadgeCheck className="h-3.5 w-3.5 shrink-0 text-emerald-600" aria-label="Verified vendor" /> : null}
                 </p>
                 <StarRating value={store.rating_avg} count={store.rating_count} size="sm" />
+                {completedOrdersCount > 0 ? (
+                  <p className="text-[11px] font-medium text-slate-500">{completedOrdersCount} completed orders</p>
+                ) : null}
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -690,6 +706,7 @@ type TemplateProps = {
   store: StoreRecord;
   products: ProductRecord[];
   nicheNames: string[];
+  completedOrdersCount: number;
   primaryColor: string;
   surfaceColor: string;
   config: ReturnType<typeof normalizeStorefrontConfig>;
@@ -718,6 +735,7 @@ export default async function StorePage({ params, searchParams }: StorePageProps
 
   const products = storefrontData.products;
   const nicheNames = storefrontData.nicheNames;
+  const completedOrdersCount = storefrontData.completedOrdersCount;
 
   let isFollowing = false;
   if (session?.user?.id) {
@@ -771,6 +789,7 @@ export default async function StorePage({ params, searchParams }: StorePageProps
     store,
     products: filteredProducts,
     nicheNames,
+    completedOrdersCount,
     primaryColor,
     surfaceColor,
     config,

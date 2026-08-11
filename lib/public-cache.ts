@@ -246,10 +246,10 @@ const getStorefrontPublicDataInternal = async (slug: string) => {
     .maybeSingle();
 
   if (!store) {
-    return { store: null, products: [] as PublicProductLite[], nicheNames: [] as string[] };
+    return { store: null, products: [] as PublicProductLite[], nicheNames: [] as string[], completedOrdersCount: 0 };
   }
 
-  const [{ data: products }, { data: storeNiches }] = await Promise.all([
+  const [{ data: products }, { data: storeNiches }, { count: completedOrdersCount }] = await Promise.all([
     supabase
       .from("products")
       .select("id, store_id, slug, name, description, category, price, image_url, image_urls, rating_avg, rating_count, stock_count, is_available, created_at")
@@ -260,6 +260,11 @@ const getStorefrontPublicDataInternal = async (slug: string) => {
       .from("store_niches")
       .select("niche:niche_id(name)")
       .eq("store_id", store.id),
+    supabase
+      .from("orders")
+      .select("id", { count: "exact", head: true })
+      .eq("store_id", store.id)
+      .eq("status", "delivered"),
   ]);
 
   const nicheNames = Array.from(
@@ -274,6 +279,7 @@ const getStorefrontPublicDataInternal = async (slug: string) => {
     store,
     products: (products ?? []) as PublicProductLite[],
     nicheNames,
+    completedOrdersCount: completedOrdersCount ?? 0,
   };
 };
 
