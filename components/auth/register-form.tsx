@@ -4,17 +4,7 @@ import { useMemo, useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 
-type RegisterStartResponse = {
-  error?: string;
-  challenge?: {
-    id: string;
-    expires_at: string;
-    target_phone: string;
-    command: string;
-    verify_code: string;
-    wa_link: string | null;
-  };
-};
+type RegisterResponse = { error?: string };
 
 type CountryOption = {
   code: string;
@@ -58,7 +48,6 @@ function GoogleIcon() {
 
 export function RegisterForm() {
   const router = useRouter();
-  const [step, setStep] = useState<"register" | "verify">("register");
   const [form, setForm] = useState({
     full_name: "",
     email: "",
@@ -66,27 +55,11 @@ export function RegisterForm() {
     password: "",
     confirmPassword: "",
   });
-  const [botCopied, setBotCopied] = useState(false);
-  const [commandCopied, setCommandCopied] = useState(false);
-  const [copyError, setCopyError] = useState<string | null>(null);
-  const botNumber = process.env.NEXT_PUBLIC_WHATSAPP_BOT_NUMBER?.trim() ?? "";
-  const cleanedNumber = useMemo(() => botNumber.replace(/\s+/g, ""), [botNumber]);
-  const displayNumber = useMemo(
-    () => (cleanedNumber.startsWith("+") ? cleanedNumber : `+${cleanedNumber}`),
-    [cleanedNumber],
-  );
-
   const [countryCode, setCountryCode] = useState("+234");
-  const [challenge, setChallenge] = useState<RegisterStartResponse["challenge"] | null>(null);
-  const [otp, setOtp] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSendingOtp, setIsSendingOtp] = useState(false);
-  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
-  const [isCheckingStatus, setIsCheckingStatus] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const isBusy =
-    isSubmitting || isSendingOtp || isVerifyingOtp || isCheckingStatus;
+  const isBusy = isSubmitting;
   const normalizedLocalPhone = useMemo(
     () => form.phone_local.replace(/[^0-9]/g, ""),
     [form.phone_local],
@@ -101,66 +74,13 @@ export function RegisterForm() {
     });
 
     if (!result || result.error) {
-      setNotice("Verification complete. Please sign in with your email and password.");
+      setNotice("Account created. Please sign in with your email and password.");
       router.push("/login");
       return;
     }
     
     router.push("/");
     router.refresh();
-  }
-
-  async function checkStatus() {
-    if (!challenge?.id) return;
-    setIsCheckingStatus(true);
-    setError(null);
-    try {
-      const response = await fetch(`/api/register/status?challenge_id=${challenge.id}`, {
-        cache: "no-store",
-      });
-      const payload = (await response.json()) as {
-        error?: string;
-        status?: { status: "pending" | "completed" | "expired" | "cancelled" };
-      };
-
-      if (!response.ok) {
-        setError(payload.error ?? "Could not check verification status.");
-        return;
-      }
-
-      const status = payload.status?.status;
-      if (status === "completed") {
-        setNotice("WhatsApp verification complete. Signing you in...");
-        await completeSignIn();
-        return;
-      }
-      if (status === "expired") {
-        setError("Verification code expired. Start registration again.");
-        return;
-      }
-
-      setNotice("Not verified yet. Send the VERIFY command in WhatsApp, then check again.");
-    } catch {
-      setError("Network error while checking status.");
-    } finally {
-      setIsCheckingStatus(false);
-    }
-  }
-
-  async function handleCopyNumber(text: string, numberType: "bot" | "command" = "bot") {
-    setCopyError(null);
-    try {
-      await navigator.clipboard.writeText(text);
-      if (numberType === "bot") {
-        setBotCopied(true);
-        setTimeout(() => setBotCopied(false), 1800);
-      } else {
-        setCommandCopied(true);
-        setTimeout(() => setCommandCopied(false), 1800);
-      }
-    } catch {
-      setCopyError(`Could not copy ${numberType === "bot" ? "bot number" : "command"}.`);
-    }
   }
 
   async function startRegistration(event: React.FormEvent<HTMLFormElement>) {
@@ -192,201 +112,19 @@ export function RegisterForm() {
         }),
       });
 
-      const payload = (await response.json().catch(() => ({}))) as RegisterStartResponse;
-      if (!response.ok || !payload.challenge?.id) {
-        setError(payload.error ?? "Could not start verification.");
+      const payload = (await response.json().catch(() => ({}))) as RegisterResponse;
+      if (!response.ok) {
+        setError(payload.error ?? "Could not create account.");
         return;
       }
 
-      setChallenge(payload.challenge);
-      setStep("verify");
-      setNotice("Registration started. Verify your number on WhatsApp to activate your account.");
+      setNotice("Account created. Signing you in...");
+      await completeSignIn();
     } catch {
-      setError("Network error while starting verification.");
+      setError("Network error while creating account.");
     } finally {
       setIsSubmitting(false);
     }
-  }
-
-  async function sendOtp() {
-    if (!challenge?.id) return;
-    setIsSendingOtp(true);
-    setError(null);
-    setNotice(null);
-    try {
-      const response = await fetch("/api/register/otp/send", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ challenge_id: challenge.id }),
-      });
-      const payload = (await response.json()) as { error?: string; message?: string };
-      if (!response.ok) {
-        setError(payload.error ?? "Could not send OTP.");
-        return;
-      }
-      setNotice(payload.message ?? "OTP sent on WhatsApp.");
-    } catch {
-      setError("Network error while sending OTP.");
-    } finally {
-      setIsSendingOtp(false);
-    }
-  }
-
-  async function verifyOtp() {
-    if (!challenge?.id || !otp.trim()) return;
-    setIsVerifyingOtp(true);
-    setError(null);
-    setNotice(null);
-    try {
-      const response = await fetch("/api/register/otp/verify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          challenge_id: challenge.id,
-          otp: otp.trim(),
-        }),
-      });
-      const payload = (await response.json()) as { error?: string; completed?: boolean };
-      if (!response.ok || !payload.completed) {
-        setError(payload.error ?? "OTP verification failed.");
-        return;
-      }
-
-      setNotice("Phone verified successfully. Signing you in...");
-      await completeSignIn();
-    } catch {
-      setError("Network error while verifying OTP.");
-    } finally {
-      setIsVerifyingOtp(false);
-    }
-  }
-
-  if (step === "verify" && challenge) {
-    return (
-      <div className="space-y-4 sm:space-y-4">
-        <div className="auth-stagger-1 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">
-          Number to verify: <span className="font-semibold">+{challenge.target_phone}</span>
-          <br />
-          Expires: <span className="font-semibold">{new Date(challenge.expires_at).toLocaleString()}</span>
-        </div>
-
-        <div className="auth-stagger-2 rounded-xl border border-slate-200 bg-white p-3">
-          <p className="text-sm font-semibold text-slate-900">Option 1: Verify on WhatsApp</p>
-          <p className="mt-1 text-xs text-slate-600">
-            Open sellee bot chat <button
-              type="button"
-              onClick={copyError ? undefined : () => handleCopyNumber(displayNumber)}
-              disabled={isBusy}
-              className="rounded-full border border-slate-300 bg-white px-2 py-1 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 cursor-pointer"
-            >
-              {botCopied ? "Number Copied" : displayNumber}
-            </button> and send this command from the same number.
-          </p>
-          <code className="mt-2 block rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
-            {challenge.command}
-          </code>
-          <div className="mt-2 flex flex-wrap gap-2">
-            <a
-              href={challenge.wa_link ?? "#"}
-              target="_blank"
-              rel="noreferrer"
-              className={`rounded-full px-3 py-2 text-xs font-semibold transition ${
-                challenge.wa_link
-                  ? "bg-emerald-600 text-white hover:bg-emerald-700"
-                  : "border border-slate-300 text-slate-500"
-              }`}
-            >
-              Verify on WhatsApp
-            </a>
-            <button
-              type="button"
-              onClick={copyError ? undefined : () => handleCopyNumber(challenge.command, "command")}
-              disabled={isBusy}
-              className="rounded-full border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 cursor-pointer disabled:opacity-60"
-            >
-              {commandCopied ? "Command Copied" : "Copy Command"}
-            </button>
-            <button
-              type="button"
-              onClick={() => void checkStatus()}
-              disabled={isCheckingStatus}
-              className="rounded-full border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 cursor-pointer disabled:opacity-60"
-            >
-              {isCheckingStatus ? "Checking..." : "I Have Verified"}
-            </button>
-          </div>
-        </div>
-
-        {/* <div className="auth-stagger-3 rounded-xl border border-slate-200 bg-white p-3">
-          <p className="text-sm font-semibold text-slate-900">Option 2: Verify by OTP</p>
-          <p className="mt-1 text-xs text-slate-600">
-            Send OTP to your WhatsApp number, then enter it below.
-          </p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => void sendOtp()}
-              disabled={isSendingOtp}
-              className="rounded-full border border-yellow-300 bg-yellow-100 px-3 py-2 text-xs font-semibold text-slate-800 transition hover:bg-yellow-200 disabled:opacity-60"
-            >
-              {isSendingOtp ? "Sending OTP..." : "Send OTP"}
-            </button>
-          </div>
-          <div className="mt-3 flex gap-2">
-            <input
-              value={otp}
-              onChange={(event) => setOtp(event.target.value.replace(/[^0-9]/g, ""))}
-              placeholder="Enter OTP"
-              maxLength={6}
-              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none ring-emerald-300 transition placeholder:text-slate-400 focus:border-emerald-400 focus:ring-2"
-            />
-            <button
-              type="button"
-              onClick={() => void verifyOtp()}
-              disabled={isVerifyingOtp || otp.trim().length < 4}
-              className="rounded-xl bg-emerald-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-60"
-            >
-              {isVerifyingOtp ? "Verifying..." : "Verify OTP"}
-            </button>
-          </div>
-        </div> */}
-
-        <button
-          type="button"
-          onClick={() => {
-            if (isBusy) return;
-            setStep("register");
-            setChallenge(null);
-            setOtp("");
-            setNotice(null);
-            setError(null);
-          }}
-          disabled={isBusy}
-          className="auth-stagger-4 text-xs font-semibold text-slate-600 hover:underline disabled:opacity-60"
-        >
-          Back to registration form
-        </button>
-
-        <button
-          type="button"
-          onClick={() => signIn("google", { callbackUrl: "/account?onboarding=google" })}
-          disabled={isBusy}
-          className="auth-stagger-5 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-yellow-300 bg-yellow-100/60 px-4 py-2.5 text-sm font-semibold text-slate-900 transition hover:bg-yellow-100 disabled:opacity-60"
-        >
-          <GoogleIcon />
-          Continue with Google instead
-        </button>
-
-        {error ? (
-          <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
-        ) : null}
-        {notice ? (
-          <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
-            {notice}
-          </p>
-        ) : null}
-      </div>
-    );
   }
 
   return (
@@ -495,7 +233,7 @@ export function RegisterForm() {
         disabled={isBusy}
         className="auth-stagger-7 w-full rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-60"
       >
-        {isSubmitting ? "Starting verification..." : "Create account"}
+        {isSubmitting ? "Creating account..." : "Create account"}
       </button>
 
       <button

@@ -31,7 +31,7 @@ create index if not exists idx_pending_registrations_phone_status
 
 create table if not exists public.phone_verification_challenges (
   id uuid primary key default gen_random_uuid(),
-  purpose text not null check (purpose in ('register', 'account_phone_change')),
+  purpose text not null check (purpose in ('register', 'account_phone_change', 'store_whatsapp_number')),
   user_id uuid references public.users(id) on delete cascade,
   pending_registration_id uuid references public.pending_registrations(id) on delete cascade,
   target_phone text not null,

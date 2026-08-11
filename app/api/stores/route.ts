@@ -225,6 +225,7 @@ type StoreRow = {
   theme_color: string | null;
   is_active: boolean;
   created_at: string;
+  whatsapp_verified_at: string | null;
 };
 
 async function validateNicheIds(nicheIds: string[]): Promise<string[]> {
@@ -352,7 +353,7 @@ export async function GET() {
 
   const { data, error } = await supabase
     .from("stores")
-    .select("id, vendor_id, name, slug, logo_url, whatsapp_number, address_line1, city, state, country, latitude, longitude, location_source, store_template, store_theme_preset, storefront_config, rating_avg, rating_count, theme_color, is_active, created_at")
+    .select("id, vendor_id, name, slug, logo_url, whatsapp_number, address_line1, city, state, country, latitude, longitude, location_source, store_template, store_theme_preset, storefront_config, rating_avg, rating_count, theme_color, is_active, created_at, whatsapp_verified_at")
     .eq("vendor_id", session.user.id)
     .order("created_at", { ascending: false });
 
@@ -395,7 +396,7 @@ export async function POST(request: Request) {
 
     const { data: existingStore, error: existingStoreError } = await supabase
       .from("stores")
-      .select("id, slug, logo_url, storefront_config")
+      .select("id, slug, logo_url, storefront_config, whatsapp_number, whatsapp_verified_at")
       .eq("vendor_id", session.user.id)
       .maybeSingle();
 
@@ -451,12 +452,14 @@ export async function POST(request: Request) {
     }
 
     if (existingStore) {
+      const numberChanged = existingStore.whatsapp_number !== whatsappCheck.normalized;
       const { data, error } = await supabase
         .from("stores")
         .update({
           name: parsedData.name,
           slug: uniqueSlug,
           whatsapp_number: whatsappCheck.normalized,
+          whatsapp_verified_at: numberChanged ? null : existingStore.whatsapp_verified_at,
           address_line1: parsedData.address_line1 || null,
           city: parsedData.city || null,
           state: parsedData.state || null,
@@ -472,7 +475,7 @@ export async function POST(request: Request) {
           is_active: parsedData.is_active,
         })
         .eq("id", existingStore.id)
-        .select("id, vendor_id, name, slug, logo_url, whatsapp_number, address_line1, city, state, country, latitude, longitude, location_source, store_template, store_theme_preset, storefront_config, rating_avg, rating_count, theme_color, is_active, created_at")
+        .select("id, vendor_id, name, slug, logo_url, whatsapp_number, address_line1, city, state, country, latitude, longitude, location_source, store_template, store_theme_preset, storefront_config, rating_avg, rating_count, theme_color, is_active, created_at, whatsapp_verified_at")
         .single();
 
       if (error || !data) {
@@ -537,7 +540,7 @@ export async function POST(request: Request) {
         logo_url: logoUrl,
         is_active: parsedData.is_active,
       })
-      .select("id, vendor_id, name, slug, logo_url, whatsapp_number, address_line1, city, state, country, latitude, longitude, location_source, store_template, store_theme_preset, storefront_config, rating_avg, rating_count, theme_color, is_active, created_at")
+      .select("id, vendor_id, name, slug, logo_url, whatsapp_number, address_line1, city, state, country, latitude, longitude, location_source, store_template, store_theme_preset, storefront_config, rating_avg, rating_count, theme_color, is_active, created_at, whatsapp_verified_at")
       .single();
 
     if (error || !data) {

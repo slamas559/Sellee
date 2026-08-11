@@ -27,6 +27,7 @@ export type StoreLookup = {
   rating_count: number;
   latitude: number | null;
   longitude: number | null;
+  whatsapp_verified_at: string | null;
 };
 
 export type ProductRow = {
@@ -88,7 +89,7 @@ export async function searchProducts(
 
   const { data: activeStores, error: storesError } = await supabase
     .from("stores")
-    .select("id, name, slug, city, state, country, logo_url, rating_avg, rating_count, latitude, longitude")
+    .select("id, name, slug, city, state, country, logo_url, rating_avg, rating_count, latitude, longitude, whatsapp_verified_at")
     .eq("is_active", true)
     .limit(500);
 

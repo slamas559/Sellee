@@ -5,7 +5,7 @@ import { createAdminSupabaseClient } from "@/lib/supabase-admin";
 import { validateWhatsAppNumber } from "@/lib/whatsapp";
 import { sendWhatsAppTextMessage } from "@/lib/whatsapp-cloud";
 
-type ChallengePurpose = "register" | "account_phone_change";
+type ChallengePurpose = "register" | "account_phone_change" | "store_whatsapp_number";
 type CompleteVia = "verify_command" | "otp";
 
 type ChallengeRow = {
@@ -92,6 +92,7 @@ async function ensureVendorPhoneSync(userId: string, phone: string) {
     .update({
       whatsapp_number: phone,
       is_active: true,
+      verified_at: new Date().toISOString(),
     })
     .eq("vendor_id", userId);
 
@@ -112,7 +113,7 @@ async function ensureVendorPhoneSync(userId: string, phone: string) {
  * Check whether a phone number is already used by another account.
  * Returns an error string if taken, null if available.
  */
-async function checkPhoneAvailability(
+export async function checkPhoneAvailability(
   phone: string,
   excludeUserId?: string,
 ): Promise<string | null> {
@@ -257,7 +258,7 @@ export async function sendOtpForChallenge(challengeId: string, userId?: string):
   if (new Date(challenge.expires_at).getTime() <= Date.now()) {
     throw new Error("Verification challenge has expired.");
   }
-  if (challenge.purpose === "account_phone_change") {
+  if (challenge.purpose === "account_phone_change" || challenge.purpose === "store_whatsapp_number") {
     if (!userId || challenge.user_id !== userId) {
       throw new Error("Unauthorized challenge access.");
     }
@@ -451,6 +452,22 @@ export async function verifyChallengeByOtp(params: {
     };
   }
 
+  if (challenge.purpose === "store_whatsapp_number") {
+    if (!params.userId || challenge.user_id !== params.userId) {
+      throw new Error("Unauthorized challenge.");
+    }
+
+    const nowIso = new Date().toISOString();
+    const { error: updateError } = await supabase
+      .from("stores")
+      .update({ whatsapp_number: challenge.target_phone, whatsapp_verified_at: nowIso })
+      .eq("vendor_id", params.userId);
+
+    if (updateError) throw new Error(updateError.message);
+    await markChallengeCompleted(challenge.id, "otp");
+    return { completed: true, purpose: "store_whatsapp_number", userId: params.userId };
+  }
+
   if (!challenge.pending_registration_id) {
     throw new Error("Broken registration challenge.");
   }
@@ -561,6 +578,22 @@ export async function verifyByWhatsAppCommand(params: {
     };
   }
 
+  if (challenge.purpose === "store_whatsapp_number") {
+    if (!challenge.user_id) {
+      return { completed: false, message: "Could not resolve vendor for this verification." };
+    }
+
+    const nowIso = new Date().toISOString();
+    const { error: updateError } = await supabase
+      .from("stores")
+      .update({ whatsapp_number: challenge.target_phone, whatsapp_verified_at: nowIso })
+      .eq("vendor_id", challenge.user_id);
+
+    if (updateError) return { completed: false, message: updateError.message };
+    await markChallengeCompleted(challenge.id, "verify_command");
+    return { completed: true, purpose: "store_whatsapp_number", message: "Your store's WhatsApp number is verified." };
+  }
+
   if (!challenge.pending_registration_id) {
     return {
       completed: false,
@@ -626,7 +659,7 @@ export async function getChallengeStatus(params: {
   }
 
   const challenge = data as Pick<ChallengeRow, "purpose" | "user_id" | "status" | "expires_at">;
-  if (challenge.purpose === "account_phone_change") {
+  if (challenge.purpose === "account_phone_change" || challenge.purpose === "store_whatsapp_number") {
     if (!params.userId || challenge.user_id !== params.userId) {
       throw new Error("Unauthorized challenge access.");
     }
@@ -716,6 +749,65 @@ export async function startAccountPhoneChangeVerification(params: {
     verifyCode,
     expiresAt,
     targetPhone: phoneCheck.normalized,
+    command: `VERIFY ${verifyCode}`,
+    waLink: botNumber ? makeWaLink(botNumber.replace(/[^0-9]/g, ""), verifyCode) : null,
+  };
+}
+
+export async function startStoreWhatsAppVerification(params: {
+  userId: string;
+  phoneInput: string;
+}): Promise<{
+  challengeId: string;
+  verifyCode: string;
+  expiresAt: string;
+  targetPhone: string;
+  command: string;
+  waLink: string | null;
+}> {
+  const phoneCheck = validateWhatsAppNumber(params.phoneInput);
+  if (!phoneCheck.ok) throw new Error(phoneCheck.error ?? "Enter a valid WhatsApp number.");
+
+  const supabase = createAdminSupabaseClient();
+  const { data: store, error: storeError } = await supabase
+    .from("stores")
+    .select("id, whatsapp_number, whatsapp_verified_at")
+    .eq("vendor_id", params.userId)
+    .maybeSingle();
+  if (storeError || !store) {
+    throw new Error("Could not load your store. Create your store first, then verify its WhatsApp number.");
+  }
+  if (store.whatsapp_number === phoneCheck.normalized && store.whatsapp_verified_at) {
+    throw new Error("This WhatsApp number is already verified.");
+  }
+
+  const { data: clashingStore } = await supabase
+    .from("stores")
+    .select("id")
+    .eq("whatsapp_number", phoneCheck.normalized)
+    .not("whatsapp_verified_at", "is", null)
+    .neq("vendor_id", params.userId)
+    .maybeSingle();
+  if (clashingStore) throw new Error("This WhatsApp number is already verified on another Sellee store.");
+
+  const verifyCode = generateCode();
+  const otpCode = generateCode();
+  const expiresAt = expiresAtIso(10);
+  const nowIso = new Date().toISOString();
+  const { data: challenge, error } = await supabase
+    .from("phone_verification_challenges")
+    .insert({
+      purpose: "store_whatsapp_number", user_id: params.userId, target_phone: phoneCheck.normalized,
+      verify_code: verifyCode, otp_code: otpCode, status: "pending", expires_at: expiresAt,
+      created_at: nowIso, updated_at: nowIso,
+    })
+    .select("id")
+    .single();
+  if (error || !challenge?.id) throw new Error(error?.message ?? "Could not create store verification challenge.");
+
+  const botNumber = process.env.NEXT_PUBLIC_WHATSAPP_BOT_NUMBER?.trim() ?? "";
+  return {
+    challengeId: String(challenge.id), verifyCode, expiresAt, targetPhone: phoneCheck.normalized,
     command: `VERIFY ${verifyCode}`,
     waLink: botNumber ? makeWaLink(botNumber.replace(/[^0-9]/g, ""), verifyCode) : null,
   };

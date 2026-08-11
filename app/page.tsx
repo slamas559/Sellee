@@ -70,6 +70,7 @@ type StoreLite = {
   follower_count?: number;
   theme_color: string | null;
   niche_names?: string[];
+  whatsapp_verified_at?: string | null;
 };
 
 type ProductLite = {

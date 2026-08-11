@@ -26,6 +26,7 @@ export type PublicStoreLite = {
   theme_color?: string | null;
   latitude?: number | null;
   longitude?: number | null;
+  whatsapp_verified_at?: string | null;
 };
 
 export type PublicProductLite = {
@@ -68,7 +69,7 @@ const getHomeMarketplaceBaseDataInternal = async () => {
     await Promise.all([
       supabase
         .from("stores")
-        .select("id, vendor_id, name, slug, city, state, country, logo_url, rating_avg, rating_count, theme_color")
+        .select("id, vendor_id, name, slug, city, state, country, logo_url, rating_avg, rating_count, theme_color, whatsapp_verified_at")
         .eq("is_active", true)
         .order("created_at", { ascending: false })
         .limit(24),
@@ -162,7 +163,7 @@ const getMarketplaceBaseDataInternal = async () => {
       supabase
         .from("stores")
         .select(
-          "id, name, slug, city, state, country, logo_url, rating_avg, rating_count, latitude, longitude",
+          "id, name, slug, city, state, country, logo_url, rating_avg, rating_count, latitude, longitude, whatsapp_verified_at",
         )
         .eq("is_active", true)
         .limit(500),
@@ -239,7 +240,7 @@ const getStorefrontPublicDataInternal = async (slug: string) => {
 
   const { data: store } = await supabase
     .from("stores")
-    .select("id, vendor_id, name, slug, logo_url, whatsapp_number, store_template, store_theme_preset, storefront_config, rating_avg, rating_count, theme_color, is_active, created_at")
+    .select("id, vendor_id, name, slug, logo_url, whatsapp_number, store_template, store_theme_preset, storefront_config, rating_avg, rating_count, theme_color, is_active, created_at, whatsapp_verified_at")
     .eq("slug", slug)
     .eq("is_active", true)
     .maybeSingle();

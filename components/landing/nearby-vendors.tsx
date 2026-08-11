@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { BadgeCheck } from "lucide-react";
 
 export type NearbyVendor = {
   id: string;
@@ -17,6 +18,7 @@ export type NearbyVendor = {
   follower_count?: number;
   distance_km: number | null;
   niche_names?: string[];
+  whatsapp_verified_at?: string | null;
 };
 
 type NearbyVendorsProps = {
@@ -74,8 +76,11 @@ export function NearbyVendorCard({
       />
 
       <div className={`relative z-10 ${isGrid ? "flex h-full flex-col" : ""}`}>
-        <p className="line-clamp-1 text-sm font-semibold text-slate-900 group-hover:text-emerald-700 sm:text-base">
-          {vendor.name}
+        <p className="flex items-center gap-1 line-clamp-1 text-sm font-semibold text-slate-900 group-hover:text-emerald-700 sm:text-base">
+          <span className="truncate">{vendor.name}</span>
+          {vendor.whatsapp_verified_at ? (
+            <BadgeCheck className="h-3.5 w-3.5 shrink-0 text-emerald-600" aria-label="Verified vendor" />
+          ) : null}
         </p>
         <p className="mt-1.5 line-clamp-1 text-xs text-slate-600 sm:mt-2 sm:text-sm">
           {locationText}

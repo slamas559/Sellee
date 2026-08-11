@@ -56,6 +56,7 @@ export type StoreRecord = {
   theme_color: string | null;
   is_active: boolean;
   created_at: string;
+  whatsapp_verified_at: string | null;
 };
 
 export type ProductRecord = {

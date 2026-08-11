@@ -3,7 +3,6 @@ import { getServerSession } from "next-auth";
 import { z } from "zod";
 import { authOptions } from "@/lib/auth";
 import { logDevError } from "@/lib/logger";
-import { requireVerifiedPhone } from "@/lib/require-verified-phone";
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
 import { sendWhatsAppTextMessage } from "@/lib/whatsapp-cloud";
 import { waMessage, waTitle } from "@/lib/whatsapp-bot/message-format";
@@ -42,16 +41,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid order request." }, { status: 400 });
     }
 
-    const guard = await requireVerifiedPhone({
-      userId: session.user.id,
-      context: "order",
-    });
-    if (!guard.ok) {
-      return guard.response;
-    }
-    const user = guard.user;
-
     const supabase = createAdminSupabaseClient();
+
+    const { data: user, error: userError } = await supabase
+      .from("users")
+      .select("id, email, phone")
+      .eq("id", session.user.id)
+      .maybeSingle();
+
+    if (userError || !user) {
+      return NextResponse.json({ error: "Could not verify your account." }, { status: 500 });
+    }
 
     const { data: store, error: storeError } = await supabase
       .from("stores")

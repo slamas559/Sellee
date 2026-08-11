@@ -1,8 +1,11 @@
+import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { logDevError } from "@/lib/logger";
+import { checkPhoneAvailability } from "@/lib/phone-verification";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { startRegistrationVerification } from "@/lib/phone-verification";
+import { createAdminSupabaseClient } from "@/lib/supabase-admin";
+import { validateWhatsAppNumber } from "@/lib/whatsapp";
 
 const registerStartSchema = z.object({
   full_name: z.string().min(2).max(80),
@@ -53,24 +56,63 @@ export async function POST(request: Request) {
       );
     }
 
-    const challenge = await startRegistrationVerification({
-      fullName: parsed.data.full_name,
-      email: parsed.data.email,
-      password: parsed.data.password,
-      role: parsed.data.role ?? "customer",
-      phoneInput: parsed.data.phone,
+    const phoneCheck = validateWhatsAppNumber(parsed.data.phone);
+    if (!phoneCheck.ok) {
+      return NextResponse.json(
+        { error: phoneCheck.error ?? "Enter a valid WhatsApp number." },
+        { status: 400 },
+      );
+    }
+
+    const fullName = parsed.data.full_name.trim();
+    const email = parsed.data.email.trim().toLowerCase();
+    const role = parsed.data.role ?? "customer";
+    const supabase = createAdminSupabaseClient();
+
+    const { data: existingUser, error: existingUserError } = await supabase
+      .from("users")
+      .select("id")
+      .eq("email", email)
+      .maybeSingle();
+
+    if (existingUserError) {
+      throw new Error(existingUserError.message);
+    }
+
+    if (existingUser?.id) {
+      return NextResponse.json(
+        { error: "An account with this email already exists. Please sign in or use a different email address." },
+        { status: 409 },
+      );
+    }
+
+    const phoneError = await checkPhoneAvailability(phoneCheck.normalized);
+    if (phoneError) {
+      return NextResponse.json({ error: phoneError }, { status: 400 });
+    }
+
+    const passwordHash = await bcrypt.hash(parsed.data.password, 12);
+    const { error: insertError } = await supabase.from("users").insert({
+      full_name: fullName,
+      email,
+      phone: phoneCheck.normalized,
+      role,
+      password_hash: passwordHash,
     });
 
+    if (insertError) {
+      if (insertError.message.toLowerCase().includes("email")) {
+        return NextResponse.json(
+          { error: "An account with this email already exists. Please sign in or use a different email address." },
+          { status: 409 },
+        );
+      }
+      throw new Error(insertError.message);
+    }
+
     return NextResponse.json({
-      message: "Verification started. Complete WhatsApp verification to activate account.",
-      challenge: {
-        id: challenge.challengeId,
-        expires_at: challenge.expiresAt,
-        target_phone: challenge.targetPhone,
-        command: challenge.command,
-        verify_code: challenge.verifyCode,
-        wa_link: challenge.waLink,
-      },
+      message: "Account created.",
+      email,
     });
   } catch (error) {
     const message =
@@ -84,4 +126,3 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: message }, { status });
   }
 }
-

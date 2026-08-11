@@ -216,7 +216,7 @@ export function OrderButton({
       <button
         type="button"
         onClick={() => void handleOrder()}
-        disabled={isSubmitting || status === "loading" || (status === "authenticated" && !profile?.phone?.trim())}
+        disabled={isSubmitting || status === "loading"}
         className="inline-flex w-full items-center justify-center rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60 sm:w-auto"
       >
         {isSubmitting

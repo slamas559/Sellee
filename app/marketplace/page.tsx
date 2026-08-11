@@ -47,6 +47,7 @@ type StoreLite = {
   rating_count: number;
   latitude: number | null;
   longitude: number | null;
+  whatsapp_verified_at: string | null;
 };
 
 type ProductLite = {

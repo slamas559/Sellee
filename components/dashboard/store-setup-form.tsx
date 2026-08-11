@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
+import { BadgeCheck } from "lucide-react";
 import { AiRefineButton } from "@/components/ai/ai-refine-button";
 import {
   DEFAULT_STOREFRONT_CONFIG,
@@ -37,6 +38,8 @@ type NicheOption = {
 type MeResponse = {
   user?: { phone?: string | null };
 };
+
+type VerificationChallenge = { id: string; command: string; wa_link: string | null };
 
 const INITIAL_UPLOAD_STATE: UploadState = {
   isUploading: false,
@@ -293,6 +296,10 @@ export function StoreSetupForm({ initialStore }: StoreSetupFormProps) {
   const [isLoadingNiches, setIsLoadingNiches] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [challenge, setChallenge] = useState<VerificationChallenge | null>(null);
+  const [verifyMessage, setVerifyMessage] = useState<string | null>(null);
+  const [verifyError, setVerifyError] = useState<string | null>(null);
+  const [copied, setCopied] = useState<"number" | "command" | null>(null);
 
   const [form, setForm] = useState({
     name: initialStore?.name ?? "",
@@ -323,6 +330,8 @@ export function StoreSetupForm({ initialStore }: StoreSetupFormProps) {
 
   const shareablePath = store?.slug ? `/store/${store.slug}` : null;
   const hasCoordinates = Boolean(form.latitude && form.longitude);
+  const botNumber = process.env.NEXT_PUBLIC_WHATSAPP_BOT_NUMBER?.trim() ?? "";
+  const displayBotNumber = botNumber ? (botNumber.startsWith("+") ? botNumber : `+${botNumber}`) : "Sellee WhatsApp bot";
 
   // Live preview URLs
   const previewLogoUrl = useMemo(() => {
@@ -391,6 +400,26 @@ export function StoreSetupForm({ initialStore }: StoreSetupFormProps) {
 
   function updateFormField<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
+  }
+
+  async function startVerification() {
+    setVerifyError(null); setVerifyMessage(null);
+    try {
+      const response = await fetch("/api/vendor/whatsapp-verification/start", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone: form.whatsapp_number }) });
+      const payload = (await response.json()) as { error?: string; challenge?: VerificationChallenge };
+      if (!response.ok || !payload.challenge) { setVerifyError(payload.error ?? "Could not start verification."); return; }
+      setChallenge(payload.challenge); setVerifyMessage("Choose either option below to verify your store number.");
+    } catch { setVerifyError("Network error while starting verification."); }
+  }
+
+  async function copyToClipboard(value: string, kind: "number" | "command") {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(kind);
+      setTimeout(() => setCopied(null), 1800);
+    } catch {
+      setVerifyError("Could not copy. Please select and copy it manually.");
+    }
   }
 
   function updateUpload(kind: UploadKind, patch: Partial<UploadState>) {
@@ -640,12 +669,40 @@ export function StoreSetupForm({ initialStore }: StoreSetupFormProps) {
               <input required value={form.name} onChange={(e) => updateFormField("name", e.target.value)} placeholder="e.g. Moores Furniture" className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none ring-emerald-300 transition focus:ring-2" />
             </label>
 
-            <div className="space-y-1.5 text-sm">
+            <div className="space-y-2 text-sm">
               <span className="font-medium text-slate-700">WhatsApp number</span>
-              <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-slate-600">
-                {form.whatsapp_number || <span className="text-slate-400">Loading from account…</span>}
-              </div>
-              <p className="text-[11px] text-slate-400">Update in Account settings when needed.</p>
+              <input required value={form.whatsapp_number} onChange={(e) => updateFormField("whatsapp_number", e.target.value)} placeholder="e.g. +2348012345678" className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none ring-emerald-300 transition focus:ring-2" />
+              {store?.whatsapp_verified_at && store.whatsapp_number === form.whatsapp_number ? (
+                <p className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700"><BadgeCheck className="h-4 w-4" /> Verified</p>
+              ) : (
+                <div className="space-y-2">
+                  <p className="text-xs text-slate-500">Not verified — orders will still work, but shoppers won&apos;t see a Verified badge on your store.</p>
+                  <button type="button" onClick={() => void startVerification()} disabled={!store || !form.whatsapp_number.trim()} className="rounded-lg border border-emerald-200 px-3 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50">Verify Now</button>
+                  {!store ? <p className="text-xs text-slate-500">Save your store first, then verify this number.</p> : null}
+                </div>
+              )}
+              {challenge ? (
+                <div className="space-y-3 rounded-xl border border-emerald-100 bg-emerald-50/70 p-3 text-xs text-slate-700">
+                  <p className="leading-5">Verify from the same WhatsApp number saved above. The easiest way is to open the bot with the command already filled in.</p>
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                    {challenge.wa_link ? <a href={challenge.wa_link} target="_blank" rel="noreferrer" className="inline-flex justify-center rounded-lg bg-emerald-600 px-3 py-2 font-semibold text-white transition hover:bg-emerald-700">Open WhatsApp &amp; send</a> : null}
+                    <span className="text-slate-500">or copy the details below.</span>
+                  </div>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <button type="button" onClick={() => void copyToClipboard(displayBotNumber, "number")} disabled={!botNumber} className="min-w-0 rounded-lg border border-emerald-200 bg-white px-3 py-2 text-left transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60">
+                      <span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-500">1. Bot number</span>
+                      <span className="mt-0.5 block truncate font-semibold text-emerald-800">{copied === "number" ? "Copied!" : displayBotNumber}</span>
+                    </button>
+                    <button type="button" onClick={() => void copyToClipboard(challenge.command, "command")} className="min-w-0 rounded-lg border border-emerald-200 bg-white px-3 py-2 text-left transition hover:bg-emerald-50">
+                      <span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-500">2. Verify command</span>
+                      <code className="mt-0.5 block truncate font-semibold text-emerald-800">{copied === "command" ? "Copied!" : challenge.command}</code>
+                    </button>
+                  </div>
+                  <p className="text-[11px] leading-4 text-slate-500">Open a chat with the Sellee bot, paste the command, then send it. Your store will be marked verified once the bot confirms it.</p>
+                </div>
+              ) : null}
+              {verifyError ? <p className="text-xs text-red-700">{verifyError}</p> : null}
+              {verifyMessage ? <p className="text-xs text-emerald-700">{verifyMessage}</p> : null}
             </div>
 
             {/* Logo */}

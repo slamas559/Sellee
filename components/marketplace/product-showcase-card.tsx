@@ -8,7 +8,7 @@ import { useMemo, useRef, useState } from "react";
 import { StarRating } from "@/components/store/star-rating";
 import { formatNaira, formatProductPathSegment } from "@/lib/format";
 import type { StoreTemplate } from "@/types";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { BadgeCheck, ChevronLeft, ChevronRight } from "lucide-react";
 
 type ProductShowcaseCardProps = {
   product: {
@@ -29,6 +29,7 @@ type ProductShowcaseCardProps = {
     logo_url: string | null;
     rating_avg?: number | null;
     rating_count?: number;
+    whatsapp_verified_at?: string | null;
   };
   variant?: "home" | "marketplace" | "store";
   template?: StoreTemplate;
@@ -195,8 +196,11 @@ export function ProductShowcaseCard({
       <div className={contentWrapClass}>
         <div className="flex items-start justify-between gap-2">
           <Link href={`/store/${store.slug}`} target="_blank" rel="noopener noreferrer">
-            <p className={`line-clamp-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${metaClass}`}>
-              {store.name}
+            <p className={`flex items-center gap-1 line-clamp-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${metaClass}`}>
+              <span className="truncate">{store.name}</span>
+              {store.whatsapp_verified_at ? (
+                <BadgeCheck className="h-3 w-3 shrink-0 text-emerald-600" aria-label="Verified vendor" />
+              ) : null}
             </p>
           </Link>
         </div>

@@ -25,6 +25,7 @@ export type StoreRow = {
   theme_color: string | null;
   rating_avg: number;
   rating_count: number;
+  whatsapp_verified_at: string | null;
 };
 
 export type StoreSearchResult = StoreRow & {
@@ -58,7 +59,7 @@ export async function searchStores(params: StoreSearchParams): Promise<StoreSear
   const { data: stores, error: storesError } = await supabase
     .from("stores")
     .select(
-      "id, vendor_id, name, slug, logo_url, city, state, country, latitude, longitude, theme_color, rating_avg, rating_count",
+      "id, vendor_id, name, slug, logo_url, city, state, country, latitude, longitude, theme_color, rating_avg, rating_count, whatsapp_verified_at",
     )
     .eq("is_active", true)
     .order("created_at", { ascending: false })

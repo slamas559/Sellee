@@ -18,6 +18,7 @@ import {
   normalizeThemePreset,
 } from "@/lib/storefront";
 import { getStorefrontPublicDataCached } from "@/lib/public-cache";
+import { BadgeCheck } from "lucide-react";
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
 import type { ProductRecord, StoreRecord } from "@/types";
 
@@ -182,7 +183,12 @@ function MarketTemplate({
                   </div>
                 )}
                 <div>
-                  <h1 className="text-2xl font-black tracking-tight text-white sm:text-3xl">{store.name}</h1>
+                  <h1 className="flex items-center gap-1.5 text-2xl font-black tracking-tight text-white sm:text-3xl">
+                    {store.name}
+                    {store.whatsapp_verified_at ? (
+                      <BadgeCheck className="h-5 w-5 shrink-0 text-white" aria-label="Verified vendor" />
+                    ) : null}
+                  </h1>
                   <p className="mt-0.5 text-sm text-white/80">{config.promo_text}</p>
                   {nicheNames.length > 0 && (
                     <div className="mt-1.5 flex flex-wrap gap-1.5">
@@ -232,7 +238,7 @@ function MarketTemplate({
             <div className="mt-4 grid grid-cols-2 justify-items-center gap-1 [@media(max-width:320px)]:grid-cols-1 sm:mt-5 sm:gap-3 lg:grid-cols-3 xl:grid-cols-4">
               {products.map((p) => (
                 <div key={p.id} className="w-full max-w-[320px] space-y-2">
-                  <ProductCard product={p} template="grocery_promo" store={{ name: store.name, slug: store.slug, logo_url: store.logo_url, rating_avg: store.rating_avg, rating_count: store.rating_count }} />
+                  <ProductCard product={p} template="grocery_promo" store={{ name: store.name, slug: store.slug, logo_url: store.logo_url, rating_avg: store.rating_avg, rating_count: store.rating_count, whatsapp_verified_at: store.whatsapp_verified_at }} />
                 </div>
               ))}
             </div>
@@ -290,7 +296,10 @@ function EditorialTemplate({
                   <Image src={store.logo_url} alt={store.name} fill className="object-cover" sizes="36px" />
                 </div>
               ) : null}
-              <span className="text-sm font-bold uppercase tracking-[0.18em] text-white/70">{store.name}</span>
+              <span className="flex items-center gap-1 text-sm font-bold uppercase tracking-[0.18em] text-white/70">
+                {store.name}
+                {store.whatsapp_verified_at ? <BadgeCheck className="h-3.5 w-3.5 shrink-0 text-white/70" aria-label="Verified vendor" /> : null}
+              </span>
             </div>
             <div className="flex items-center gap-2">
               <FollowStoreButton storeId={store.id} storeSlug={store.slug} isLoggedIn={isLoggedIn} isOwner={Boolean(activeUserId && activeUserId === store.vendor_id)} initialFollowing={isFollowing} compact />
@@ -307,7 +316,10 @@ function EditorialTemplate({
                 ))}
               </div>
             )}
-            <h1 className="max-w-2xl text-4xl font-black leading-none tracking-tight text-white sm:text-6xl">{config.hero_title || store.name}</h1>
+            <h1 className="flex max-w-2xl flex-wrap items-center gap-2 text-4xl font-black leading-none tracking-tight text-white sm:text-6xl">
+              {config.hero_title || store.name}
+              {store.whatsapp_verified_at ? <BadgeCheck className="h-7 w-7 shrink-0 text-white sm:h-9 sm:w-9" aria-label="Verified vendor" /> : null}
+            </h1>
             {config.hero_subtitle && <p className="mt-3 max-w-xl text-base text-white/70">{config.hero_subtitle}</p>}
             <div className="mt-4 flex flex-wrap items-center gap-3">
               <a href={`https://wa.me/${store.whatsapp_number}`} className="rounded-full px-5 py-2 text-sm font-bold text-white" style={{ backgroundColor: primaryColor }}><span className="text-white">{config.hero_cta_text || "Order now"}</span></a>
@@ -337,7 +349,7 @@ function EditorialTemplate({
             <div className="flex gap-4 overflow-x-auto pb-2 [scrollbar-width:none]">
               {featured.map((p) => (
                 <div key={p.id} className="w-[56vw] max-w-[280px] shrink-0 sm:max-w-[280px]">
-                  <ProductCard product={p} template="fashion_editorial" store={{ name: store.name, slug: store.slug, logo_url: store.logo_url, rating_avg: store.rating_avg, rating_count: store.rating_count }} />
+                  <ProductCard product={p} template="fashion_editorial" store={{ name: store.name, slug: store.slug, logo_url: store.logo_url, rating_avg: store.rating_avg, rating_count: store.rating_count, whatsapp_verified_at: store.whatsapp_verified_at }} />
                 </div>
               ))}
             </div>
@@ -365,7 +377,7 @@ function EditorialTemplate({
             <div className="mt-4 grid grid-cols-2 justify-items-center gap-1 [@media(max-width:320px)]:grid-cols-1 sm:mt-5 sm:gap-3 lg:grid-cols-3 xl:grid-cols-4">
               {(rest.length > 0 ? rest : products).map((p) => (
                 <div key={p.id} className="w-full max-w-[320px] space-y-2">
-                  <ProductCard product={p} template="fashion_editorial" store={{ name: store.name, slug: store.slug, logo_url: store.logo_url, rating_avg: store.rating_avg, rating_count: store.rating_count }} />
+                  <ProductCard product={p} template="fashion_editorial" store={{ name: store.name, slug: store.slug, logo_url: store.logo_url, rating_avg: store.rating_avg, rating_count: store.rating_count, whatsapp_verified_at: store.whatsapp_verified_at }} />
                 </div>
               ))}
             </div>
@@ -418,10 +430,14 @@ function ShowcaseTemplate({
               ) : (
                 <div className="flex h-12 w-12 items-center justify-center rounded-xl font-black text-xl text-white" style={{ backgroundColor: primaryColor }}>{store.name.charAt(0)}</div>
               )}
-              <span className="text-sm font-semibold text-slate-500">{store.name}</span>
+              <span className="flex items-center gap-1 text-sm font-semibold text-slate-500">
+                {store.name}
+                {store.whatsapp_verified_at ? <BadgeCheck className="h-3.5 w-3.5 shrink-0 text-emerald-600" aria-label="Verified vendor" /> : null}
+              </span>
             </div>
-            <h1 className="mt-5 text-4xl font-black leading-[1.05] tracking-tight text-slate-900 sm:text-5xl lg:text-6xl">
+            <h1 className="mt-5 flex flex-wrap items-center gap-2 text-4xl font-black leading-[1.05] tracking-tight text-slate-900 sm:text-5xl lg:text-6xl">
               {config.hero_title || store.name}
+              {store.whatsapp_verified_at ? <BadgeCheck className="h-7 w-7 shrink-0 text-emerald-600 sm:h-9 sm:w-9" aria-label="Verified vendor" /> : null}
             </h1>
             <p className="mt-4 max-w-md text-base leading-7 text-slate-600">{config.hero_subtitle}</p>
             {nicheNames.length > 0 && (
@@ -487,7 +503,7 @@ function ShowcaseTemplate({
               <div className="mt-4 grid grid-cols-2 justify-items-center gap-1 [@media(max-width:320px)]:grid-cols-1 sm:mt-5 sm:gap-3 lg:grid-cols-3 xl:grid-cols-4">
                 {products.map((p) => (
                   <div key={p.id} className="w-full max-w-[320px] space-y-2">
-                    <ProductCard product={p} template="lifestyle_showcase" store={{ name: store.name, slug: store.slug, logo_url: store.logo_url, rating_avg: store.rating_avg, rating_count: store.rating_count }} />
+                  <ProductCard product={p} template="lifestyle_showcase" store={{ name: store.name, slug: store.slug, logo_url: store.logo_url, rating_avg: store.rating_avg, rating_count: store.rating_count, whatsapp_verified_at: store.whatsapp_verified_at }} />
                   </div>
                 ))}
               </div>
@@ -547,7 +563,10 @@ function GridTemplate({
                 <div className="flex h-9 w-9 items-center justify-center rounded-lg font-black text-white text-sm" style={{ backgroundColor: primaryColor }}>{store.name.charAt(0)}</div>
               )}
               <div>
-                <p className="text-sm font-bold text-slate-900">{store.name}</p>
+                <p className="flex items-center gap-1 text-sm font-bold text-slate-900">
+                  {store.name}
+                  {store.whatsapp_verified_at ? <BadgeCheck className="h-3.5 w-3.5 shrink-0 text-emerald-600" aria-label="Verified vendor" /> : null}
+                </p>
                 <StarRating value={store.rating_avg} count={store.rating_count} size="sm" />
               </div>
             </div>
@@ -648,7 +667,7 @@ function GridTemplate({
               <div className="mt-4 grid grid-cols-2 justify-items-center gap-1 [@media(max-width:320px)]:grid-cols-1 sm:mt-5 sm:gap-3 lg:grid-cols-3 xl:grid-cols-4">
                 {products.map((p) => (
                   <div key={p.id} className="w-full max-w-[320px] space-y-2">
-                    <ProductCard key={p.id} product={p} template="modern_grid" store={{ name: store.name, slug: store.slug, logo_url: store.logo_url, rating_avg: store.rating_avg, rating_count: store.rating_count }} />
+                    <ProductCard key={p.id} product={p} template="modern_grid" store={{ name: store.name, slug: store.slug, logo_url: store.logo_url, rating_avg: store.rating_avg, rating_count: store.rating_count, whatsapp_verified_at: store.whatsapp_verified_at }} />
                   </div>
                 ))}
               </div>
