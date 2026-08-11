@@ -18,7 +18,44 @@ const updateSchema = z.object({
   stock_count: z.number().int().min(0),
   is_available: z.boolean().default(true),
   remove_image: z.boolean().optional().default(false),
+  brand: z.string().max(80).optional().default(""),
+  condition: z.string().max(20).optional().default(""),
 });
+
+const ALLOWED_CONDITIONS = new Set(["new", "used", "refurbished"]);
+
+function normalizeCondition(raw: string): "new" | "used" | "refurbished" | null {
+  const value = raw.trim().toLowerCase();
+  return ALLOWED_CONDITIONS.has(value) ? (value as "new" | "used" | "refurbished") : null;
+}
+
+function parseProductAttributes(raw: FormDataEntryValue | null): Record<string, string> {
+  if (typeof raw !== "string" || !raw.trim()) return {};
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return {};
+    const result: Record<string, string> = {};
+    for (const entry of parsed.slice(0, 12)) {
+      if (
+        entry &&
+        typeof entry === "object" &&
+        "key" in entry &&
+        "value" in entry &&
+        typeof (entry as { key: unknown }).key === "string" &&
+        typeof (entry as { value: unknown }).value === "string"
+      ) {
+        const key = (entry as { key: string }).key.trim().slice(0, 40);
+        const value = (entry as { value: string }).value.trim().slice(0, 80);
+        if (key && value) {
+          result[key] = value;
+        }
+      }
+    }
+    return result;
+  } catch {
+    return {};
+  }
+}
 
 async function getVendorStore(vendorId: string): Promise<{ id: string; slug: string } | null> {
   const supabase = createAdminSupabaseClient();
@@ -185,6 +222,8 @@ export async function PATCH(
       stock_count: Number(formData.get("stock_count")),
       is_available: formData.get("is_available") === "true",
       remove_image: formData.get("remove_image") === "true",
+      brand: formData.get("brand") ?? "",
+      condition: formData.get("condition") ?? "",
     });
     const categoryIsOther = formData.get("category_is_other") === "true";
 
@@ -283,6 +322,7 @@ export async function PATCH(
     imageUrl = imageUrls[0] ?? null;
 
     const productSlug = await buildUniqueProductSlug(store.id, parsed.data.name, id);
+    const attributes = parseProductAttributes(formData.get("attributes"));
 
     const { data, error } = await supabase
       .from("products")
@@ -294,6 +334,9 @@ export async function PATCH(
         price: parsed.data.price,
         stock_count: parsed.data.stock_count,
         is_available: parsed.data.is_available,
+        brand: parsed.data.brand.trim() || null,
+        condition: normalizeCondition(parsed.data.condition),
+        attributes,
         image_url: imageUrl,
         image_urls: imageUrls,
       })

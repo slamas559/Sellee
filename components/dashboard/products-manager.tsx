@@ -12,6 +12,8 @@ type ProductsResponse = {
   error?: string;
 };
 
+type ProductAttributeRow = { key: string; value: string };
+
 type ProductFormState = {
   name: string;
   description: string;
@@ -23,6 +25,9 @@ type ProductFormState = {
   images: File[];
   existing_image_urls: string[];
   remove_image: boolean;
+  brand: string;
+  condition: string;
+  attributes: ProductAttributeRow[];
 };
 
 const initialForm: ProductFormState = {
@@ -36,6 +41,9 @@ const initialForm: ProductFormState = {
   images: [],
   existing_image_urls: [],
   remove_image: false,
+  brand: "",
+  condition: "",
+  attributes: [],
 };
 
 type ProductsManagerProps = {
@@ -116,6 +124,9 @@ export function ProductsManager({ initialProducts }: ProductsManagerProps) {
             ? [product.image_url]
             : [],
       remove_image: false,
+      brand: product.brand ?? "",
+      condition: product.condition ?? "",
+      attributes: Object.entries(product.attributes ?? {}).map(([key, value]) => ({ key, value })),
     });
     setMessage(null);
     setError(null);
@@ -224,6 +235,12 @@ export function ProductsManager({ initialProducts }: ProductsManagerProps) {
     body.append("is_available", String(form.is_available));
     body.append("remove_image", String(form.remove_image));
     body.append("keep_image_urls", JSON.stringify(form.existing_image_urls));
+    body.append("brand", form.brand.trim());
+    body.append("condition", form.condition);
+    body.append(
+      "attributes",
+      JSON.stringify(form.attributes.filter((row) => row.key.trim() && row.value.trim())),
+    );
 
     for (const image of form.images) {
       body.append("images", image);
@@ -402,6 +419,96 @@ export function ProductsManager({ initialProducts }: ProductsManagerProps) {
               className="w-full rounded-md border border-slate-200 px-3 py-2 outline-none ring-emerald-300 focus:ring-2"
             />
           </label>
+
+          <label className="space-y-2 text-sm">
+            <span className="font-medium text-slate-700">Brand (optional)</span>
+            <input
+              type="text"
+              value={form.brand}
+              onChange={(event) => setForm((prev) => ({ ...prev, brand: event.target.value }))}
+              className="w-full rounded-md border border-slate-200 px-3 py-2 outline-none ring-emerald-300 focus:ring-2"
+              placeholder="e.g. ASUS, Nike, Samsung"
+            />
+          </label>
+
+          <label className="space-y-2 text-sm">
+            <span className="font-medium text-slate-700">Condition (optional)</span>
+            <select
+              value={form.condition}
+              onChange={(event) => setForm((prev) => ({ ...prev, condition: event.target.value }))}
+              className="w-full rounded-md border border-slate-200 px-3 py-2 outline-none ring-emerald-300 focus:ring-2"
+            >
+              <option value="">Not specified</option>
+              <option value="new">New</option>
+              <option value="used">Used</option>
+              <option value="refurbished">Refurbished</option>
+            </select>
+          </label>
+
+          <div className="space-y-2 text-sm md:col-span-2">
+            <div className="flex items-center justify-between">
+              <span className="font-medium text-slate-700">Specifications (optional)</span>
+              <button
+                type="button"
+                onClick={() =>
+                  setForm((prev) => ({
+                    ...prev,
+                    attributes: [...prev.attributes, { key: "", value: "" }],
+                  }))
+                }
+                className="text-xs font-semibold text-emerald-700 hover:underline cursor-pointer"
+              >
+                + Add spec
+              </button>
+            </div>
+            <p className="text-xs text-slate-500">
+              Things shoppers actually compare — RAM, Storage, Size, Color, Material, etc.
+            </p>
+            {form.attributes.map((row, index) => (
+              <div key={index} className="flex gap-2">
+                <input
+                  type="text"
+                  value={row.key}
+                  onChange={(event) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      attributes: prev.attributes.map((item, itemIndex) =>
+                        itemIndex === index ? { ...item, key: event.target.value } : item,
+                      ),
+                    }))
+                  }
+                  placeholder="Label (e.g. RAM)"
+                  className="w-1/3 rounded-md border border-slate-200 px-3 py-2 text-sm outline-none ring-emerald-300 focus:ring-2"
+                />
+                <input
+                  type="text"
+                  value={row.value}
+                  onChange={(event) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      attributes: prev.attributes.map((item, itemIndex) =>
+                        itemIndex === index ? { ...item, value: event.target.value } : item,
+                      ),
+                    }))
+                  }
+                  placeholder="Value (e.g. 16GB)"
+                  className="flex-1 rounded-md border border-slate-200 px-3 py-2 text-sm outline-none ring-emerald-300 focus:ring-2"
+                />
+                <button
+                  type="button"
+                  onClick={() =>
+                    setForm((prev) => ({
+                      ...prev,
+                      attributes: prev.attributes.filter((_, itemIndex) => itemIndex !== index),
+                    }))
+                  }
+                  className="rounded-md border border-slate-200 px-2 text-xs text-slate-500 hover:bg-slate-50 cursor-pointer"
+                >
+                  Remove
+                </button>
+              </div>
+            ))}
+          </div>
 
           <div className="space-y-2 text-sm md:col-span-2">
             <span className="font-medium text-slate-700">Product images</span>

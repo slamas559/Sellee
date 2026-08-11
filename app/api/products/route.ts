@@ -16,7 +16,44 @@ const productSchema = z.object({
   price: z.number().min(0),
   stock_count: z.number().int().min(0),
   is_available: z.boolean().default(true),
+  brand: z.string().max(80).optional().default(""),
+  condition: z.string().max(20).optional().default(""),
 });
+
+const ALLOWED_CONDITIONS = new Set(["new", "used", "refurbished"]);
+
+function normalizeCondition(raw: string): "new" | "used" | "refurbished" | null {
+  const value = raw.trim().toLowerCase();
+  return ALLOWED_CONDITIONS.has(value) ? (value as "new" | "used" | "refurbished") : null;
+}
+
+function parseProductAttributes(raw: FormDataEntryValue | null): Record<string, string> {
+  if (typeof raw !== "string" || !raw.trim()) return {};
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return {};
+    const result: Record<string, string> = {};
+    for (const entry of parsed.slice(0, 12)) {
+      if (
+        entry &&
+        typeof entry === "object" &&
+        "key" in entry &&
+        "value" in entry &&
+        typeof (entry as { key: unknown }).key === "string" &&
+        typeof (entry as { value: unknown }).value === "string"
+      ) {
+        const key = (entry as { key: string }).key.trim().slice(0, 40);
+        const value = (entry as { value: string }).value.trim().slice(0, 80);
+        if (key && value) {
+          result[key] = value;
+        }
+      }
+    }
+    return result;
+  } catch {
+    return {};
+  }
+}
 
 async function getVendorStore(vendorId: string): Promise<{ id: string; slug: string } | null> {
   const supabase = createAdminSupabaseClient();
@@ -206,6 +243,8 @@ export async function POST(request: Request) {
       price: Number(formData.get("price")),
       stock_count: Number(formData.get("stock_count")),
       is_available: formData.get("is_available") === "true",
+      brand: formData.get("brand") ?? "",
+      condition: formData.get("condition") ?? "",
     });
     const categoryIsOther = formData.get("category_is_other") === "true";
 
@@ -263,6 +302,7 @@ export async function POST(request: Request) {
     const supabase = createAdminSupabaseClient();
 
     const productSlug = await buildUniqueProductSlug(store.id, parsed.data.name);
+    const attributes = parseProductAttributes(formData.get("attributes"));
 
     const { data, error } = await supabase
       .from("products")
@@ -277,6 +317,9 @@ export async function POST(request: Request) {
         image_urls: uploadedImageUrls,
         stock_count: parsed.data.stock_count,
         is_available: parsed.data.is_available,
+        brand: parsed.data.brand.trim() || null,
+        condition: normalizeCondition(parsed.data.condition),
+        attributes,
       })
       .select("id, store_id, slug, name, description, category, price, image_url, image_urls, rating_avg, rating_count, stock_count, is_available, created_at")
       .single();

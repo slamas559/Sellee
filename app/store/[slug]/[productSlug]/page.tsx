@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Fragment } from "react";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ProductShowcaseCard } from "@/components/marketplace/product-showcase-card";
@@ -385,6 +386,33 @@ export default async function StoreProductPage({ params, searchParams }: Product
               <p className="text-sm leading-relaxed text-stone-600">
                 {product.description ?? "No description added for this product yet."}
               </p>
+
+              {/* Structured product info */}
+              {product.brand || product.condition || (product.attributes && Object.keys(product.attributes).length > 0) ? (
+                <div className="mt-5 rounded-xl border border-stone-200 bg-stone-50/60 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-stone-500">Product information</p>
+                  <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm">
+                    {product.condition ? (
+                      <>
+                        <dt className="capitalize text-stone-500">Condition</dt>
+                        <dd className="capitalize font-medium text-stone-800">{product.condition}</dd>
+                      </>
+                    ) : null}
+                    {product.brand ? (
+                      <>
+                        <dt className="text-stone-500">Brand</dt>
+                        <dd className="font-medium text-stone-800">{product.brand}</dd>
+                      </>
+                    ) : null}
+                    {Object.entries(product.attributes ?? {}).map(([key, value]) => (
+                      <Fragment key={key}>
+                        <dt className="text-stone-500">{key}</dt>
+                        <dd className="font-medium text-stone-800">{value}</dd>
+                      </Fragment>
+                    ))}
+                  </dl>
+                </div>
+              ) : null}
 
               {/* Stock + badge row */}
               <div className="mt-5 flex flex-wrap items-center gap-2">

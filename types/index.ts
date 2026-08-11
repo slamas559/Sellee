@@ -74,6 +74,9 @@ export type ProductRecord = {
   stock_count: number;
   is_available: boolean;
   created_at: string;
+  brand: string | null;
+  condition: "new" | "used" | "refurbished" | null;
+  attributes: Record<string, string> | null;
 };
 
 export type OrderRecord = {
