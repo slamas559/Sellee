@@ -459,7 +459,7 @@ export async function POST(request: Request) {
           name: parsedData.name,
           slug: uniqueSlug,
           whatsapp_number: whatsappCheck.normalized,
-          whatsapp_verified_at: numberChanged ? null : existingStore.whatsapp_verified_at,
+          ...(numberChanged ? { whatsapp_verified_at: null } : {}),
           address_line1: parsedData.address_line1 || null,
           city: parsedData.city || null,
           state: parsedData.state || null,

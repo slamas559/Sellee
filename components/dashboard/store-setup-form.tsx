@@ -671,7 +671,18 @@ export function StoreSetupForm({ initialStore }: StoreSetupFormProps) {
 
             <div className="space-y-2 text-sm">
               <span className="font-medium text-slate-700">WhatsApp number</span>
-              <input required value={form.whatsapp_number} onChange={(e) => updateFormField("whatsapp_number", e.target.value)} placeholder="e.g. +2348012345678" className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none ring-emerald-300 transition focus:ring-2" />
+              <input
+                required
+                value={form.whatsapp_number}
+                onChange={(e) => {
+                  updateFormField("whatsapp_number", e.target.value);
+                  setChallenge(null);
+                  setVerifyMessage(null);
+                  setVerifyError(null);
+                }}
+                placeholder="e.g. +2348012345678"
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none ring-emerald-300 transition focus:ring-2"
+              />
               {store?.whatsapp_verified_at && store.whatsapp_number === form.whatsapp_number ? (
                 <p className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700"><BadgeCheck className="h-4 w-4" /> Verified</p>
               ) : (
