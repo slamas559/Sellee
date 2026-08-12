@@ -22,7 +22,7 @@ const SUPPORT_EMAIL = "support@sellee.store";
 const SUPPORT_PHONE_DISPLAY = "08100596007";
 const SUPPORT_WHATSAPP = "2348100596007";
 
-type HelpCategory = "All" | "Customers" | "Vendors" | "Orders" | "Account";
+type HelpCategory = "All" | "Customers" | "Vendors" | "Orders" | "Account" | "WhatsApp";
 
 type FaqItem = {
   id: string;
@@ -31,9 +31,10 @@ type FaqItem = {
   answer: string;
 };
 
-const categories: HelpCategory[] = ["All", "Customers", "Vendors", "Orders", "Account"];
+const categories: HelpCategory[] = ["All", "Customers", "Vendors", "Orders", "Account", "WhatsApp"];
 
 const faqs: FaqItem[] = [
+  // ── Customers ──────────────────────────────────────────────────────────
   {
     id: "order-whatsapp",
     category: "Customers",
@@ -49,19 +50,105 @@ const faqs: FaqItem[] = [
       "Sellee uses store location details and, when allowed, your selected location to help surface vendors close to you. You can still browse the full marketplace if you do not want to use location-based discovery.",
   },
   {
+    id: "verified-seller-meaning",
+    category: "Customers",
+    question: "What does the \"Verified\" badge on a store mean?",
+    answer:
+      "A verified badge means the vendor confirmed ownership of their store's WhatsApp number through a one-time code sent by the Sellee bot. Not being verified doesn't automatically mean a store is untrustworthy — many genuine vendors just haven't completed the optional step yet — but a verified badge is a stronger signal that messages to that number reach a real, confirmed business.",
+  },
+  {
+    id: "know-seller-legit",
+    category: "Customers",
+    question: "How do I know a seller is legitimate before ordering?",
+    answer:
+      "Check for the Verified badge, read the store's rating and reviews, and look at its completed orders count where shown. Ask the vendor questions directly on WhatsApp before paying, and be cautious of any seller who pressures you to pay immediately without answering questions.",
+  },
+  {
+    id: "save-follow-vendors",
+    category: "Customers",
+    question: "Can I save products or follow a vendor?",
+    answer:
+      "Yes. Use the save/wishlist action on a product to find it again later from your account, and use the follow action on a store page to keep up with a vendor you like. Both are available from your account menu once you're signed in.",
+  },
+  {
+    id: "leave-review",
+    category: "Customers",
+    question: "Can I leave a review after ordering?",
+    answer:
+      "Yes, you can rate and review both the product and the store after an order. Honest reviews help other shoppers and help good vendors build a track record on Sellee.",
+  },
+  {
+    id: "cancel-order",
+    category: "Customers",
+    question: "How do I cancel an order?",
+    answer:
+      "Sellee doesn't have an in-app cancel button today — since the order conversation and payment happen directly with the vendor on WhatsApp, message the vendor as soon as possible to cancel or change your order. Most vendors will confirm and adjust the order status on their end.",
+  },
+  {
+    id: "seller-not-responding",
+    category: "Customers",
+    question: "What happens if a seller doesn't respond?",
+    answer:
+      "Give the vendor a reasonable amount of time to reply, especially outside business hours. If a seller stays unresponsive for an extended period, contact Sellee Support with the store name, product, and a screenshot of your WhatsApp conversation so the team can look into it.",
+  },
+  {
+    id: "report-seller",
+    category: "Customers",
+    question: "How do I report a seller or a suspicious listing?",
+    answer:
+      "Sellee doesn't have a built-in \"report\" button yet. In the meantime, contact Sellee Support (email or WhatsApp, both linked below) with the store name, product link, and details of the issue, and the team will review it.",
+  },
+  {
+    id: "refunds",
+    category: "Customers",
+    question: "How do refunds work?",
+    answer:
+      "Sellee doesn't process payments or hold funds, so refunds are arranged directly between you and the vendor, the same way payment was. If a vendor won't resolve a genuine issue, contact Sellee Support with your order details and the team can step in.",
+  },
+  // ── Vendors ────────────────────────────────────────────────────────────
+  {
     id: "store-setup",
     category: "Vendors",
     question: "How do I set up my store?",
     answer:
-      "Create a vendor account, complete phone verification, then open your dashboard. Add your store name, WhatsApp number, location, logo, and products so buyers can discover you in the marketplace.",
+      "Create an account, then choose \"Become a Vendor\" to open your store setup. Add your store name, WhatsApp number, location, logo, and your first products so buyers can discover you in the marketplace.",
   },
   {
     id: "product-uploads",
     category: "Vendors",
     question: "What should I include in product listings?",
     answer:
-      "Use clear product names, accurate pricing, helpful descriptions, category information, current stock, and good photos. Better product detail reduces repeated questions and helps customers make decisions faster.",
+      "Use clear product names, accurate pricing, helpful descriptions, category information, current stock, and good photos. Where relevant, add the brand, condition, and any key specs (like RAM, size, or color) in the product form — structured details like these reduce repeated questions and help customers decide faster.",
   },
+  {
+    id: "receive-orders",
+    category: "Vendors",
+    question: "How do I receive and manage orders?",
+    answer:
+      "When a customer messages you through a Sellee product or store link, the order also appears in your dashboard. Keep its status updated (confirmed, delivered, etc.) as you fulfil it — this keeps your records straight and feeds your store's completed-orders count that shoppers can see.",
+  },
+  {
+    id: "verify-whatsapp-number",
+    category: "Vendors",
+    question: "Do I have to verify my store's WhatsApp number?",
+    answer:
+      "No — adding a WhatsApp number is required to run a store, but verifying it is optional. If you skip verification, your store still works and can take orders, but it won't show the Verified badge to shoppers. You can verify anytime from Store settings, and if you later change your WhatsApp number, you'll need to verify the new one.",
+  },
+  {
+    id: "promote-store",
+    category: "Vendors",
+    question: "How do I promote my store?",
+    answer:
+      "Share your store or product links directly — every store and product page has a share action for WhatsApp, social apps, or copying the link. Sellee doesn't have paid promotion or featured placement yet; the best lever right now is a complete, verified storefront with good photos and real reviews.",
+  },
+  {
+    id: "one-store-per-account",
+    category: "Vendors",
+    question: "Can I run more than one store from one account?",
+    answer:
+      "Each vendor account currently manages one store. If you sell in genuinely different categories, you can still organize your catalogue with categories and niches within that single store.",
+  },
+  // ── Orders ─────────────────────────────────────────────────────────────
   {
     id: "order-status",
     category: "Orders",
@@ -76,12 +163,13 @@ const faqs: FaqItem[] = [
     answer:
       "Keep order status current in your dashboard and reply quickly on WhatsApp. Clear updates on availability, pickup, delivery, or delays make customers more likely to trust and return to your store.",
   },
+  // ── Account ────────────────────────────────────────────────────────────
   {
     id: "login-phone",
     category: "Account",
-    question: "Why do I need phone verification?",
+    question: "Do I need to verify my phone number as a customer?",
     answer:
-      "Phone verification helps link your account to a real WhatsApp number and protects marketplace interactions. Vendors also need verified contact details so customers can reach the right business safely.",
+      "No. Adding a phone number at signup is optional and never blocks browsing, ordering, or checking out. Verification only ever applies to vendors, and only for the store's WhatsApp number, since that's the number customers actually message.",
   },
   {
     id: "delete-account",
@@ -89,6 +177,28 @@ const faqs: FaqItem[] = [
     question: "How do I request account or data deletion?",
     answer:
       "Send a data deletion request to support@sellee.store from your account email. Include your registered phone number so the team can verify the request before processing it.",
+  },
+  // ── WhatsApp ───────────────────────────────────────────────────────────
+  {
+    id: "whatsapp-how-it-works",
+    category: "WhatsApp",
+    question: "Why does Sellee use WhatsApp instead of in-app checkout?",
+    answer:
+      "Most vendors on Sellee already sell through WhatsApp, so Sellee focuses on helping shoppers discover and compare sellers, then hands the actual conversation, payment, and delivery details to the existing WhatsApp relationship between you and the vendor.",
+  },
+  {
+    id: "whatsapp-bot-verify",
+    category: "WhatsApp",
+    question: "What is the Sellee WhatsApp bot and the VERIFY command?",
+    answer:
+      "The Sellee bot is a WhatsApp number vendors message to complete actions like number verification. When you start verifying a store's WhatsApp number, Sellee gives you a one-time code — sending \"VERIFY <code>\" to the bot number from that WhatsApp number confirms you control it.",
+  },
+  {
+    id: "whatsapp-number-privacy",
+    category: "WhatsApp",
+    question: "Is my WhatsApp number shown publicly?",
+    answer:
+      "A vendor's store WhatsApp number is shown publicly, since that's how customers message the store — vendors should use a number they're comfortable sharing. Customer phone numbers are not shown publicly; they're only visible to the vendor on the orders customers place with that store.",
   },
 ];
 

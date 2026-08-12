@@ -44,7 +44,7 @@ export async function getVendorProducts(vendorId: string): Promise<ProductRecord
 
   const { data } = await supabase
     .from("products")
-    .select("id, store_id, slug, name, description, category, price, image_url, image_urls, rating_avg, rating_count, stock_count, is_available, created_at")
+    .select("id, store_id, slug, name, description, category, price, image_url, image_urls, rating_avg, rating_count, stock_count, is_available, created_at, brand, condition, attributes")
     .eq("store_id", store.id)
     .order("created_at", { ascending: false });
 

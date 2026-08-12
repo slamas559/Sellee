@@ -200,7 +200,7 @@ export async function GET() {
     const supabase = createAdminSupabaseClient();
     const { data, error } = await supabase
       .from("products")
-      .select("id, store_id, slug, name, description, category, price, image_url, image_urls, rating_avg, rating_count, stock_count, is_available, created_at")
+      .select("id, store_id, slug, name, description, category, price, image_url, image_urls, rating_avg, rating_count, stock_count, is_available, created_at, brand, condition, attributes")
       .eq("store_id", store.id)
       .order("created_at", { ascending: false });
 
@@ -321,7 +321,7 @@ export async function POST(request: Request) {
         condition: normalizeCondition(parsed.data.condition),
         attributes,
       })
-      .select("id, store_id, slug, name, description, category, price, image_url, image_urls, rating_avg, rating_count, stock_count, is_available, created_at")
+      .select("id, store_id, slug, name, description, category, price, image_url, image_urls, rating_avg, rating_count, stock_count, is_available, created_at, brand, condition, attributes")
       .single();
 
     if (error || !data) {

@@ -127,7 +127,7 @@ export default async function StoreProductPage({ params, searchParams }: Product
 
   let productQuery = supabase
     .from("products")
-    .select("id, store_id, slug, name, description, category, price, image_url, image_urls, rating_avg, rating_count, stock_count, is_available, created_at")
+    .select("id, store_id, slug, name, description, category, price, image_url, image_urls, rating_avg, rating_count, stock_count, is_available, created_at, brand, condition, attributes")
     .eq("store_id", store.id);
   if (parsedPath.id) {
     productQuery = productQuery.eq("id", parsedPath.id);
@@ -141,7 +141,7 @@ export default async function StoreProductPage({ params, searchParams }: Product
   if (!product && parsedPath.slugPart) {
     const { data: fallbackBySlug } = await supabase
       .from("products")
-      .select("id, store_id, slug, name, description, category, price, image_url, image_urls, rating_avg, rating_count, stock_count, is_available, created_at")
+      .select("id, store_id, slug, name, description, category, price, image_url, image_urls, rating_avg, rating_count, stock_count, is_available, created_at, brand, condition, attributes")
       .eq("store_id", store.id)
       .eq("slug", parsedPath.slugPart)
       .maybeSingle<ProductRecord>();
@@ -165,7 +165,7 @@ export default async function StoreProductPage({ params, searchParams }: Product
 
   const vendorProductsPromise = supabase
     .from("products")
-    .select("id, store_id, slug, name, description, category, price, image_url, image_urls, rating_avg, rating_count, stock_count, is_available, created_at")
+    .select("id, store_id, slug, name, description, category, price, image_url, image_urls, rating_avg, rating_count, stock_count, is_available, created_at, brand, condition, attributes")
     .eq("store_id", store.id)
     .eq("is_available", true)
     .neq("id", product.id)
@@ -175,7 +175,7 @@ export default async function StoreProductPage({ params, searchParams }: Product
   const relatedProductsPromise = product.category
     ? supabase
         .from("products")
-        .select("id, store_id, slug, name, description, category, price, image_url, image_urls, rating_avg, rating_count, stock_count, is_available, created_at")
+        .select("id, store_id, slug, name, description, category, price, image_url, image_urls, rating_avg, rating_count, stock_count, is_available, created_at, brand, condition, attributes")
         .eq("category", product.category)
         .eq("is_available", true)
         .neq("id", product.id)

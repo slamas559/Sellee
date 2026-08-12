@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 import { formatProductPathSegment } from "@/lib/format";
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
+import { getNicheLocationCombosCached } from "@/lib/public-cache";
 
 const BASE_URL = "https://sellee.store";
 
@@ -112,5 +113,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     });
   }
 
-  return [...staticRoutes, ...storeRoutes, ...productRoutes];
+  const combos = await getNicheLocationCombosCached();
+  const nicheLocationRoutes: MetadataRoute.Sitemap = combos.map((combo) => ({
+    url: `${BASE_URL}/shop/${combo.nicheSlug}/${combo.citySlug}`,
+    lastModified: new Date(),
+    changeFrequency: "weekly",
+    priority: 0.6,
+  }));
+
+  return [...staticRoutes, ...storeRoutes, ...productRoutes, ...nicheLocationRoutes];
 }

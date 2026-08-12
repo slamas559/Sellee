@@ -342,7 +342,7 @@ export async function PATCH(
       })
       .eq("id", id)
       .eq("store_id", store.id)
-      .select("id, store_id, slug, name, description, category, price, image_url, image_urls, rating_avg, rating_count, stock_count, is_available, created_at")
+      .select("id, store_id, slug, name, description, category, price, image_url, image_urls, rating_avg, rating_count, stock_count, is_available, created_at, brand, condition, attributes")
       .single();
 
     if (error || !data) {

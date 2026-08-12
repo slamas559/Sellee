@@ -1,5 +1,6 @@
 import { unstable_cache } from "next/cache";
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
+import { slugify } from "@/lib/format";
 
 export const CACHE_TAGS = {
   homeMarketplaceBase: "home-marketplace-base",
@@ -10,6 +11,7 @@ export const CACHE_TAGS = {
   marketplaceStats: "marketplace-stats",
   storefrontPublic: "storefront-public",
   storefrontBySlug: (slug: string) => `storefront:${slug}`,
+  nicheLocationPages: "niche-location-pages",
 } as const;
 
 export type PublicStoreLite = {
@@ -252,7 +254,7 @@ const getStorefrontPublicDataInternal = async (slug: string) => {
   const [{ data: products }, { data: storeNiches }, { count: completedOrdersCount }] = await Promise.all([
     supabase
       .from("products")
-      .select("id, store_id, slug, name, description, category, price, image_url, image_urls, rating_avg, rating_count, stock_count, is_available, created_at")
+      .select("id, store_id, slug, name, description, category, price, image_url, image_urls, rating_avg, rating_count, stock_count, is_available, created_at, brand, condition, attributes")
       .eq("store_id", store.id)
       .eq("is_available", true)
       .order("created_at", { ascending: false }),
@@ -293,3 +295,133 @@ export function getStorefrontPublicDataCached(slug: string) {
     },
   )();
 }
+
+// ─── Category × location SEO landing pages (/shop/[niche]/[city]) ─────────
+
+export type NicheLocationPageData = {
+  niche: { id: string; slug: string; name: string } | null;
+  cityLabel: string | null;
+  stores: PublicStoreLite[];
+  products: PublicProductLite[];
+};
+
+const getNicheLocationPageDataInternal = async (
+  nicheSlug: string,
+  citySlug: string,
+): Promise<NicheLocationPageData> => {
+  const supabase = createAdminSupabaseClient();
+
+  const { data: niche } = await supabase
+    .from("niches")
+    .select("id, slug, name")
+    .eq("slug", nicheSlug)
+    .maybeSingle();
+
+  if (!niche) {
+    return { niche: null, cityLabel: null, stores: [], products: [] };
+  }
+
+  const { data: storeNicheRows } = await supabase
+    .from("store_niches")
+    .select("store_id")
+    .eq("niche_id", niche.id);
+
+  const candidateStoreIds = (storeNicheRows ?? []).map((row) => row.store_id as string);
+  if (candidateStoreIds.length === 0) {
+    return { niche, cityLabel: null, stores: [], products: [] };
+  }
+
+  const { data: storesRaw } = await supabase
+    .from("stores")
+    .select(
+      "id, vendor_id, name, slug, city, state, country, logo_url, rating_avg, rating_count, theme_color, whatsapp_verified_at",
+    )
+    .in("id", candidateStoreIds)
+    .eq("is_active", true);
+
+  const stores = ((storesRaw ?? []) as PublicStoreLite[]).filter(
+    (store) => slugify(store.city ?? "") === citySlug,
+  );
+
+  if (stores.length === 0) {
+    return { niche, cityLabel: null, stores: [], products: [] };
+  }
+
+  const cityLabel = stores[0].city ?? citySlug;
+  const storeIds = stores.map((store) => store.id);
+
+  const { data: productsRaw } = await supabase
+    .from("products")
+    .select(
+      "id, store_id, slug, name, description, category, price, image_url, image_urls, rating_avg, rating_count, stock_count, is_available, created_at",
+    )
+    .in("store_id", storeIds)
+    .eq("is_available", true)
+    .order("rating_avg", { ascending: false })
+    .limit(48);
+
+  return {
+    niche,
+    cityLabel,
+    stores,
+    products: (productsRaw ?? []) as PublicProductLite[],
+  };
+};
+
+export function getNicheLocationPageDataCached(nicheSlug: string, citySlug: string) {
+  return unstable_cache(
+    async () => getNicheLocationPageDataInternal(nicheSlug, citySlug),
+    ["niche-location-page-v1", nicheSlug, citySlug],
+    {
+      revalidate: 300,
+      tags: [CACHE_TAGS.nicheLocationPages],
+    },
+  )();
+}
+
+// Used by the sitemap and the landing pages themselves to know which
+// niche/city combinations actually have vendors, so we never generate or
+// index a thin, empty page.
+export const getNicheLocationCombosCached = unstable_cache(
+  async () => {
+    const supabase = createAdminSupabaseClient();
+
+    const [{ data: niches }, { data: storeNicheRows }] = await Promise.all([
+      supabase.from("niches").select("id, slug, name"),
+      supabase.from("store_niches").select("store_id, niche_id"),
+    ]);
+
+    const activeStoreIds = Array.from(new Set((storeNicheRows ?? []).map((row) => row.store_id as string)));
+    if (activeStoreIds.length === 0) return [] as Array<{ nicheSlug: string; citySlug: string; nicheName: string; cityLabel: string }>;
+
+    const { data: stores } = await supabase
+      .from("stores")
+      .select("id, city")
+      .in("id", activeStoreIds)
+      .eq("is_active", true)
+      .not("city", "is", null);
+
+    const cityByStoreId = new Map((stores ?? []).map((store) => [store.id as string, store.city as string]));
+    const nicheById = new Map((niches ?? []).map((niche) => [niche.id as string, niche]));
+
+    const seen = new Set<string>();
+    const combos: Array<{ nicheSlug: string; citySlug: string; nicheName: string; cityLabel: string }> = [];
+
+    for (const row of storeNicheRows ?? []) {
+      const city = cityByStoreId.get(row.store_id as string);
+      const niche = nicheById.get(row.niche_id as string);
+      if (!city || !niche) continue;
+
+      const citySlug = slugify(city);
+      const key = `${niche.slug}:${citySlug}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+
+      combos.push({ nicheSlug: niche.slug, citySlug, nicheName: niche.name, cityLabel: city });
+    }
+
+    return combos;
+  },
+  ["niche-location-combos-v1"],
+  { revalidate: 300, tags: [CACHE_TAGS.nicheLocationPages] },
+);
