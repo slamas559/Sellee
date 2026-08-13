@@ -130,9 +130,9 @@ const faqs: FaqItem[] = [
   {
     id: "verify-whatsapp-number",
     category: "Vendors",
-    question: "Do I have to verify my store's WhatsApp number?",
+    question: "Must I verify my store's WhatsApp number?",
     answer:
-      "No — adding a WhatsApp number is required to run a store, but verifying it is optional. If you skip verification, your store still works and can take orders, but it won't show the Verified badge to shoppers. You can verify anytime from Store settings, and if you later change your WhatsApp number, you'll need to verify the new one.",
+      "No, adding a WhatsApp number is required to run a store, but verifying it is optional. If you skip verification, your store still works and can take orders, but it won't show the Verified badge to shoppers (meaning we could not verify your store). You can verify anytime from Store settings, and if you later change your WhatsApp number, you'll need to verify the new one.",
   },
   {
     id: "promote-store",

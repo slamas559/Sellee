@@ -167,3 +167,93 @@ a {
 .storefront-anim-zoom {
   animation: storefrontZoomSoft 0.65s ease-out both;
 }
+
+/* ---------- Become Vendor page ---------- */
+
+@keyframes bvWordIn {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+    filter: blur(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+.bv-word {
+  display: inline-block;
+  opacity: 0;
+  animation: bvWordIn 0.75s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes bvFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(22px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.bv-fade-up {
+  animation: bvFadeUp 0.85s ease-out both;
+}
+
+@keyframes bvFloat {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.bv-float {
+  animation: bvFloat 5.5s ease-in-out infinite;
+}
+
+@keyframes bvFloatSlow {
+  0%,
+  100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-6px) rotate(1deg);
+  }
+}
+
+.bv-float-slow {
+  animation: bvFloatSlow 7s ease-in-out infinite;
+}
+
+@keyframes bvPulseRing {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.35);
+  }
+  100% {
+    box-shadow: 0 0 0 14px rgba(255, 255, 255, 0);
+  }
+}
+
+.bv-pulse-ring {
+  animation: bvPulseRing 2.2s ease-out infinite;
+}
+
+@keyframes bvKenBurns {
+  0% {
+    transform: scale(1.06) translate(0, 0);
+  }
+  100% {
+    transform: scale(1.16) translate(-1%, -1%);
+  }
+}
+
+.bv-kenburns {
+  animation: bvKenBurns 16s ease-in-out infinite alternate;
+}
