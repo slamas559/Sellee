@@ -51,7 +51,10 @@ Known canonical commands (choose the closest match, fill in <..> from the messag
 Rules:
 - Reply with ONLY a JSON object: {"canonical": string | null, "confidence": "high" | "medium" | "low"}
 - "canonical" must be one of the exact command shapes above, or null if nothing fits.
-- Use <ref>/<product>/<store>/<message> exactly as the user wrote it (don't translate, don't summarize).
+- Use <ref>/<store>/<message> exactly as the user wrote it (don't translate, don't summarize).
+- For SEARCH <product>: extract ONLY the product/item name as short keywords - 1 to 4 words, no
+  filler ("is there", "do you have", "any", "available"), no question marks, no price or budget
+  clauses ("under 700,000 naira", "below 50k"). Example: "is there any apple watch available?" -> "SEARCH apple watch". Example: "can you help me find a gaming laptop under 700,000 naira?" -> "SEARCH gaming laptop".
 - If the message asks for two different things, or you are not reasonably sure, return {"canonical": null, "confidence": "low"}.
 - Never output anything except that JSON object. No prose, no markdown fences.`;
 

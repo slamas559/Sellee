@@ -1,3 +1,5 @@
+import { cleanSearchQuery } from "@/lib/whatsapp-bot/search-text";
+
 export function todayStartIso(): string {
   const now = new Date();
   const start = new Date(
@@ -203,9 +205,11 @@ export function extractSearchQuery(body: string): string | null {
       const index = rawUpper.indexOf(triggerUpper);
       if (index >= 0) {
         const rawQuery = strippedRaw.slice(index + triggerUpper.length).trim();
-        return rawQuery.length >= 2 ? rawQuery : null;
+        const cleaned = cleanSearchQuery(rawQuery);
+        return cleaned.length >= 2 ? cleaned : null;
       }
-      return strippedQuery;
+      const cleanedStripped = cleanSearchQuery(strippedQuery);
+      return cleanedStripped.length >= 2 ? cleanedStripped : null;
     }
   }
 

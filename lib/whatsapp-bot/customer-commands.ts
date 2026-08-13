@@ -10,6 +10,7 @@ import {
   extractSearchQuery,
   normalizeIntentText,
 } from "@/lib/whatsapp-bot/parse";
+import { escapeIlikeValue, escapeOrFilterValue } from "@/lib/whatsapp-bot/search-text";
 
 type StoreLite = {
   id: string;
@@ -184,7 +185,7 @@ async function resolveStoreByInput(rawInput: string): Promise<StoreResolution> {
   const { data: byName, error: byNameError } = await supabase
     .from("stores")
     .select("id, name, slug, whatsapp_number, is_active")
-    .ilike("name", `%${trimmed}%`)
+    .ilike("name", `%${escapeIlikeValue(trimmed)}%`)
     .eq("is_active", true)
     .order("created_at", { ascending: false })
     .limit(5);
@@ -625,10 +626,27 @@ async function handleSearchProducts(from: string, query: string): Promise<string
     return null;
   }
 
+  // Belt-and-suspenders: `trimmedQuery` should already be clean by the
+  // time it gets here (see cleanSearchQuery in parse.ts), but this
+  // guarantees no value - whichever code path it came from - can ever
+  // break the .or() filter string again.
+  const safeQuery = escapeIlikeValue(escapeOrFilterValue(trimmedQuery));
+  if (safeQuery.length < 2) {
+    await sendWhatsAppTextMessage({
+      to: from,
+      message: waMessage(
+        waTitle("Usage"),
+        "SEARCH <product>",
+        "Example: SEARCH rice",
+      ),
+    });
+    return null;
+  }
+
   const { data, error } = await supabase
     .from("products")
     .select("id, slug, store_id, name, price, category, stock_count, is_available")
-    .or(`name.ilike.%${trimmedQuery}%,description.ilike.%${trimmedQuery}%,category.ilike.%${trimmedQuery}%`)
+    .or(`name.ilike.%${safeQuery}%,description.ilike.%${safeQuery}%,category.ilike.%${safeQuery}%`)
     .eq("is_available", true)
     .gt("stock_count", 0)
     .order("created_at", { ascending: false })
@@ -644,7 +662,7 @@ async function handleSearchProducts(from: string, query: string): Promise<string
       to: from,
       message: waMessage(
         waTitle("No Products Found"),
-        `No results for "${trimmedQuery}".`,
+        `No results for "${safeQuery}".`,
         "Try another keyword.",
       ),
     });
@@ -671,11 +689,11 @@ async function handleSearchProducts(from: string, query: string): Promise<string
   await sendPaginatedList({
     to: from,
     role: "customer",
-    title: `Search Results: "${trimmedQuery}"`,
+    title: `Search Results: "${safeQuery}"`,
     lines,
     pageSize: 5,
     paginateWhenAtLeast: 9,
-    emptyMessage: waMessage(waTitle("No Products Found"), `No results for "${trimmedQuery}".`),
+    emptyMessage: waMessage(waTitle("No Products Found"), `No results for "${safeQuery}".`),
     hint: "Tip: Open any listed link to view full product details.",
   });
 
@@ -818,4 +836,3 @@ export async function handleCustomerCommand(
       return { handled: false };
   }
 }
-

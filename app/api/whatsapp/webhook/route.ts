@@ -1,13 +1,21 @@
 import { NextResponse } from "next/server";
 import { logDevError, logServerInfo } from "@/lib/logger";
 import { logInboundMessage } from "@/lib/whatsapp-bot/logs";
+import { waMessage, waTitle } from "@/lib/whatsapp-bot/message-format";
 import { inferCommand } from "@/lib/whatsapp-bot/parse";
 import { routeIncomingText } from "@/lib/whatsapp-bot/router";
+import { sendWhatsAppTextMessage } from "@/lib/whatsapp-cloud";
 import type {
   WebhookDebugResult,
   WebhookPayload,
   WhatsAppStatusEvent,
 } from "@/lib/whatsapp-bot/types";
+
+const GENERIC_ERROR_REPLY = waMessage(
+  waTitle("Something Went Wrong"),
+  "I couldn't process that message. Please try again, or rephrase it.",
+  "Send HELP to see what I can do.",
+);
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -106,6 +114,15 @@ export async function POST(request: Request) {
           command: inferredCommand,
           error: error instanceof Error ? error.message : "Unknown error",
         });
+
+        // The user should never be left without a reply just because a
+        // handler threw. This is best-effort: if the outbound send also
+        // fails, we still log it (below) but don't let it crash the loop.
+        try {
+          await sendWhatsAppTextMessage({ to: from, message: GENERIC_ERROR_REPLY });
+        } catch (sendError) {
+          logDevError("whatsapp.webhook.message.error_reply_failed", sendError, { from });
+        }
 
         if (debugEnabled) {
           debugResults.push({
