@@ -1,16 +1,13 @@
 import {
-  Body,
   Button,
-  Container,
-  Head,
+  Column,
   Heading,
   Hr,
-  Html,
-  Preview,
+  Row,
   Section,
-  Tailwind,
   Text,
 } from "@react-email/components";
+import { EmailShell } from "./components/EmailShell";
 
 export interface OrderNotificationEmailProps {
   storeName: string;
@@ -22,6 +19,47 @@ export interface OrderNotificationEmailProps {
   unitPrice: number;
   totalAmount: number;
   dashboardUrl: string;
+}
+
+function DetailRow({
+  label,
+  value,
+  strong = false,
+}: {
+  label: string;
+  value: string;
+  strong?: boolean;
+}) {
+  // Table-based row instead of `flex justify-between`: flexbox alignment
+  // properties (justify-content especially) are stripped or ignored by a lot
+  // of email clients, which is what was collapsing the label and value
+  // together with no gap. A two-column table is universally supported.
+  return (
+    <Row>
+      <Column align="left">
+        <Text
+          className={
+            strong
+              ? "m-0 text-[14px] font-semibold text-slate-900"
+              : "m-0 text-[14px] text-slate-600"
+          }
+        >
+          {label}
+        </Text>
+      </Column>
+      <Column align="right">
+        <Text
+          className={
+            strong
+              ? "m-0 text-[16px] font-black text-emerald-600"
+              : "m-0 text-[14px] font-semibold text-slate-900"
+          }
+        >
+          {value}
+        </Text>
+      </Column>
+    </Row>
+  );
 }
 
 export default function OrderNotificationEmail({
@@ -42,115 +80,81 @@ export default function OrderNotificationEmail({
   });
 
   return (
-    <Html>
-      <Head />
-      <Preview>New order received at {storeName}</Preview>
-      <Tailwind>
-        <Body className="m-0 bg-slate-100 px-3 py-8 font-sans text-slate-700">
-          <Container className="mx-auto w-full max-w-[400px] overflow-hidden rounded-[24px] bg-white shadow-sm">
-            <Section className="bg-emerald-600 px-6 py-8 text-white">
-              <Text className="m-0 text-xs font-bold uppercase tracking-[0.18em] text-emerald-50">
-                New Order Alert
-              </Text>
-              <Heading className="mb-0 mt-3 text-[30px] font-black leading-[1.15] text-white">
-                Order #{orderRef}
-              </Heading>
-            </Section>
+    <EmailShell previewText={`New order received at ${storeName}`} width={400} radius={24}>
+      <Section className="bg-emerald-600 px-6 py-8 text-white">
+        <Text className="m-0 text-xs font-bold uppercase tracking-[0.18em] text-emerald-50">
+          New Order Alert
+        </Text>
+        <Heading className="mb-0 mt-3 text-[30px] font-black leading-[1.15] text-white">
+          Order #{orderRef}
+        </Heading>
+      </Section>
 
-            <Section className="px-6 py-7">
-              <Text className="m-0 text-[16px] font-semibold text-slate-900">
-                Hi {storeName},
-              </Text>
+      <Section className="px-6 py-7">
+        <Text className="m-0 text-[16px] font-semibold text-slate-900">
+          Hi {storeName},
+        </Text>
 
-              <Text className="mt-4 text-[15px] leading-7 text-slate-700">
-                You received a new order! Here are the details:
-              </Text>
+        <Text className="mt-4 text-[15px] leading-7 text-slate-700">
+          You received a new order! Here are the details:
+        </Text>
 
-              <Hr className="my-5 border-slate-200" />
+        <Hr className="my-5 border-slate-200" />
 
-              <div className="rounded-lg border border-emerald-100 bg-emerald-50 p-4">
-                <Text className="m-0 text-[13px] font-semibold uppercase tracking-[0.08em] text-emerald-700">
-                  Order Details
-                </Text>
+        <Section className="rounded-lg border border-emerald-100 bg-emerald-50 px-4 py-4">
+          <Text className="m-0 text-[13px] font-semibold uppercase tracking-[0.08em] text-emerald-700">
+            Order Details
+          </Text>
 
-                <div className="mt-4 space-y-3">
-                  <div className="flex justify-between">
-                    <Text className="m-0 text-[14px] text-slate-600">Customer: </Text>
-                    <Text className="m-0 text-[14px] font-semibold text-slate-900">
-                      {customerName}
-                    </Text>
-                  </div>
+          <Section className="mt-4">
+            <DetailRow label="Customer" value={customerName} />
+            <Row>
+              <Column style={{ height: 10 }} />
+            </Row>
+            <DetailRow label="WhatsApp" value={customerWhatsApp} />
 
-                  <div className="flex justify-between">
-                    <Text className="m-0 text-[14px] text-slate-600">WhatsApp: </Text>
-                    <Text className="m-0 text-[14px] font-semibold text-slate-900">
-                      {customerWhatsApp}
-                    </Text>
-                  </div>
+            <Hr className="my-3 border-emerald-200" />
 
-                  <Hr className="my-2 border-emerald-200" />
+            <DetailRow label="Product" value={productName} />
+            <Row>
+              <Column style={{ height: 10 }} />
+            </Row>
+            <DetailRow label="Quantity" value={`${quantity}x`} />
+            <Row>
+              <Column style={{ height: 10 }} />
+            </Row>
+            <DetailRow label="Unit Price" value={`₦${unitPrice.toLocaleString("en-NG")}`} />
 
-                  <div className="flex justify-between">
-                    <Text className="m-0 text-[14px] text-slate-600">Product: </Text>
-                    <Text className="m-0 text-[14px] font-semibold text-slate-900">
-                      {productName}
-                    </Text>
-                  </div>
+            <Hr className="my-3 border-emerald-200" />
 
-                  <div className="flex justify-between">
-                    <Text className="m-0 text-[14px] text-slate-600">Quantity: </Text>
-                    <Text className="m-0 text-[14px] font-semibold text-slate-900">
-                      {quantity}x
-                    </Text>
-                  </div>
+            <DetailRow label="Total" value={formattedTotal} strong />
+          </Section>
+        </Section>
 
-                  <div className="flex justify-between">
-                    <Text className="m-0 text-[14px] text-slate-600">Unit Price: </Text>
-                    <Text className="m-0 text-[14px] font-semibold text-slate-900">
-                      ₦{unitPrice.toLocaleString("en-NG")}
-                    </Text>
-                  </div>
+        <Text className="mt-6 text-[14px] leading-6 text-slate-700">
+          Log in to your dashboard to confirm or reject the order, and manage all your orders in one place.
+        </Text>
+      </Section>
 
-                  <Hr className="my-2 border-emerald-200" />
+      <Section className="px-6 py-6">
+        <Button
+          className="inline-block rounded-lg bg-emerald-600 px-6 py-3 text-center font-semibold text-white"
+          href={dashboardUrl}
+        >
+          View in Dashboard
+        </Button>
+      </Section>
 
-                  <div className="flex justify-between">
-                    <Text className="m-0 text-[14px] font-semibold text-slate-900">
-                      Total:
-                    </Text>
-                    <Text className="m-0 text-[16px] font-black text-emerald-600">
-                      {formattedTotal}
-                    </Text>
-                  </div>
-                </div>
-              </div>
+      <Hr className="border-slate-200" />
 
-              <Text className="mt-6 text-[14px] leading-6 text-slate-700">
-                Log in to your dashboard to confirm or reject the order, and manage all your orders in one place.
-              </Text>
-            </Section>
-
-            <Section className="px-6 py-6">
-              <Button
-                className="inline-block rounded-lg bg-emerald-600 px-6 py-3 text-center font-semibold text-white"
-                href={dashboardUrl}
-              >
-                View in Dashboard
-              </Button>
-            </Section>
-
-            <Hr className="border-slate-200" />
-
-            <Section className="px-6 py-6 text-center">
-              <Text className="m-0 text-xs text-slate-500">
-                © 2026 Sellee. All rights reserved.
-              </Text>
-              <Text className="mt-2 text-xs text-slate-500">
-                This is an automated notification. Please do not reply to this email.
-              </Text>
-            </Section>
-          </Container>
-        </Body>
-      </Tailwind>
-    </Html>
+      <Section className="px-6 py-6 text-center">
+        <Text className="m-0 text-xs text-slate-500">
+          © 2026 Sellee. All rights reserved.
+        </Text>
+        <Text className="mt-2 text-xs text-slate-500">
+          This is an automated notification. Please do not reply to this email.
+        </Text>
+      </Section>
+    </EmailShell>
   );
 }

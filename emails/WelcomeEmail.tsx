@@ -1,20 +1,12 @@
 import {
-  Body,
   Button,
-  Container,
-  Head,
   Heading,
   Hr,
-  Html,
-  Row,
-  Column,
-  Link,
   Img,
-  Preview,
   Section,
-  Tailwind,
   Text,
 } from "@react-email/components";
+import { EmailShell } from "./components/EmailShell";
 
 export interface WelcomeEmailProps {
   name?: string | null;
@@ -34,13 +26,12 @@ export default function WelcomeEmail({
       : "You can discover trusted vendors, compare products, and track orders through WhatsApp-powered workflows.";
 
   return (
-    <Html>
-      <Head />
-      <Preview>Welcome to Sellee, your local marketplace for WhatsApp commerce.</Preview>
-      <Tailwind>
-        <Body className="m-0 bg-slate-100 px-3 py-8 font-sans text-slate-700">
-          <Container className="mx-auto w-full max-w-[400px] overflow-hidden rounded-[20px] bg-white shadow-sm">
-            <Section className="bg-emerald-600 px-6 py-8 text-white">
+    <EmailShell
+      previewText="Welcome to Sellee, your local marketplace for WhatsApp commerce."
+      width={400}
+      radius={20}
+    >
+      <Section className="bg-emerald-600 px-6 py-8 text-white">
               <Img
                 src="https://sellee.store/icon2.png"
                 alt="Sellee"
@@ -94,9 +85,6 @@ export default function WelcomeEmail({
                 receive your message.
               </Text>
             </Section>
-          </Container>
-        </Body>
-      </Tailwind>
-    </Html>
+    </EmailShell>
   );
 }

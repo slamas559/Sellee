@@ -274,7 +274,7 @@ export default async function BecomeVendorPage() {
             <ul className="mt-6 space-y-3 text-sm text-slate-700 sm:text-base">
               <li className="flex gap-3">
                 <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" />
-                Optional vendor verification adds a trust badge to your store.
+                Vendor verification adds a trust badge to your store.
               </li>
               <li className="flex gap-3">
                 <Wallet className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" />
