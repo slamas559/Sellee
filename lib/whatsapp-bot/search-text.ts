@@ -28,6 +28,8 @@ const SEARCH_STOPWORDS = new Set([
   "AVAILABLE",
   "PLEASE",
   "PLS",
+  "PLZ",
+  "KINDLY",
   "IS",
   "THERE",
   "ARE",
@@ -39,9 +41,14 @@ const SEARCH_STOPWORDS = new Set([
   "SELLS",
   "GOT",
   "CAN",
+  "COULD",
+  "WOULD",
+  "LIKE",
   "I",
+  "MY",
   "GET",
   "ME",
+  "HELP",
   "FOR",
   "TO",
   "BUY",
@@ -58,11 +65,13 @@ const SEARCH_STOPWORDS = new Set([
 ]);
 
 // Cuts a trailing price/quantity clause like "under 700,000 naira" or
-// "below #50k" off the end of a search phrase. SEARCH has no price
-// filter, so keeping those words only pollutes the match - and, before
-// this fix, could carry a comma that broke the DB filter outright.
+// "over #10,000,000" off the end of a search phrase, once the amount has
+// already been captured by `extractSearchPriceBounds` below. Keeping
+// these words in the *keyword* search only pollutes the product-name
+// match - and, before this fix, could carry a comma that broke the DB
+// filter outright.
 const PRICE_CLAUSE_RE =
-  /\s+(under|below|less than|not more than|around|about|within|for)\s+[₦#]?\s*[\d,]+(\.\d+)?\s*(naira|ngn|k|thousand|million|m)?\b.*$/i;
+  /\s+(under|below|less\s+than|not\s+more\s+than|max(?:imum)?|at\s+most|over|above|more\s+than|at\s+least|min(?:imum)?|starting\s+from|between|around|about|within|for)\s+[₦#]?\s*[\d,]+(\.\d+)?\s*(naira|ngn|k|thousand|million|m)?\b.*$/i;
 
 /**
  * Normalizes a raw, human-phrased search query into a short, clean
@@ -90,6 +99,55 @@ export function cleanSearchQuery(raw: string): string {
   const result = (meaningful.length > 0 ? meaningful : words).join(" ").trim();
 
   return result.slice(0, 80);
+}
+
+const MAX_PRICE_RE =
+  /(under|below|less\s+than|not\s+more\s+than|max(?:imum)?|at\s+most)\s*[₦#]?\s*([\d,]+(?:\.\d+)?)\s*(k|thousand|m|million)?/i;
+
+const MIN_PRICE_RE =
+  /(over|above|more\s+than|at\s+least|min(?:imum)?|starting\s+from)\s*[₦#]?\s*([\d,]+(?:\.\d+)?)\s*(k|thousand|m|million)?/i;
+
+const BETWEEN_PRICE_RE =
+  /between\s*[₦#]?\s*([\d,]+(?:\.\d+)?)\s*(k|thousand|m|million)?\s*(?:and|to|-)\s*[₦#]?\s*([\d,]+(?:\.\d+)?)\s*(k|thousand|m|million)?/i;
+
+function parseAmount(rawNum: string, suffix?: string): number | null {
+  const value = Number.parseFloat(rawNum.replace(/,/g, ""));
+  if (Number.isNaN(value)) return null;
+
+  const normalizedSuffix = suffix?.toLowerCase();
+  if (normalizedSuffix === "k" || normalizedSuffix === "thousand") return value * 1_000;
+  if (normalizedSuffix === "m" || normalizedSuffix === "million") return value * 1_000_000;
+  return value;
+}
+
+export type SearchPriceBounds = { minPrice: number | null; maxPrice: number | null };
+
+/**
+ * Reads a min and/or max price out of free-form text, e.g.
+ * "laptop under 700,000 naira" -> { minPrice: null, maxPrice: 700000 }
+ * "laptop over 10,000,000"     -> { minPrice: 10000000, maxPrice: null }
+ * "laptop between 200k and 500k" -> { minPrice: 200000, maxPrice: 500000 }
+ * Works on raw, unnormalized text - handles commas, "k"/"million"
+ * shorthand, and an optional "₦"/"#" prefix. Returns nulls when no price
+ * language is present. Never throws.
+ */
+export function extractSearchPriceBounds(text: string): SearchPriceBounds {
+  const betweenMatch = text.match(BETWEEN_PRICE_RE);
+  if (betweenMatch) {
+    const a = parseAmount(betweenMatch[1] ?? "", betweenMatch[2]);
+    const b = parseAmount(betweenMatch[3] ?? "", betweenMatch[4]);
+    if (a !== null && b !== null) {
+      return { minPrice: Math.min(a, b), maxPrice: Math.max(a, b) };
+    }
+  }
+
+  const maxMatch = text.match(MAX_PRICE_RE);
+  const minMatch = text.match(MIN_PRICE_RE);
+
+  return {
+    maxPrice: maxMatch ? parseAmount(maxMatch[2] ?? "", maxMatch[3]) : null,
+    minPrice: minMatch ? parseAmount(minMatch[2] ?? "", minMatch[3]) : null,
+  };
 }
 
 /**

@@ -43,7 +43,7 @@ Known canonical commands (choose the closest match, fill in <..> from the messag
 - MY STATUS                  (customer: quick status snapshot)
 - TRACK <ref>                (customer: details for one order)
 - CANCEL <ref>                (customer: cancel a pending order)
-- SEARCH <product>           (customer: find a product)
+- SEARCH <product>           (customer: find a product, optionally with a price limit)
 - FOLLOW <store>             (customer: get updates from a store)
 - UNFOLLOW <store>           (customer: stop updates from a store)
 - MY FOLLOWS                 (customer: list followed stores)
@@ -53,8 +53,12 @@ Rules:
 - "canonical" must be one of the exact command shapes above, or null if nothing fits.
 - Use <ref>/<store>/<message> exactly as the user wrote it (don't translate, don't summarize).
 - For SEARCH <product>: extract ONLY the product/item name as short keywords - 1 to 4 words, no
-  filler ("is there", "do you have", "any", "available"), no question marks, no price or budget
-  clauses ("under 700,000 naira", "below 50k"). Example: "is there any apple watch available?" -> "SEARCH apple watch". Example: "can you help me find a gaming laptop under 700,000 naira?" -> "SEARCH gaming laptop".
+  filler ("is there", "do you have", "any", "available"), no question marks. If the message
+  includes a price limit, KEEP it but normalize it to plain digits (no commas, no currency
+  symbol) using "under <amount>" or "over <amount>": Example: "is there any apple watch
+  available?" -> "SEARCH apple watch". Example: "can you help me find a gaming laptop under
+  700,000 naira?" -> "SEARCH gaming laptop under 700000". Example: "laptops above 10 million
+  naira" -> "SEARCH laptop over 10000000".
 - If the message asks for two different things, or you are not reasonably sure, return {"canonical": null, "confidence": "low"}.
 - Never output anything except that JSON object. No prose, no markdown fences.`;
 

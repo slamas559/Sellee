@@ -10,7 +10,7 @@ import {
   extractSearchQuery,
   normalizeIntentText,
 } from "@/lib/whatsapp-bot/parse";
-import { escapeIlikeValue, escapeOrFilterValue } from "@/lib/whatsapp-bot/search-text";
+import { escapeIlikeValue, escapeOrFilterValue, extractSearchPriceBounds } from "@/lib/whatsapp-bot/search-text";
 
 type StoreLite = {
   id: string;
@@ -611,16 +611,35 @@ async function handleMyFollows(from: string, normalizedFrom: string) {
   });
 }
 
-async function handleSearchProducts(from: string, query: string): Promise<string | null> {
+function formatPriceLabel(bounds: { minPrice: number | null; maxPrice: number | null }): string {
+  const { minPrice, maxPrice } = bounds;
+  if (minPrice !== null && maxPrice !== null) {
+    return ` (${formatNaira(minPrice)} - ${formatNaira(maxPrice)})`;
+  }
+  if (maxPrice !== null) return ` (under ${formatNaira(maxPrice)})`;
+  if (minPrice !== null) return ` (over ${formatNaira(minPrice)})`;
+  return "";
+}
+
+async function handleSearchProducts(
+  from: string,
+  query: string,
+  priceBounds: { minPrice: number | null; maxPrice: number | null } = { minPrice: null, maxPrice: null },
+): Promise<string | null> {
   const supabase = createAdminSupabaseClient();
   const trimmedQuery = query.trim();
-  if (trimmedQuery.length < 2) {
+  const { minPrice, maxPrice } = priceBounds;
+
+  // A price range alone ("show me stuff under 50k") is a valid search;
+  // only reject when there's neither a keyword nor a price filter.
+  if (trimmedQuery.length < 2 && minPrice === null && maxPrice === null) {
     await sendWhatsAppTextMessage({
       to: from,
       message: waMessage(
         waTitle("Usage"),
         "SEARCH <product>",
         "Example: SEARCH rice",
+        "Example: SEARCH laptop under 700000",
       ),
     });
     return null;
@@ -631,7 +650,10 @@ async function handleSearchProducts(from: string, query: string): Promise<string
   // guarantees no value - whichever code path it came from - can ever
   // break the .or() filter string again.
   const safeQuery = escapeIlikeValue(escapeOrFilterValue(trimmedQuery));
-  if (safeQuery.length < 2) {
+  const priceLabel = formatPriceLabel({ minPrice, maxPrice });
+  const queryLabel = safeQuery ? `"${safeQuery}"${priceLabel}` : `products${priceLabel}`;
+
+  if (trimmedQuery.length >= 2 && safeQuery.length < 2) {
     await sendWhatsAppTextMessage({
       to: from,
       message: waMessage(
@@ -643,12 +665,25 @@ async function handleSearchProducts(from: string, query: string): Promise<string
     return null;
   }
 
-  const { data, error } = await supabase
+  let productsQuery = supabase
     .from("products")
     .select("id, slug, store_id, name, price, category, stock_count, is_available")
-    .or(`name.ilike.%${safeQuery}%,description.ilike.%${safeQuery}%,category.ilike.%${safeQuery}%`)
     .eq("is_available", true)
-    .gt("stock_count", 0)
+    .gt("stock_count", 0);
+
+  if (safeQuery.length >= 2) {
+    productsQuery = productsQuery.or(
+      `name.ilike.%${safeQuery}%,description.ilike.%${safeQuery}%,category.ilike.%${safeQuery}%`,
+    );
+  }
+  if (maxPrice !== null) {
+    productsQuery = productsQuery.lte("price", maxPrice);
+  }
+  if (minPrice !== null) {
+    productsQuery = productsQuery.gte("price", minPrice);
+  }
+
+  const { data, error } = await productsQuery
     .order("created_at", { ascending: false })
     .limit(8);
 
@@ -662,8 +697,8 @@ async function handleSearchProducts(from: string, query: string): Promise<string
       to: from,
       message: waMessage(
         waTitle("No Products Found"),
-        `No results for "${safeQuery}".`,
-        "Try another keyword.",
+        `No results for ${queryLabel}.`,
+        "Try another keyword or a wider price range.",
       ),
     });
     return null;
@@ -689,11 +724,11 @@ async function handleSearchProducts(from: string, query: string): Promise<string
   await sendPaginatedList({
     to: from,
     role: "customer",
-    title: `Search Results: "${safeQuery}"`,
+    title: `Search Results: ${queryLabel}`,
     lines,
     pageSize: 5,
     paginateWhenAtLeast: 9,
-    emptyMessage: waMessage(waTitle("No Products Found"), `No results for "${safeQuery}".`),
+    emptyMessage: waMessage(waTitle("No Products Found"), `No results for ${queryLabel}.`),
     hint: "Tip: Open any listed link to view full product details.",
   });
 
@@ -808,7 +843,8 @@ export async function handleCustomerCommand(
     case "SEARCH": {
       await ensureCustomerLink(normalizedFrom);
       const query = extractSearchQuery(body) ?? "";
-      const scopeStoreId = await handleSearchProducts(from, query);
+      const priceBounds = extractSearchPriceBounds(body);
+      const scopeStoreId = await handleSearchProducts(from, query, priceBounds);
       return { handled: true, scopeStoreId };
     }
 

@@ -57,6 +57,7 @@ const UNLINKED_HELP = waMessage(
     "TRACK <ref> - order details",
     "CANCEL <ref> - cancel pending order",
     "SEARCH <product> - find products",
+    "SEARCH <product> under <amount> - price limit",
     "FOLLOW <store> - get store updates",
     "UNFOLLOW <store> - stop updates",
     "MY FOLLOWS - list followed stores",
