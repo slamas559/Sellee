@@ -1,4 +1,4 @@
-import { Body, Container, Head, Html, Preview, Tailwind } from "@react-email/components";
+import { Body, Head, Html, Preview, Tailwind } from "@react-email/components";
 import * as React from "react";
 
 export interface EmailShellProps {
@@ -53,18 +53,35 @@ export function EmailShell({ previewText, width = 400, radius = 20, children }: 
             <tbody>
               <tr>
                 <td align="center" style={{ padding: "32px 12px", backgroundColor: "#ffffff" }}>
-                  <Container
-                    className="overflow-hidden bg-white shadow-sm"
+                  {/* Deliberately NOT using react-email's <Container>: it
+                      renders its outer <table> with a hard-coded
+                      `width="100%"` HTML attribute that you can't override via
+                      `style`. Email clients (Gmail included) treat that
+                      attribute as authoritative over CSS max-width/width, so
+                      the card kept rendering full-width no matter what inline
+                      style was applied. Setting the attribute itself to the
+                      real pixel value fixes it for good. */}
+                  <table
+                    align="center"
+                    role="presentation"
+                    width={width}
+                    cellPadding={0}
+                    cellSpacing={0}
                     style={{
                       width,
                       maxWidth: width,
                       margin: "0 auto",
                       backgroundColor: "#ffffff",
                       borderRadius: radius,
+                      overflow: "hidden",
                     }}
                   >
-                    {children}
-                  </Container>
+                    <tbody>
+                      <tr>
+                        <td style={{ backgroundColor: "#ffffff" }}>{children}</td>
+                      </tr>
+                    </tbody>
+                  </table>
                 </td>
               </tr>
             </tbody>
