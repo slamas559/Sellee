@@ -48,6 +48,7 @@ type StoreLite = {
   latitude: number | null;
   longitude: number | null;
   whatsapp_verified_at: string | null;
+  is_verified?: boolean | null;
 };
 
 type ProductLite = {

@@ -29,7 +29,7 @@ type ProductShowcaseCardProps = {
     logo_url: string | null;
     rating_avg?: number | null;
     rating_count?: number;
-    whatsapp_verified_at?: string | null;
+    is_verified?: boolean | null;
   };
   variant?: "home" | "marketplace" | "store";
   template?: StoreTemplate;
@@ -198,7 +198,7 @@ export function ProductShowcaseCard({
           <Link href={`/store/${store.slug}`} target="_blank" rel="noopener noreferrer">
             <p className={`flex items-center gap-1 line-clamp-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${metaClass}`}>
               <span className="truncate">{store.name}</span>
-              {store.whatsapp_verified_at ? (
+              {store.is_verified ? (
                 <BadgeCheck className="h-3 w-3 shrink-0 text-emerald-600" aria-label="Verified vendor" />
               ) : null}
             </p>

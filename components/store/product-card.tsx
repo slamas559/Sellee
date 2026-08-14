@@ -11,7 +11,7 @@ type ProductCardProps = {
     logo_url: string | null;
     rating_avg: number | null;
     rating_count: number;
-    whatsapp_verified_at?: string | null;
+    is_verified?: boolean | null;
   };
 };
 

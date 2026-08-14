@@ -6,7 +6,7 @@ export async function getVendorStore(vendorId: string): Promise<StoreRecord | nu
 
   const { data } = await supabase
     .from("stores")
-    .select("id, vendor_id, name, slug, logo_url, whatsapp_number, address_line1, city, state, country, latitude, longitude, location_source, store_template, store_theme_preset, storefront_config, rating_avg, rating_count, theme_color, is_active, created_at, whatsapp_verified_at")
+    .select("id, vendor_id, name, slug, logo_url, whatsapp_number, address_line1, city, state, country, latitude, longitude, location_source, store_template, store_theme_preset, storefront_config, rating_avg, rating_count, theme_color, is_active, created_at, whatsapp_verified_at, is_verified")
     .eq("vendor_id", vendorId)
     .order("created_at", { ascending: false })
     .limit(1)
@@ -626,4 +626,16 @@ export async function getVendorBroadcastHistory(
     failed_count: Number(row.failed_count ?? 0),
     created_at: String(row.created_at),
   }));
+}
+
+export async function getUserEmailVerifiedAt(userId: string): Promise<string | null> {
+  const supabase = createAdminSupabaseClient();
+
+  const { data } = await supabase
+    .from("users")
+    .select("email_verified_at")
+    .eq("id", userId)
+    .maybeSingle();
+
+  return (data as { email_verified_at: string | null } | null)?.email_verified_at ?? null;
 }

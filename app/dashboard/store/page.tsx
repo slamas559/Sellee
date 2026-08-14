@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { getServerSession } from "next-auth";
 import { StoreSetupForm } from "@/components/dashboard/store-setup-form";
 import { authOptions } from "@/lib/auth";
-import { getVendorStore } from "@/lib/dashboard-data";
+import { getUserEmailVerifiedAt, getVendorStore } from "@/lib/dashboard-data";
 
 export const metadata: Metadata = {
   title: "Storefront",
@@ -10,7 +10,9 @@ export const metadata: Metadata = {
 
 export default async function DashboardStorePage() {
   const session = await getServerSession(authOptions);
-  const store = session?.user?.id ? await getVendorStore(session.user.id) : null;
+  const [store, emailVerifiedAt] = session?.user?.id
+    ? await Promise.all([getVendorStore(session.user.id), getUserEmailVerifiedAt(session.user.id)])
+    : [null, null];
 
   return (
     <section className="space-y-4">
@@ -23,7 +25,7 @@ export default async function DashboardStorePage() {
           Manage profile, location, and storefront template style from one place.
         </p>
       </header>
-      <StoreSetupForm initialStore={store} />
+      <StoreSetupForm initialStore={store} initialEmailVerifiedAt={emailVerifiedAt} />
     </section>
   );
 }

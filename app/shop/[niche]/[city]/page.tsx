@@ -71,7 +71,7 @@ export default async function NicheLocationPage({ params }: PageProps) {
     rating_avg: store.rating_avg,
     rating_count: store.rating_count,
     distance_km: null,
-    whatsapp_verified_at: store.whatsapp_verified_at,
+    is_verified: store.is_verified,
   }));
 
   const breadcrumbJsonLd = {

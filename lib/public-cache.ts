@@ -29,6 +29,7 @@ export type PublicStoreLite = {
   latitude?: number | null;
   longitude?: number | null;
   whatsapp_verified_at?: string | null;
+  is_verified?: boolean | null;
 };
 
 export type PublicProductLite = {
@@ -71,7 +72,7 @@ const getHomeMarketplaceBaseDataInternal = async () => {
     await Promise.all([
       supabase
         .from("stores")
-        .select("id, vendor_id, name, slug, city, state, country, logo_url, rating_avg, rating_count, theme_color, whatsapp_verified_at")
+        .select("id, vendor_id, name, slug, city, state, country, logo_url, rating_avg, rating_count, theme_color, whatsapp_verified_at, is_verified")
         .eq("is_active", true)
         .order("created_at", { ascending: false })
         .limit(24),
@@ -165,7 +166,7 @@ const getMarketplaceBaseDataInternal = async () => {
       supabase
         .from("stores")
         .select(
-          "id, name, slug, city, state, country, logo_url, rating_avg, rating_count, latitude, longitude, whatsapp_verified_at",
+          "id, name, slug, city, state, country, logo_url, rating_avg, rating_count, latitude, longitude, whatsapp_verified_at, is_verified",
         )
         .eq("is_active", true)
         .limit(500),
@@ -242,7 +243,7 @@ const getStorefrontPublicDataInternal = async (slug: string) => {
 
   const { data: store } = await supabase
     .from("stores")
-    .select("id, vendor_id, name, slug, logo_url, whatsapp_number, store_template, store_theme_preset, storefront_config, rating_avg, rating_count, theme_color, is_active, created_at, whatsapp_verified_at")
+    .select("id, vendor_id, name, slug, logo_url, whatsapp_number, store_template, store_theme_preset, storefront_config, rating_avg, rating_count, theme_color, is_active, created_at, whatsapp_verified_at, is_verified")
     .eq("slug", slug)
     .eq("is_active", true)
     .maybeSingle();
@@ -334,7 +335,7 @@ const getNicheLocationPageDataInternal = async (
   const { data: storesRaw } = await supabase
     .from("stores")
     .select(
-      "id, vendor_id, name, slug, city, state, country, logo_url, rating_avg, rating_count, theme_color, whatsapp_verified_at",
+      "id, vendor_id, name, slug, city, state, country, logo_url, rating_avg, rating_count, theme_color, whatsapp_verified_at, is_verified",
     )
     .in("id", candidateStoreIds)
     .eq("is_active", true);

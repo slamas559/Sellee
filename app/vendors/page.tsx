@@ -34,6 +34,7 @@ type StoreRow = {
   rating_count: number;
   follower_count?: number;
   whatsapp_verified_at: string | null;
+  is_verified?: boolean | null;
 };
 
 type VendorsPageProps = {
@@ -55,7 +56,7 @@ export default async function VendorsPage({ searchParams }: VendorsPageProps) {
   const supabase = createAdminSupabaseClient();
   const { data: stores } = await supabase
     .from("stores")
-    .select("id, vendor_id, name, slug, city, state, country, logo_url, rating_avg, rating_count, whatsapp_verified_at")
+    .select("id, vendor_id, name, slug, city, state, country, logo_url, rating_avg, rating_count, whatsapp_verified_at, is_verified")
     .eq("is_active", true)
     .order("created_at", { ascending: false })
     .limit(400);

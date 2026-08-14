@@ -10,6 +10,9 @@ import WelcomeEmail, { type WelcomeEmailProps } from "@/emails/WelcomeEmail";
 import PasswordResetEmail, {
   type PasswordResetEmailProps,
 } from "@/emails/PasswordResetEmail";
+import EmailVerificationEmail, {
+  type EmailVerificationEmailProps,
+} from "@/emails/EmailVerificationEmail";
 import OrderNotificationEmail, {
   type OrderNotificationEmailProps,
 } from "@/emails/OrderNotificationEmail";
@@ -30,6 +33,11 @@ export interface SendWelcomeEmailInput extends WelcomeEmailProps {
 }
 
 export interface SendPasswordResetEmailInput extends PasswordResetEmailProps {
+  to: string;
+  subject?: string;
+}
+
+export interface SendEmailVerificationEmailInput extends EmailVerificationEmailProps {
   to: string;
   subject?: string;
 }
@@ -160,6 +168,41 @@ export async function sendPasswordResetEmail({
       try {
         // eslint-disable-next-line no-console
         console.debug("[sendPasswordResetEmail] resend response:", { data, error });
+      } catch (logErr) {
+        // Swallow logging errors to avoid interfering with email flow.
+      }
+    }
+
+    if (error) {
+      return { success: false, error };
+    }
+
+    return { success: true, data };
+  } catch (error) {
+    return { success: false, error: normalizeError(error) };
+  }
+}
+
+export async function sendEmailVerificationEmail({
+  to,
+  subject = "Verify your email for Sellee",
+  name,
+  verifyUrl,
+}: SendEmailVerificationEmailInput): Promise<EmailActionResult> {
+  try {
+    const resend = getResendClient();
+    const { data, error } = await resend.emails.send({
+      from: SYSTEM_FROM,
+      to,
+      replyTo: SUPPORT_REPLY_TO,
+      subject,
+      react: EmailVerificationEmail({ name, verifyUrl }),
+    });
+
+    if (process.env.NODE_ENV === "development") {
+      try {
+        // eslint-disable-next-line no-console
+        console.debug("[sendEmailVerificationEmail] resend response:", { data, error });
       } catch (logErr) {
         // Swallow logging errors to avoid interfering with email flow.
       }

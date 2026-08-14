@@ -145,7 +145,7 @@ export function SiteFooter() {
         </div>
       </footer>
 
-      {/* {showToTop ? (
+      {showToTop ? (
         <button
           type="button"
           aria-label="Back to top"
@@ -165,7 +165,7 @@ export function SiteFooter() {
             <path d="m18 15-6-6-6 6" />
           </svg>
         </button>
-      ) : null} */}
+      ) : null}
     </>
   );
 }

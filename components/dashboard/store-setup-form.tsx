@@ -17,6 +17,7 @@ import type { StoreRecord, StoreTemplate, StorefrontSectionId } from "@/types";
 
 type StoreSetupFormProps = {
   initialStore: StoreRecord | null;
+  initialEmailVerifiedAt?: string | null;
 };
 
 type UploadKind = "logo" | "hero" | "banner";
@@ -274,9 +275,13 @@ function StepSection({
 
 // ─── Main form ────────────────────────────────────────────────────────────
 
-export function StoreSetupForm({ initialStore }: StoreSetupFormProps) {
+export function StoreSetupForm({ initialStore, initialEmailVerifiedAt = null }: StoreSetupFormProps) {
   const initialConfig = normalizeStorefrontConfig(initialStore?.storefront_config);
   const [store, setStore] = useState<StoreRecord | null>(initialStore);
+  const [emailVerifiedAt] = useState<string | null>(initialEmailVerifiedAt);
+  const [isSendingEmailVerification, setIsSendingEmailVerification] = useState(false);
+  const [emailVerifyMessage, setEmailVerifyMessage] = useState<string | null>(null);
+  const [emailVerifyError, setEmailVerifyError] = useState<string | null>(null);
   const [draggedSection, setDraggedSection] = useState<StorefrontSectionId | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [logoFile, setLogoFile] = useState<File | null>(null);
@@ -440,6 +445,7 @@ export function StoreSetupForm({ initialStore }: StoreSetupFormProps) {
           ...prev,
           whatsapp_verified_at: new Date().toISOString(),
           whatsapp_number: form.whatsapp_number,
+          is_verified: Boolean(emailVerifiedAt),
         } : prev);
         return;
       }
@@ -453,6 +459,25 @@ export function StoreSetupForm({ initialStore }: StoreSetupFormProps) {
       setVerifyError("Network error while checking verification status.");
     } finally {
       setIsCheckingVerification(false);
+    }
+  }
+
+  async function handleSendEmailVerification() {
+    setEmailVerifyError(null);
+    setEmailVerifyMessage(null);
+    setIsSendingEmailVerification(true);
+    try {
+      const response = await fetch("/api/account/email-verification/send", { method: "POST" });
+      const payload = (await response.json().catch(() => null)) as { error?: string; message?: string } | null;
+      if (!response.ok) {
+        setEmailVerifyError(payload?.error ?? "Could not send the verification email. Please try again.");
+        return;
+      }
+      setEmailVerifyMessage(payload?.message ?? "Verification email sent - check your inbox.");
+    } catch {
+      setEmailVerifyError("Network error while sending the verification email.");
+    } finally {
+      setIsSendingEmailVerification(false);
     }
   }
 
@@ -766,6 +791,29 @@ export function StoreSetupForm({ initialStore }: StoreSetupFormProps) {
               ) : null}
               {verifyError ? <p className="text-xs text-red-700">{verifyError}</p> : null}
               {verifyMessage ? <p className="text-xs text-emerald-700">{verifyMessage}</p> : null}
+            </div>
+
+            <div className="space-y-2 text-sm sm:col-span-2">
+              <span className="font-medium text-slate-700">Account email verification</span>
+              {emailVerifiedAt ? (
+                <p className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700"><BadgeCheck className="h-4 w-4" /> Verified</p>
+              ) : (
+                <div className="space-y-2">
+                  <p className="text-xs text-slate-500">
+                    Not verified — your store also needs a verified account email (in addition to a verified WhatsApp number) before shoppers see the Verified badge.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => void handleSendEmailVerification()}
+                    disabled={isSendingEmailVerification}
+                    className="rounded-lg border border-emerald-200 px-3 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
+                  >
+                    {isSendingEmailVerification ? "Sending..." : "Send verification email"}
+                  </button>
+                </div>
+              )}
+              {emailVerifyError ? <p className="text-xs text-red-700">{emailVerifyError}</p> : null}
+              {emailVerifyMessage ? <p className="text-xs text-emerald-700">{emailVerifyMessage}</p> : null}
             </div>
 
             {/* Logo */}

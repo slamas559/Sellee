@@ -59,7 +59,7 @@ export async function searchStores(params: StoreSearchParams): Promise<StoreSear
   const { data: stores, error: storesError } = await supabase
     .from("stores")
     .select(
-      "id, vendor_id, name, slug, logo_url, city, state, country, latitude, longitude, theme_color, rating_avg, rating_count, whatsapp_verified_at",
+      "id, vendor_id, name, slug, logo_url, city, state, country, latitude, longitude, theme_color, rating_avg, rating_count, whatsapp_verified_at, is_verified",
     )
     .eq("is_active", true)
     .order("created_at", { ascending: false })

@@ -226,6 +226,7 @@ type StoreRow = {
   is_active: boolean;
   created_at: string;
   whatsapp_verified_at: string | null;
+  is_verified?: boolean | null;
 };
 
 async function validateNicheIds(nicheIds: string[]): Promise<string[]> {
@@ -353,7 +354,7 @@ export async function GET() {
 
   const { data, error } = await supabase
     .from("stores")
-    .select("id, vendor_id, name, slug, logo_url, whatsapp_number, address_line1, city, state, country, latitude, longitude, location_source, store_template, store_theme_preset, storefront_config, rating_avg, rating_count, theme_color, is_active, created_at, whatsapp_verified_at")
+    .select("id, vendor_id, name, slug, logo_url, whatsapp_number, address_line1, city, state, country, latitude, longitude, location_source, store_template, store_theme_preset, storefront_config, rating_avg, rating_count, theme_color, is_active, created_at, whatsapp_verified_at, is_verified")
     .eq("vendor_id", session.user.id)
     .order("created_at", { ascending: false });
 
@@ -396,7 +397,7 @@ export async function POST(request: Request) {
 
     const { data: existingStore, error: existingStoreError } = await supabase
       .from("stores")
-      .select("id, slug, logo_url, storefront_config, whatsapp_number, whatsapp_verified_at")
+      .select("id, slug, logo_url, storefront_config, whatsapp_number, whatsapp_verified_at, is_verified")
       .eq("vendor_id", session.user.id)
       .maybeSingle();
 
@@ -475,7 +476,7 @@ export async function POST(request: Request) {
           is_active: parsedData.is_active,
         })
         .eq("id", existingStore.id)
-        .select("id, vendor_id, name, slug, logo_url, whatsapp_number, address_line1, city, state, country, latitude, longitude, location_source, store_template, store_theme_preset, storefront_config, rating_avg, rating_count, theme_color, is_active, created_at, whatsapp_verified_at")
+        .select("id, vendor_id, name, slug, logo_url, whatsapp_number, address_line1, city, state, country, latitude, longitude, location_source, store_template, store_theme_preset, storefront_config, rating_avg, rating_count, theme_color, is_active, created_at, whatsapp_verified_at, is_verified")
         .single();
 
       if (error || !data) {
@@ -540,7 +541,7 @@ export async function POST(request: Request) {
         logo_url: logoUrl,
         is_active: parsedData.is_active,
       })
-      .select("id, vendor_id, name, slug, logo_url, whatsapp_number, address_line1, city, state, country, latitude, longitude, location_source, store_template, store_theme_preset, storefront_config, rating_avg, rating_count, theme_color, is_active, created_at, whatsapp_verified_at")
+      .select("id, vendor_id, name, slug, logo_url, whatsapp_number, address_line1, city, state, country, latitude, longitude, location_source, store_template, store_theme_preset, storefront_config, rating_avg, rating_count, theme_color, is_active, created_at, whatsapp_verified_at, is_verified")
       .single();
 
     if (error || !data) {

@@ -71,6 +71,7 @@ type StoreLite = {
   theme_color: string | null;
   niche_names?: string[];
   whatsapp_verified_at?: string | null;
+  is_verified?: boolean | null;
 };
 
 type ProductLite = {

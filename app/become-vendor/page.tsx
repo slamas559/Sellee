@@ -90,7 +90,7 @@ const benefits = [
   {
     icon: BadgeCheck,
     title: "Earn a verified badge",
-    description: "Verify your WhatsApp number to unlock a trust badge that makes buyers feel confident ordering.",
+    description: "Verify your WhatsApp number and email to unlock a trust badge that makes buyers feel confident ordering.",
   },
 ];
 

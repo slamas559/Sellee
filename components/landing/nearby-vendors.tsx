@@ -18,7 +18,7 @@ export type NearbyVendor = {
   follower_count?: number;
   distance_km: number | null;
   niche_names?: string[];
-  whatsapp_verified_at?: string | null;
+  is_verified?: boolean | null;
 };
 
 type NearbyVendorsProps = {
@@ -78,7 +78,7 @@ export function NearbyVendorCard({
       <div className={`relative z-10 ${isGrid ? "flex h-full flex-col" : ""}`}>
         <p className="flex items-center gap-1 line-clamp-1 text-sm font-semibold text-slate-900 group-hover:text-emerald-700 sm:text-base">
           <span className="truncate">{vendor.name}</span>
-          {vendor.whatsapp_verified_at ? (
+          {vendor.is_verified ? (
             <BadgeCheck className="h-3.5 w-3.5 shrink-0 text-emerald-600" aria-label="Verified vendor" />
           ) : null}
         </p>

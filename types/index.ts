@@ -57,6 +57,8 @@ export type StoreRecord = {
   is_active: boolean;
   created_at: string;
   whatsapp_verified_at: string | null;
+  vendor_email_verified_at?: string | null;
+  is_verified?: boolean | null;
 };
 
 export type ProductRecord = {

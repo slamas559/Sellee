@@ -89,7 +89,7 @@ export async function searchProducts(
 
   const { data: activeStores, error: storesError } = await supabase
     .from("stores")
-    .select("id, name, slug, city, state, country, logo_url, rating_avg, rating_count, latitude, longitude, whatsapp_verified_at")
+    .select("id, name, slug, city, state, country, logo_url, rating_avg, rating_count, latitude, longitude, whatsapp_verified_at, is_verified")
     .eq("is_active", true)
     .limit(500);
 
