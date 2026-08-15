@@ -7,6 +7,7 @@ import { ConditionalAiAssistant } from "@/components/layout/conditional-ai-assis
 import { ConditionalFooter } from "@/components/layout/conditional-footer";
 import SiteHeader from "@/components/layout/site-header";
 import { Suspense } from "react";
+import { headers } from "next/headers";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -68,11 +69,14 @@ function HeaderFallback() {
   );
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const headersList = await headers();
+  const effectivePathname = headersList.get("x-sellee-pathname") ?? undefined;
+
   return (
     <html
       lang="en"
@@ -83,7 +87,7 @@ export default function RootLayout({
           <div className="flex min-h-full flex-col">
             <div className="flex-1">
               <Suspense fallback={<HeaderFallback />}>
-                <SiteHeader />
+                <SiteHeader effectivePathname={effectivePathname} />
               </Suspense>
               {children}
             </div>

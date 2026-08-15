@@ -12,8 +12,23 @@ import { useSession } from "next-auth/react";
 
 const HIDDEN_ON_ROUTES = ["/login", "/register", "/forgot-password", "/reset-password"];
 
-export default function SiteHeader() {
-  const pathname = usePathname() || "/";
+type SiteHeaderProps = {
+  /**
+   * The path actually being rendered server-side, passed down from
+   * app/layout.tsx (sourced from the "x-sellee-pathname" header proxy.ts
+   * sets on vendor-subdomain requests). Needed because a subdomain request
+   * like "olas-gadgets.sellee.store/" is served via an internal rewrite to
+   * "/store/olas-gadgets" - the browser URL bar (and therefore
+   * usePathname()) never shows that, it still just shows "/". Falls back to
+   * the client-observed pathname for ordinary path-based navigation, where
+   * the two already agree.
+   */
+  effectivePathname?: string;
+};
+
+export default function SiteHeader({ effectivePathname }: SiteHeaderProps = {}) {
+  const observedPathname = usePathname() || "/";
+  const pathname = effectivePathname || observedPathname;
   const searchParams = useSearchParams();
   const router = useRouter();
   const { data: session } = useSession();

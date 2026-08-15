@@ -56,7 +56,16 @@ export default async function proxy(req: NextRequest) {
 
     // "olas-gadgets.sellee.store/watch-ultra-2" -> "/store/olas-gadgets/watch-ultra-2"
     const rewrittenPath = `/store/${slug}${pathname === "/" ? "" : pathname}`;
-    return NextResponse.rewrite(new URL(rewrittenPath + search, req.url));
+    const rewriteUrl = new URL(rewrittenPath + search, req.url);
+
+    // The browser URL bar (and therefore usePathname() client-side) never
+    // shows this rewritten path - it still shows "/" or "/product-slug".
+    // Pass the real internal path along as a request header so Server
+    // Components (see app/layout.tsx) can tell what's actually being
+    // rendered, e.g. to hide the main site nav on vendor storefront pages.
+    const requestHeaders = new Headers(req.headers);
+    requestHeaders.set("x-sellee-pathname", rewrittenPath);
+    return NextResponse.rewrite(rewriteUrl, { request: { headers: requestHeaders } });
   }
 
   // On the main domain: send old-style "/store/:slug" links to their
