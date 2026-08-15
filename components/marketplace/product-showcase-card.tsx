@@ -7,6 +7,7 @@ import type { KeyboardEvent, MouseEvent } from "react";
 import { useMemo, useRef, useState } from "react";
 import { StarRating } from "@/components/store/star-rating";
 import { formatNaira, formatProductPathSegment } from "@/lib/format";
+import { storeUrl } from "@/lib/store-url";
 import type { StoreTemplate } from "@/types";
 import { BadgeCheck, ChevronLeft, ChevronRight } from "lucide-react";
 
@@ -195,7 +196,7 @@ export function ProductShowcaseCard({
 
       <div className={contentWrapClass}>
         <div className="flex items-start justify-between gap-2">
-          <Link href={`/store/${store.slug}`} target="_blank" rel="noopener noreferrer">
+          <Link href={storeUrl(store.slug)} target="_blank" rel="noopener noreferrer">
             <p className={`flex items-center gap-1 line-clamp-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${metaClass}`}>
               <span className="truncate">{store.name}</span>
               {store.is_verified ? (

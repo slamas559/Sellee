@@ -225,7 +225,6 @@ export default async function StoreProductPage({ params, searchParams }: Product
     .filter((item): item is ProductWithStore => item !== null)
     .slice(0, 8);
 
-  const storeHref = `/store/${store.slug}`;
   const storeShareUrl = buildStoreUrl(store.slug);
   const productPathRef = formatProductPathSegment({
     id: product.id,
@@ -328,7 +327,9 @@ export default async function StoreProductPage({ params, searchParams }: Product
               {/* Sold-by row + actions */}
               <div className="mb-3 flex items-center justify-between gap-3">
                 <Link
-                  href={`/store/${store.slug}`}
+                  href={storeShareUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="text-xs font-semibold text-stone-500 transition-colors hover:text-emerald-700"
                 >
                   Sold by <span className="text-stone-800">{store.name}</span>
@@ -394,7 +395,7 @@ export default async function StoreProductPage({ params, searchParams }: Product
             {/* Vendor card — single source of truth for store identity */}
             <div className="mt-5 overflow-hidden rounded-xl border border-stone-100 bg-white shadow-sm">
               <div className="flex items-center justify-between gap-3 px-4 py-3">
-                <Link href={storeHref} className="group flex min-w-0 items-center gap-3">
+                <Link href={storeShareUrl} target="_blank" rel="noopener noreferrer" className="group flex min-w-0 items-center gap-3">
                   {store.logo_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={store.logo_url} alt={store.name} className="h-10 w-10 shrink-0 rounded-full object-cover ring-2 ring-stone-100" />
@@ -469,7 +470,9 @@ export default async function StoreProductPage({ params, searchParams }: Product
               <p className="mt-0.5 text-xs text-stone-400">Other products by this vendor</p>
             </div>
             <Link
-              href={`/store/${store.slug}`}
+              href={storeShareUrl}
+              target="_blank"
+              rel="noopener noreferrer"
               className="rounded-full border border-stone-200 px-4 py-1.5 text-xs font-semibold text-stone-600 transition-all hover:border-emerald-300 hover:text-emerald-700"
             >
               view store

@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { getCustomerFollows } from "@/lib/dashboard-data";
+import { storeUrl } from "@/lib/store-url";
 
 export const metadata: Metadata = {
   title: "Followed Vendors",
@@ -41,7 +42,7 @@ export default async function FollowedVendorsPage() {
                 <div className="h-12 w-12 rounded-md bg-slate-100" />
               )}
               <div>
-                <Link href={`/store/${store.slug}`} target="_blank" rel="noopener noreferrer" className="font-medium text-emerald-700 hover:underline">{store.name}</Link>
+                <Link href={storeUrl(store.slug)} target="_blank" rel="noopener noreferrer" className="font-medium text-emerald-700 hover:underline">{store.name}</Link>
                 <p className="text-xs text-slate-500">{[store.city, store.state, store.country].filter(Boolean).join(", ")}</p>
               </div>
             </li>

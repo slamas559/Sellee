@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { formatNaira, formatProductPathSegment } from "@/lib/format";
+import { storeUrl } from "@/lib/store-url";
 import { ASSISTANT_NAME } from "@/lib/ai/assistant-config";
 import { MicButton } from "@/components/ai/mic-button";
 import { SpeakButton } from "@/components/ai/speak-button";
@@ -77,7 +78,9 @@ function StoreMiniCard({ store }: { store: AssistantStoreCard }) {
 
   return (
     <Link
-      href={`/store/${store.slug}`}
+      href={storeUrl(store.slug)}
+      target="_blank"
+      rel="noopener noreferrer"
       className="flex w-56 shrink-0 flex-col gap-1.5 rounded-2xl border border-slate-200 bg-white p-3 transition hover:-translate-y-0.5 hover:shadow-md"
     >
       <div className="flex items-center gap-2">

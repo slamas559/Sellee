@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { BadgeCheck } from "lucide-react";
+import { storeUrl } from "@/lib/store-url";
 
 export type NearbyVendor = {
   id: string;
@@ -57,7 +58,7 @@ export function NearbyVendorCard({
 
   return (
     <Link
-      href={`/store/${vendor.slug}`}
+      href={storeUrl(vendor.slug)}
       target="_blank" 
       rel="noopener noreferrer"
       prefetch

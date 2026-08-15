@@ -19,6 +19,7 @@ import {
   Users,
   X,
 } from "lucide-react";
+import { storeUrl } from "@/lib/store-url";
 
 type VendorPin = {
   id: string;
@@ -448,7 +449,9 @@ export default function VendorsMap() {
                   ) : null}
 
                   <Link
-                    href={`/store/${vendor.slug}`}
+                    href={storeUrl(vendor.slug)}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="mt-3 flex items-center justify-center rounded-xl bg-emerald-600 px-3 py-1.5 font-semibold transition hover:bg-emerald-700"
                   >
                     <span className="text-white text-xs">Visit store</span>

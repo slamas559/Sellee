@@ -5,6 +5,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { getCustomerOrders } from "@/lib/dashboard-data";
 import { formatNaira } from "@/lib/format";
+import { storeUrl } from "@/lib/store-url";
 
 export const metadata: Metadata = {
   title: "My Orders",
@@ -62,7 +63,7 @@ export default async function MyOrdersPage({ searchParams }: { searchParams?: Pr
               <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div className="min-w-0">
                   <p className="text-sm text-slate-600">Store: {entry.store ? (
-                    <Link href={`/store/${entry.store.slug}`} target="_blank" rel="noopener noreferrer" className="font-medium text-emerald-700 hover:underline">
+                    <Link href={storeUrl(entry.store.slug)} target="_blank" rel="noopener noreferrer" className="font-medium text-emerald-700 hover:underline">
                       {entry.store.name}
                     </Link>
                   ) : (
