@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useEffect, useMemo, useState } from "react";
+import { MessageCircle } from "lucide-react";
 import { formatNaira } from "@/lib/format";
 import { buildOrderMessage, buildWaMeLink } from "@/lib/whatsapp";
 
@@ -59,6 +60,11 @@ export function OrderButton({
 
   const total = useMemo(() => productPrice * quantity, [productPrice, quantity]);
 
+  const chatLink = useMemo(() => {
+    const greeting = `Hi! I have a question about "${productName}" on your Sellee store.`;
+    return buildWaMeLink(whatsappNumber, greeting);
+  }, [whatsappNumber, productName]);
+
   function decreaseQuantity() {
     setQuantity((prev) => Math.max(1, prev - 1));
   }
@@ -83,6 +89,16 @@ export function OrderButton({
 
     void loadMe();
   }, [status]);
+
+  function handleChat() {
+    if (status !== "authenticated") {
+      const callbackUrl = encodeURIComponent(pathname || "/");
+      router.push(`/login?callbackUrl=${callbackUrl}`);
+      return;
+    }
+
+    window.open(chatLink, "_blank", "noopener,noreferrer");
+  }
 
   async function handleOrder() {
     if (status !== "authenticated") {
@@ -213,18 +229,30 @@ export function OrderButton({
         </p>
       ) : null}
 
-      <button
-        type="button"
-        onClick={() => void handleOrder()}
-        disabled={isSubmitting || status === "loading"}
-        className="inline-flex w-full items-center justify-center rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60 sm:w-auto"
-      >
-        {isSubmitting
-          ? "Preparing order..."
-          : status === "unauthenticated"
-            ? "Login to order"
-            : "Order via WhatsApp"}
-      </button>
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <button
+          type="button"
+          onClick={() => void handleOrder()}
+          disabled={isSubmitting || status === "loading"}
+          className="inline-flex flex-1 items-center justify-center rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
+        >
+          {isSubmitting
+            ? "Preparing order..."
+            : status === "unauthenticated"
+              ? "Login to order"
+              : "Order via WhatsApp"}
+        </button>
+
+        <button
+          type="button"
+          onClick={handleChat}
+          disabled={status === "loading"}
+          className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-md border border-emerald-600 px-4 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-50 disabled:opacity-60 sm:flex-initial"
+        >
+          <MessageCircle className="h-4 w-4" />
+          {status === "unauthenticated" ? "Login to chat" : "Chat with Vendor"}
+        </button>
+      </div>
     </div>
   );
 }

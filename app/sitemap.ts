@@ -2,6 +2,7 @@ import type { MetadataRoute } from "next";
 import { formatProductPathSegment } from "@/lib/format";
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
 import { getNicheLocationCombosCached } from "@/lib/public-cache";
+import { storeUrl, storeProductUrl } from "@/lib/store-url";
 
 const BASE_URL = "https://sellee.store";
 
@@ -79,7 +80,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const storeRoutes: MetadataRoute.Sitemap = (stores ?? [])
     .filter((store) => Boolean(store.slug))
     .map((store) => ({
-      url: `${BASE_URL}/store/${store.slug}`,
+      url: storeUrl(store.slug!),
       lastModified: store.created_at ? new Date(store.created_at) : new Date(),
       changeFrequency: "weekly",
       priority: 0.7,
@@ -101,10 +102,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       if (!slug) return [];
       return [
         {
-          url: `${BASE_URL}/store/${slug}/${formatProductPathSegment({
-            id: product.id,
-            slug: product.slug,
-          })}`,
+          url: storeProductUrl(
+            slug,
+            formatProductPathSegment({
+              id: product.id,
+              slug: product.slug,
+            }),
+          ),
           lastModified: product.created_at ? new Date(product.created_at) : new Date(),
           changeFrequency: "weekly",
           priority: 0.6,

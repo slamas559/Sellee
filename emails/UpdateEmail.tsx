@@ -38,7 +38,7 @@ export default function UpdateEmail({
   footerNote = "You are receiving this because you use Sellee.",
 }: UpdateEmailProps) {
   return (
-    <EmailShell previewText={previewText} width={440} radius={18}>
+    <EmailShell previewText={previewText} width={600} radius={10}>
       <Section className="px-6 py-7">
         <Text className="m-0 text-xs font-bold uppercase tracking-[0.18em] text-emerald-700">
           Sellee update

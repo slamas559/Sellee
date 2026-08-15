@@ -4,10 +4,6 @@ import * as React from "react";
 export interface EmailShellProps {
   /** Preview/inbox snippet text. */
   previewText: string;
-  /** Card width in px. Real email clients (Gmail, Outlook) don't reliably
-   *  respect `max-width` on a bare <div>, so this is enforced twice: once via
-   *  an explicit `width` HTML attribute + inline style on the table cell, and
-   *  once on the Container itself. */
   width?: number;
   /** Card corner radius in px. */
   radius?: number;

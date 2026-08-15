@@ -20,7 +20,7 @@ export default function SupportTicketEmail({
   const firstName = name?.trim()?.split(/\s+/)[0] ?? "there";
 
   return (
-    <EmailShell previewText="We received your Sellee support request." width={400} radius={18}>
+    <EmailShell previewText="We received your Sellee support request." width={500} radius={10}>
       <Section className="bg-sky-600 px-6 py-8 text-white">
         <Text className="m-0 text-xs font-bold uppercase tracking-[0.18em] text-sky-50">
           Support ticket received

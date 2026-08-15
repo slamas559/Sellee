@@ -17,7 +17,7 @@ export default function PasswordResetEmail({ name, resetUrl }: PasswordResetEmai
   const firstName = name?.trim()?.split(/\s+/)[0] ?? "there";
 
   return (
-    <EmailShell previewText="Reset your Sellee password" width={400} radius={20}>
+    <EmailShell previewText="Reset your Sellee password" width={500} radius={10}>
       <Section className="bg-emerald-600 px-6 py-8 text-white">
         <Img src="https://sellee.store/icon2.png" alt="Sellee" className="mb-4 h-8 w-auto" />
         <Text className="m-0 text-xs font-bold uppercase tracking-[0.18em] text-emerald-50">

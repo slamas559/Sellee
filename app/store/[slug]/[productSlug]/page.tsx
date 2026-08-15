@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { Fragment } from "react";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ProductShowcaseCard } from "@/components/marketplace/product-showcase-card";
@@ -7,6 +6,8 @@ import { SocialShareActions } from "@/components/shared/social-share-actions";
 import { OrderButton } from "@/components/store/order-button";
 import WishlistButton from "@/components/store/wishlist-button";
 import { ProductMediaGallery } from "@/components/store/product-media-gallery";
+import { ProductDetailsSection } from "@/components/store/product-details-section";
+import { storeUrl as buildStoreUrl, storeProductUrl } from "@/lib/store-url";
 import { ProductReviewsSection } from "@/components/reviews/product-reviews-section";
 import { StarRating } from "@/components/store/star-rating";
 import { formatNaira, formatProductPathSegment, parseProductPathSegment } from "@/lib/format";
@@ -78,18 +79,18 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
         name: product.name,
       })
     : productSlug;
-  const canonical = `/store/${slug}/${canonicalRef}`;
+  const canonicalPublicUrl = storeProductUrl(slug, canonicalRef);
   const image = `https://www.sellee.store/store/${slug}/${canonicalRef}/opengraph-image`;
 
   return {
     metadataBase: new URL("https://www.sellee.store"),
     title: `${product?.name || "Product"} | ${label}`,
     description: desc,
-    alternates: { canonical },
+    alternates: { canonical: canonicalPublicUrl },
     openGraph: {
       title: `${product?.name || "Product"} | ${label} | Sellee`,
       description: desc,
-      url: `https://www.sellee.store${canonical}`,
+      url: canonicalPublicUrl,
       type: "website",
       images: [{ 
         url: image,
@@ -224,14 +225,14 @@ export default async function StoreProductPage({ params, searchParams }: Product
     .filter((item): item is ProductWithStore => item !== null)
     .slice(0, 8);
 
-  const appBaseUrl = (process.env.NEXTAUTH_URL || "http://localhost:3000").replace(/\/$/, "");
-  const storeUrl = `${appBaseUrl}/store/${store.slug}`;
+  const storeHref = `/store/${store.slug}`;
+  const storeShareUrl = buildStoreUrl(store.slug);
   const productPathRef = formatProductPathSegment({
     id: product.id,
     slug: product.slug,
     name: product.name,
   });
-  const productUrl = `${appBaseUrl}/store/${store.slug}/${productPathRef}`;
+  const productShareUrl = storeProductUrl(store.slug, productPathRef);
   const storeLocation = [store.city, store.state, store.country].filter(Boolean).join(", ");
 
   const productJsonLd = {
@@ -244,7 +245,7 @@ export default async function StoreProductPage({ params, searchParams }: Product
     brand: { "@type": "Brand", name: store.name },
     offers: {
       "@type": "Offer",
-      url: productUrl,
+      url: productShareUrl,
       priceCurrency: "NGN",
       price: Number(product.price),
       availability:
@@ -300,7 +301,7 @@ export default async function StoreProductPage({ params, searchParams }: Product
       </div>
 
       {/* ── Hero product section ── */}
-      <div className="mx-auto max-w-7xl px-2 py-2 sm:px-6 sm:py-12">
+      <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 sm:py-12">
         <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:gap-14 xl:gap-20">
 
           {/* Left — Media gallery */}
@@ -323,33 +324,21 @@ export default async function StoreProductPage({ params, searchParams }: Product
           {/* Right — Product info */}
           <div className="flex flex-col gap-0 lg:sticky lg:top-8 lg:self-start">
 
-            <div className="p-2">
-              {/* Store chip */}
-              <div className="mb-4 flex items-center justify-between">
+            <div>
+              {/* Sold-by row + actions */}
+              <div className="mb-3 flex items-center justify-between gap-3">
                 <Link
                   href={`/store/${store.slug}`}
-                  className="group flex items-center gap-2 rounded-full border border-stone-200 bg-white px-3 py-1.5 shadow-sm transition-all hover:border-emerald-300 hover:shadow-md"
+                  className="text-xs font-semibold text-stone-500 transition-colors hover:text-emerald-700"
                 >
-                  {store.logo_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={store.logo_url} alt={store.name} className="h-5 w-5 rounded-full object-cover" />
-                  ) : (
-                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-100">
-                      <Store className="h-3 w-3 text-emerald-700" />
-                    </span>
-                  )}
-                  <span className="text-xs font-semibold text-stone-700 group-hover:text-emerald-700">{store.name}</span>
-                  {storeLocation && (
-                    <span className="hidden text-[10px] text-stone-400 sm:inline">· {storeLocation}</span>
-                  )}
+                  Sold by <span className="text-stone-800">{store.name}</span>
                 </Link>
 
-                {/* Share + Wishlist actions */}
                 <div className="flex items-center gap-2">
                   <WishlistButton productId={product.id} />
                   <SocialShareActions
                     mode="menu"
-                    url={productUrl}
+                    url={productShareUrl}
                     title={`${product.name} - ${store.name}`}
                     text={`Found this on Sellee: ${product.name} at ${store.name}.`}
                     compact
@@ -358,7 +347,6 @@ export default async function StoreProductPage({ params, searchParams }: Product
                   />
                 </div>
               </div>
-
               {/* Product name */}
               <h1 className="text-3xl font-black tracking-tight text-stone-900 sm:text-4xl lg:text-[2.6rem] lg:leading-[1.1]">
                 {product.name}
@@ -372,50 +360,11 @@ export default async function StoreProductPage({ params, searchParams }: Product
                 )}
               </div>
 
-              {/* Price */}
-              <div className="mt-5 flex items-baseline gap-3">
+              {/* Price + stock */}
+              <div className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-2">
                 <span className="text-4xl font-black tracking-tight text-stone-900">
                   {formatNaira(Number(product.price))}
                 </span>
-              </div>
-
-              {/* Divider */}
-              <div className="my-5 h-px bg-gradient-to-r from-stone-200 via-stone-100 to-transparent" />
-
-              {/* Description */}
-              <p className="text-sm leading-relaxed text-stone-600">
-                {product.description ?? "No description added for this product yet."}
-              </p>
-
-              {/* Structured product info */}
-              {product.brand || product.condition || (product.attributes && Object.keys(product.attributes).length > 0) ? (
-                <div className="mt-5 rounded-xl border border-stone-200 bg-stone-50/60 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-stone-500">Product information</p>
-                  <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm">
-                    {product.condition ? (
-                      <>
-                        <dt className="capitalize text-stone-500">Condition</dt>
-                        <dd className="capitalize font-medium text-stone-800">{product.condition}</dd>
-                      </>
-                    ) : null}
-                    {product.brand ? (
-                      <>
-                        <dt className="text-stone-500">Brand</dt>
-                        <dd className="font-medium text-stone-800">{product.brand}</dd>
-                      </>
-                    ) : null}
-                    {Object.entries(product.attributes ?? {}).map(([key, value]) => (
-                      <Fragment key={key}>
-                        <dt className="text-stone-500">{key}</dt>
-                        <dd className="font-medium text-stone-800">{value}</dd>
-                      </Fragment>
-                    ))}
-                  </dl>
-                </div>
-              ) : null}
-
-              {/* Stock + badge row */}
-              <div className="mt-5 flex flex-wrap items-center gap-2">
                 <span
                   className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold ${
                     isInStock
@@ -426,36 +375,49 @@ export default async function StoreProductPage({ params, searchParams }: Product
                   <PackageCheck className="h-3.5 w-3.5" />
                   {isInStock ? `${product.stock_count} in stock` : "Out of stock"}
                 </span>
-                <span className="rounded-full bg-stone-100 px-3 py-1.5 text-xs font-medium text-stone-600 ring-1 ring-stone-200">
-                  WhatsApp order
-                </span>
               </div>
+
+              {/* Divider */}
+              <div className="my-5 h-px bg-gradient-to-r from-stone-200 via-stone-100 to-transparent" />
+
+              {/* Description + structured info — collapsible to keep long
+                  write-ups from pushing the vendor card / CTA far down the
+                  page while scrolling. */}
+              <ProductDetailsSection
+                description={product.description}
+                brand={product.brand}
+                condition={product.condition}
+                attributes={product.attributes}
+              />
             </div>
 
-            {/* Vendor mini-card */}
+            {/* Vendor card — single source of truth for store identity */}
             <div className="mt-5 overflow-hidden rounded-xl border border-stone-100 bg-white shadow-sm">
-              <div className="flex items-center justify-between px-4 py-3">
-                <Link href={storeUrl} className="flex items-center gap-3">
-                  <div className="flex items-center gap-3">
-                    {store.logo_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={store.logo_url} alt={store.name} className="h-9 w-9 rounded-full object-cover ring-2 ring-stone-100" />
-                    ) : (
-                      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-50 ring-2 ring-stone-100">
-                        <Store className="h-4 w-4 text-emerald-700" />
-                      </div>
-                    )}
-                    <div>
-                      <p className="text-sm font-bold text-stone-800">{store.name}</p>
-                      <div className="mt-0.5">
-                        <StarRating value={store.rating_avg} count={store.rating_count} size="sm" accent="yellow" />
-                      </div>
+              <div className="flex items-center justify-between gap-3 px-4 py-3">
+                <Link href={storeHref} className="group flex min-w-0 items-center gap-3">
+                  {store.logo_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={store.logo_url} alt={store.name} className="h-10 w-10 shrink-0 rounded-full object-cover ring-2 ring-stone-100" />
+                  ) : (
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-50 ring-2 ring-stone-100">
+                      <Store className="h-4 w-4 text-emerald-700" />
+                    </div>
+                  )}
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-bold text-stone-800 group-hover:text-emerald-700">
+                      {store.name}
+                    </p>
+                    <div className="mt-0.5 flex items-center gap-1.5">
+                      <StarRating value={store.rating_avg} count={store.rating_count} size="sm" accent="yellow" />
+                      {storeLocation && (
+                        <span className="hidden truncate text-[11px] text-stone-400 sm:inline">· {storeLocation}</span>
+                      )}
                     </div>
                   </div>
                 </Link>
                 <SocialShareActions
                   mode="menu"
-                  url={storeUrl}
+                  url={storeShareUrl}
                   title={`${store.name} on Sellee`}
                   text={`Check out ${store.name} on Sellee.`}
                   compact
@@ -481,7 +443,7 @@ export default async function StoreProductPage({ params, searchParams }: Product
       </div>
 
       {/* ── Reviews ── */}
-      <div className="mx-auto max-w-7xl px-2 pb-2 sm:px-4">
+      <div className="mx-auto max-w-7xl px-4 pb-4 sm:px-6">
         <div className="rounded-2xl border border-stone-200 bg-white shadow-sm">
           {/* Section header */}
           <div className="border-b border-stone-100 px-5 py-5 sm:px-7">
@@ -499,7 +461,7 @@ export default async function StoreProductPage({ params, searchParams }: Product
       </div>
 
       {/* ── More from this vendor ── */}
-      <div className="mx-auto max-w-7xl px-2 py-8 sm:px-6">
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
         <div className="rounded-2xl border border-stone-200 bg-white shadow-sm">
           <div className="flex items-center justify-between border-b border-stone-100 px-5 py-5 sm:px-7">
             <div>
@@ -546,7 +508,7 @@ export default async function StoreProductPage({ params, searchParams }: Product
       </div>
 
       {/* ── Related products ── */}
-      <div className="mx-auto max-w-7xl px-2 pb-14 sm:px-6">
+      <div className="mx-auto max-w-7xl px-4 pb-14 sm:px-6">
         <div className="rounded-2xl border border-stone-200 bg-white shadow-sm">
           <div className="flex items-center justify-between border-b border-stone-100 px-5 py-5 sm:px-7">
             <div>

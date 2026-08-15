@@ -80,7 +80,7 @@ export default function OrderNotificationEmail({
   });
 
   return (
-    <EmailShell previewText={`New order received at ${storeName}`} width={400} radius={24}>
+    <EmailShell previewText={`New order received at ${storeName}`} width={500} radius={10}>
       <Section className="bg-emerald-600 px-6 py-8 text-white">
         <Text className="m-0 text-xs font-bold uppercase tracking-[0.18em] text-emerald-50">
           New Order Alert

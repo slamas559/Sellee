@@ -28,8 +28,8 @@ export default function WelcomeEmail({
   return (
     <EmailShell
       previewText="Welcome to Sellee, your local marketplace for WhatsApp commerce."
-      width={400}
-      radius={20}
+      width={600}
+      radius={10}
     >
       <Section className="bg-emerald-600 px-6 py-8 text-white">
               <Img

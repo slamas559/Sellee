@@ -14,6 +14,7 @@ import {
   normalizeThemePreset,
 } from "@/lib/storefront";
 import type { StoreRecord, StoreTemplate, StorefrontSectionId } from "@/types";
+import { storeUrl } from "@/lib/store-url";
 
 type StoreSetupFormProps = {
   initialStore: StoreRecord | null;
@@ -334,7 +335,7 @@ export function StoreSetupForm({ initialStore, initialEmailVerifiedAt = null }: 
     custom_niches: initialStore?.custom_niches ?? [],
   });
 
-  const shareablePath = store?.slug ? `/store/${store.slug}` : null;
+  const shareablePath = store?.slug ? storeUrl(store.slug) : null;
   const hasCoordinates = Boolean(form.latitude && form.longitude);
   const shouldPrefillAccountPhone = !initialStore?.whatsapp_number?.trim();
   const botNumber = process.env.NEXT_PUBLIC_WHATSAPP_BOT_NUMBER?.trim() ?? "";

@@ -18,6 +18,7 @@ import {
   normalizeThemePreset,
 } from "@/lib/storefront";
 import { getStorefrontPublicDataCached } from "@/lib/public-cache";
+import { storeUrl as buildStoreUrl } from "@/lib/store-url";
 import { BadgeCheck } from "lucide-react";
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
 import type { ProductRecord, StoreRecord } from "@/types";
@@ -762,8 +763,7 @@ export default async function StorePage({ params, searchParams }: StorePageProps
   const config = normalizeStorefrontConfig(store.storefront_config);
   const primaryColor = store.theme_color ?? theme.primary;
   const surfaceColor = theme.surface;
-  const appBaseUrl = (process.env.NEXTAUTH_URL || "http://localhost:3000").replace(/\/$/, "");
-  const storeUrl = `${appBaseUrl}/store/${slug}`;
+  const storeUrl = buildStoreUrl(slug);
   const bannerUrls = config.banner_urls.length > 0 ? config.banner_urls : config.secondary_banner_url ? [config.secondary_banner_url] : [];
 
   const storeJsonLd = {

@@ -17,7 +17,7 @@ export default function EmailVerificationEmail({ name, verifyUrl }: EmailVerific
   const firstName = name?.trim()?.split(/\s+/)[0] ?? "there";
 
   return (
-    <EmailShell previewText="Verify your email for Sellee" width={400} radius={20}>
+    <EmailShell previewText="Verify your email for Sellee" width={600} radius={10}>
       <Section className="bg-emerald-600 px-6 py-8 text-white">
         <Img src="https://sellee.store/icon2.png" alt="Sellee" className="mb-4 h-8 w-auto" />
         <Text className="m-0 text-xs font-bold uppercase tracking-[0.18em] text-emerald-50">
