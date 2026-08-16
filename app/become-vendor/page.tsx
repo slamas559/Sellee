@@ -131,8 +131,7 @@ function AnimatedHeadline({ text, startDelay = 0 }: { text: string; startDelay?:
 
 export default async function BecomeVendorPage() {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id) redirect("/login?callbackUrl=/become-vendor");
-  if (session.user.role === "vendor") redirect("/dashboard/store");
+  if (session?.user?.role === "vendor") redirect("/dashboard/store");
 
   return (
     <main className="w-full overflow-x-hidden pb-16 sm:pb-24">

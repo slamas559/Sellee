@@ -3,9 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { ChevronDown, ChevronRight, LayoutGrid } from "lucide-react";
-
-type CatalogCategory = { id: string; slug: string; name: string };
-type CatalogNiche = { id: string; slug: string; name: string; categories: CatalogCategory[] };
+import { useCatalog } from "@/components/layout/use-catalog";
 
 const CLOSE_DELAY_MS = 150;
 
@@ -26,39 +24,9 @@ const CLOSE_DELAY_MS = 150;
  */
 export function CategoriesMegaMenu({ compact = false }: { compact?: boolean }) {
   const [isOpen, setIsOpen] = useState(false);
-  const [niches, setNiches] = useState<CatalogNiche[] | null>(null);
-  const [error, setError] = useState(false);
+  const { niches, error, isLoading } = useCatalog();
   const containerRef = useRef<HTMLDivElement>(null);
   const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // Derived, not stored: avoids a synchronous setState call at the top of
-  // the fetch effect below just to flip a loading flag.
-  const isLoading = isOpen && niches === null && !error;
-
-  useEffect(() => {
-    if (!isOpen || niches !== null) return;
-
-    let cancelled = false;
-
-    fetch("/api/catalog")
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data: { niches?: CatalogNiche[] } | null) => {
-        if (cancelled) return;
-        if (data?.niches) {
-          setNiches(data.niches.filter((niche) => niche.categories.length > 0));
-        } else {
-          setError(true);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) setError(true);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;

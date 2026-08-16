@@ -1,0 +1,5 @@
+import { DashboardIntegrationsLoadingSkeleton } from "@/components/shared/loading-skeletons";
+
+export default function Loading() {
+  return <DashboardIntegrationsLoadingSkeleton />;
+}

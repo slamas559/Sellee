@@ -20,10 +20,7 @@ function rootDomain(): string {
 export default async function proxy(req: NextRequest) {
   const { pathname, search } = req.nextUrl;
 
-  // ── Dashboard auth guard ──
-  // (Merged in from the previous auth-only proxy.ts, alongside the
-  // storefront-subdomain logic below - Next.js only loads a single
-  // proxy.ts/middleware.ts per project, so both concerns live here.)
+  
   if (pathname.startsWith("/dashboard")) {
     const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
     if (!token) {
