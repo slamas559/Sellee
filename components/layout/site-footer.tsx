@@ -2,19 +2,37 @@
 
 import { PhoneCall } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export function SiteFooter() {
   const [showToTop, setShowToTop] = useState(false);
+  const hideTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     function onScroll() {
-      setShowToTop(window.scrollY > 360);
+      const shouldShow = window.scrollY > 360;
+      setShowToTop(shouldShow);
+
+      if (hideTimerRef.current) {
+        window.clearTimeout(hideTimerRef.current);
+      }
+
+      if (shouldShow) {
+        hideTimerRef.current = window.setTimeout(() => {
+          setShowToTop(false);
+        }, 1800);
+      }
     }
 
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
+
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      if (hideTimerRef.current) {
+        window.clearTimeout(hideTimerRef.current);
+      }
+    };
   }, []);
 
   function scrollToTop() {
@@ -150,7 +168,7 @@ export function SiteFooter() {
           type="button"
           aria-label="Back to top"
           onClick={scrollToTop}
-          className="fixed bottom-33 right-6 z-40 inline-flex h-10 w-10 items-center justify-center rounded-full border border-emerald-200 bg-white text-emerald-700 shadow-lg transition hover:bg-emerald-50 sm:bottom-23 sm:right-9"
+          className="fixed bottom-32 right-6 z-40 inline-flex h-10 w-10 items-center justify-center rounded-full border border-emerald-200 bg-white text-emerald-700 shadow-lg transition hover:bg-emerald-50 sm:bottom-23 sm:right-9"
         >
           <svg
             viewBox="0 0 24 24"

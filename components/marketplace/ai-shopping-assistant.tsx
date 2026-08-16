@@ -233,7 +233,7 @@ export function AiShoppingAssistant() {
   const suggestions = storeContext ? STORE_SUGGESTIONS : BASE_SUGGESTIONS;
 
   return (
-    <div className="fixed bottom-5 right-4 z-50 flex flex-col items-end sm:bottom-6 sm:right-6">
+    <div className="fixed bottom-13 right-4 z-50 flex flex-col items-end sm:bottom-6 sm:right-6">
       {isOpen ? (
         <div className="mb-3 flex h-[70vh] max-h-[560px] w-[90vw] max-w-[380px] flex-col overflow-hidden rounded-3xl border border-emerald-200/80 bg-white shadow-[0_28px_70px_-25px_rgba(16,185,129,0.45)]">
           <div className="flex items-center justify-between gap-2 border-b border-slate-100 bg-emerald-50/80 px-4 py-3">
