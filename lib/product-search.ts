@@ -37,6 +37,7 @@ export type ProductRow = {
   description: string | null;
   category: string | null;
   price: number;
+  compare_at_price: number | null;
   image_url: string | null;
   image_urls: string[] | null;
   rating_avg: number;
@@ -110,7 +111,7 @@ export async function searchProducts(
 
   const { data: products, error: productsError } = await supabase
     .from("products")
-    .select("id, store_id, name, description, category, price, image_url, image_urls, rating_avg, rating_count, stock_count, created_at")
+    .select("id, store_id, name, description, category, price, compare_at_price, image_url, image_urls, rating_avg, rating_count, stock_count, created_at")
     .eq("is_available", true)
     .in("store_id", allStoreIds)
     .order("created_at", { ascending: false })

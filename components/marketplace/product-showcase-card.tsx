@@ -7,7 +7,7 @@ import type { KeyboardEvent, MouseEvent } from "react";
 import { useMemo, useRef, useState } from "react";
 import { StarRating } from "@/components/store/star-rating";
 import { formatNaira, formatProductPathSegment } from "@/lib/format";
-import { storeUrl } from "@/lib/store-url";
+import { storeUrl, storeProductUrl, storeSubdomainsEnabled } from "@/lib/store-url";
 import type { StoreTemplate } from "@/types";
 import { BadgeCheck, ChevronLeft, ChevronRight } from "lucide-react";
 
@@ -35,6 +35,14 @@ type ProductShowcaseCardProps = {
   variant?: "home" | "marketplace" | "store";
   template?: StoreTemplate;
   source?: "home" | "marketplace" | "store" | "vendors";
+  /**
+   * The vendor slug the current page is being served under via subdomain
+   * (e.g. "olas-gadgets" when viewing olas-gadgets.sellee.store), or
+   * undefined/null on the ordinary apex/path-based route. See
+   * lib/current-subdomain.ts for why this changes which link form is
+   * correct.
+   */
+  currentSubdomainSlug?: string | null;
 };
 
 export function ProductShowcaseCard({
@@ -43,11 +51,32 @@ export function ProductShowcaseCard({
   variant = "marketplace",
   template = "classic",
   source,
+  currentSubdomainSlug,
 }: ProductShowcaseCardProps) {
   const router = useRouter();
   const didPrefetchRef = useRef(false);
   const navigationSource = source ?? (variant === "home" ? "home" : variant);
-  const productHref = `/store/${store.slug}/${formatProductPathSegment(product)}?from=${navigationSource}`;
+  const productPathRef = formatProductPathSegment(product);
+  const productHref =
+    currentSubdomainSlug && currentSubdomainSlug === store.slug
+      ? // Already on this exact store's subdomain: a short relative path,
+        // no "/store/:slug" prefix - proxy.ts resolves it against the
+        // current subdomain automatically. Adding the prefix here too would
+        // double it up into "/store/:slug/store/:slug/..." and 404.
+        `/${productPathRef}?from=${navigationSource}`
+      : storeSubdomainsEnabled()
+        ? // Subdomains are live and this product belongs to some OTHER
+          // store than the one currently being viewed (including "no
+          // store at all" - e.g. clicking from the homepage or
+          // marketplace). A relative "/store/:slug/..." link would just
+          // get redirected to this exact URL by proxy.ts anyway, but that
+          // redirect happens mid cross-origin RSC fetch, which Next's
+          // client router can't follow - it always logs "Failed to fetch
+          // RSC payload" and falls back to a full reload. Building the
+          // real URL up front skips that failed round trip entirely.
+          `${storeProductUrl(store.slug, productPathRef)}?from=${navigationSource}`
+        : // Subdomains disabled entirely: old relative path form.
+          `/store/${store.slug}/${productPathRef}?from=${navigationSource}`;
   const images = useMemo(() => {
     const normalized = (product.image_urls ?? []).filter(Boolean);
     if (normalized.length > 0) return normalized;
@@ -91,16 +120,28 @@ export function ProductShowcaseCard({
     setIndex((prev) => (prev - 1 + images.length) % images.length);
   }
 
+  function goToProduct() {
+    // productHref is a fully-qualified cross-origin URL exactly when this
+    // product belongs to a different store than the one the current
+    // subdomain is serving - Next's client-side router can't navigate
+    // across origins, so that case needs a real browser navigation instead.
+    if (productHref.startsWith("http")) {
+      window.location.href = productHref;
+    } else {
+      router.push(productHref);
+    }
+  }
+
   function handleCardClick(event: MouseEvent<HTMLElement>) {
     const target = event.target as HTMLElement;
     if (target.closest("button, a")) return;
-    router.push(productHref);
+    goToProduct();
   }
 
   function handleCardKeyDown(event: KeyboardEvent<HTMLElement>) {
     if (event.key !== "Enter" && event.key !== " ") return;
     event.preventDefault();
-    router.push(productHref);
+    goToProduct();
   }
 
   function prefetchProduct() {

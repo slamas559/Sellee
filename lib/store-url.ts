@@ -15,6 +15,25 @@ function publicAppUrl(): string {
   return process.env.NEXT_PUBLIC_APP_URL?.trim() || DEFAULT_APP_URL;
 }
 
+/**
+ * Builds "<protocol>//<hostname><port>" using the protocol and port from
+ * NEXT_PUBLIC_APP_URL. Hardcoding "https://" here would mean every
+ * subdomain link built while running locally still points at the real
+ * production site instead of localhost - deriving it from
+ * NEXT_PUBLIC_APP_URL instead means setting that to
+ * "http://localhost:3000" for local dev is enough to make every generated
+ * link actually testable on your machine.
+ */
+function buildOrigin(hostname: string): string {
+  try {
+    const url = new URL(publicAppUrl());
+    const port = url.port ? `:${url.port}` : "";
+    return `${url.protocol}//${hostname}${port}`;
+  } catch {
+    return `https://${hostname}`;
+  }
+}
+
 /** The bare root domain the app is served from (no protocol, no "www."). */
 function rootDomain(): string {
   const envDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN?.trim();
@@ -37,10 +56,27 @@ export function storeSubdomainsEnabled(): boolean {
   return process.env.NEXT_PUBLIC_ENABLE_STORE_SUBDOMAINS === "true";
 }
 
+/**
+ * Absolute URL for a path on the MAIN app - the real homepage, marketplace,
+ * vendors directory, etc. - as opposed to a vendor's own subdomain.
+ *
+ * Needed for "exit" links (e.g. a product page's "Home"/"Marketplace"
+ * breadcrumb) when the current page is being viewed on a vendor's
+ * subdomain: a plain relative "/" would resolve to THIS VENDOR'S OWN store
+ * home instead of the real site homepage, because proxy.ts's rewrite
+ * resolves a bare path against whatever subdomain the browser is currently
+ * on - it has no way to know the link was meant to mean "leave this store
+ * entirely."
+ */
+export function mainAppUrl(path = "/"): string {
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  return `${publicAppUrl().replace(/\/$/, "")}${normalizedPath}`;
+}
+
 /** Public, shareable URL for a vendor's storefront. */
 export function storeUrl(slug: string): string {
   if (storeSubdomainsEnabled()) {
-    return `https://${slug}.${rootDomain()}`;
+    return buildOrigin(`${slug}.${rootDomain()}`);
   }
   return `${publicAppUrl().replace(/\/$/, "")}/store/${slug}`;
 }
@@ -48,7 +84,7 @@ export function storeUrl(slug: string): string {
 /** Public, shareable URL for a single product on a vendor's storefront. */
 export function storeProductUrl(slug: string, productRef: string): string {
   if (storeSubdomainsEnabled()) {
-    return `https://${slug}.${rootDomain()}/${productRef}`;
+    return `${buildOrigin(`${slug}.${rootDomain()}`)}/${productRef}`;
   }
   return `${publicAppUrl().replace(/\/$/, "")}/store/${slug}/${productRef}`;
 }

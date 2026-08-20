@@ -20,6 +20,7 @@ type ProductFormState = {
   category: string;
   custom_category: string;
   price: string;
+  compare_at_price: string;
   stock_count: string;
   is_available: boolean;
   images: File[];
@@ -36,6 +37,7 @@ const initialForm: ProductFormState = {
   category: "",
   custom_category: "",
   price: "",
+  compare_at_price: "",
   stock_count: "0",
   is_available: true,
   images: [],
@@ -114,6 +116,7 @@ export function ProductsManager({ initialProducts }: ProductsManagerProps) {
       category: isCustomCategory ? "__other__" : rawCategory,
       custom_category: isCustomCategory ? rawCategory : "",
       price: String(product.price),
+      compare_at_price: product.compare_at_price ? String(product.compare_at_price) : "",
       stock_count: String(product.stock_count),
       is_available: product.is_available,
       images: [],
@@ -210,6 +213,23 @@ export function ProductsManager({ initialProducts }: ProductsManagerProps) {
       return;
     }
 
+    const compareAtPriceNumber = form.compare_at_price.trim()
+      ? Number(form.compare_at_price)
+      : null;
+
+    if (compareAtPriceNumber !== null) {
+      if (Number.isNaN(compareAtPriceNumber) || compareAtPriceNumber <= 0) {
+        setError("Old price must be a positive number.");
+        setIsSaving(false);
+        return;
+      }
+      if (compareAtPriceNumber <= priceNumber) {
+        setError("Old price must be higher than the current price.");
+        setIsSaving(false);
+        return;
+      }
+    }
+
     if (!Number.isInteger(stockNumber) || stockNumber < 0) {
       setError("Stock count must be a whole number 0 or more.");
       setIsSaving(false);
@@ -231,6 +251,7 @@ export function ProductsManager({ initialProducts }: ProductsManagerProps) {
     body.append("category", normalizedCategory);
     body.append("category_is_other", String(form.category === "__other__"));
     body.append("price", String(priceNumber));
+    body.append("compare_at_price", compareAtPriceNumber !== null ? String(compareAtPriceNumber) : "");
     body.append("stock_count", String(stockNumber));
     body.append("is_available", String(form.is_available));
     body.append("remove_image", String(form.remove_image));
@@ -336,6 +357,20 @@ export function ProductsManager({ initialProducts }: ProductsManagerProps) {
               onChange={(event) => setForm((prev) => ({ ...prev, price: event.target.value }))}
               className="w-full rounded-md border border-slate-200 px-3 py-2 outline-none ring-emerald-300 focus:ring-2"
               placeholder="1500"
+            />
+          </label>
+
+          <label className="space-y-2 text-sm">
+            <span className="font-medium text-slate-700">Old Price (optional)</span>
+            <input
+              type="number"
+              min="0"
+              value={form.compare_at_price}
+              onChange={(event) =>
+                setForm((prev) => ({ ...prev, compare_at_price: event.target.value }))
+              }
+              className="w-full rounded-md border border-slate-200 px-3 py-2 outline-none ring-emerald-300 focus:ring-2"
+              placeholder="e.g. 2000 — shown struck-through as a promo"
             />
           </label>
 
@@ -738,8 +773,13 @@ export function ProductsManager({ initialProducts }: ProductsManagerProps) {
                   </div>
 
                   <h3 className="text-base font-semibold text-slate-900">{product.name}</h3>
-                  <p className="mt-1 text-sm font-medium text-slate-700">
-                    {formatNaira(Number(product.price))}
+                  <p className="mt-1 flex items-center gap-2 text-sm font-medium text-slate-700">
+                    <span>{formatNaira(Number(product.price))}</span>
+                    {product.compare_at_price && product.compare_at_price > product.price ? (
+                      <span className="text-xs font-normal text-slate-400 line-through">
+                        {formatNaira(Number(product.compare_at_price))}
+                      </span>
+                    ) : null}
                   </p>
                   {product.category ? (
                     <p className="mt-1 text-xs text-slate-500">Category: {product.category}</p>

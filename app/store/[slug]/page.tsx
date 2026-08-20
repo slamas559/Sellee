@@ -11,6 +11,7 @@ import { SocialShareActions } from "@/components/shared/social-share-actions";
 import { StarRating } from "@/components/store/star-rating";
 import { VendorReviewsSection } from "@/components/reviews/vendor-reviews-section";
 import { authOptions } from "@/lib/auth";
+import { getCurrentSubdomainSlug } from "@/lib/current-subdomain";
 import {
   getThemeByPreset,
   normalizeStoreTemplate,
@@ -75,19 +76,19 @@ export async function generateMetadata({ params }: StorePageProps): Promise<Meta
 // ─── Shared search/filter controls ──────────────────────────────────────────
 
 function StoreSearchBar({
-  slug,
+  homeHref,
   query,
   selectedCategory,
   categories,
 }: {
-  slug: string;
+  homeHref: string;
   query: string;
   selectedCategory: string;
   categories: string[];
 }) {
   return (
     <div className="space-y-2">
-      <form className="flex flex-nowrap items-center gap-2" action={`/store/${slug}`}>
+      <form className="flex flex-nowrap items-center gap-2" action={homeHref}>
         <input
           name="q"
           defaultValue={query}
@@ -105,7 +106,7 @@ function StoreSearchBar({
       {categories.length > 0 && (
         <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none]">
           <Link
-            href={`/store/${slug}${query ? `?q=${encodeURIComponent(query)}` : ""}`}
+            href={`${homeHref}${query ? `?q=${encodeURIComponent(query)}` : ""}`}
             className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
               !selectedCategory
                 ? "border-emerald-600 bg-emerald-600 text-white"
@@ -117,7 +118,7 @@ function StoreSearchBar({
           {categories.map((cat) => (
             <Link
               key={cat}
-              href={`/store/${slug}?category=${encodeURIComponent(cat)}${query ? `&q=${encodeURIComponent(query)}` : ""}`}
+              href={`${homeHref}?category=${encodeURIComponent(cat)}${query ? `&q=${encodeURIComponent(query)}` : ""}`}
               className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
                 selectedCategory === cat
                   ? "border-emerald-600 bg-emerald-600 text-white"
@@ -152,6 +153,8 @@ function MarketTemplate({
   storeUrl,
   bannerUrls,
   storeJsonLd,
+  currentSubdomainSlug,
+  storeHomeHref,
 }: TemplateProps) {
   return (
     <>
@@ -235,7 +238,7 @@ function MarketTemplate({
         {/* Products */}
         <div className="mx-auto max-w-7xl px-2 py-3 sm:px-4">
           <div className="mb-4">
-            <StoreSearchBar slug={store.slug} query={query} selectedCategory={selectedCategory} categories={categories} />
+            <StoreSearchBar homeHref={storeHomeHref} query={query} selectedCategory={selectedCategory} categories={categories} />
           </div>
           {products.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-slate-300 bg-white py-16 text-center text-sm text-slate-500">No products match your search.</div>
@@ -243,7 +246,7 @@ function MarketTemplate({
             <div className="mt-4 grid grid-cols-2 justify-items-center gap-1 [@media(max-width:320px)]:grid-cols-1 sm:mt-5 sm:gap-3 lg:grid-cols-3 xl:grid-cols-4">
               {products.map((p) => (
                 <div key={p.id} className="w-full max-w-[320px] space-y-2">
-                  <ProductCard product={p} template="grocery_promo" store={{ name: store.name, slug: store.slug, logo_url: store.logo_url, rating_avg: store.rating_avg, rating_count: store.rating_count, is_verified: store.is_verified }} />
+                  <ProductCard product={p} template="grocery_promo" store={{ name: store.name, slug: store.slug, logo_url: store.logo_url, rating_avg: store.rating_avg, rating_count: store.rating_count, is_verified: store.is_verified }} currentSubdomainSlug={currentSubdomainSlug} />
                 </div>
               ))}
             </div>
@@ -278,6 +281,8 @@ function EditorialTemplate({
   storeUrl,
   bannerUrls,
   storeJsonLd,
+  currentSubdomainSlug,
+  storeHomeHref,
 }: TemplateProps) {
   const featured = products.slice(0, 4);
   const rest = products.slice(4);
@@ -358,7 +363,7 @@ function EditorialTemplate({
             <div className="flex gap-4 overflow-x-auto pb-2 [scrollbar-width:none]">
               {featured.map((p) => (
                 <div key={p.id} className="w-[56vw] max-w-[280px] shrink-0 sm:max-w-[280px]">
-                  <ProductCard product={p} template="fashion_editorial" store={{ name: store.name, slug: store.slug, logo_url: store.logo_url, rating_avg: store.rating_avg, rating_count: store.rating_count, is_verified: store.is_verified }} />
+                  <ProductCard product={p} template="fashion_editorial" store={{ name: store.name, slug: store.slug, logo_url: store.logo_url, rating_avg: store.rating_avg, rating_count: store.rating_count, is_verified: store.is_verified }} currentSubdomainSlug={currentSubdomainSlug} />
                 </div>
               ))}
             </div>
@@ -377,7 +382,7 @@ function EditorialTemplate({
           <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">{rest.length > 0 ? "All products" : "Products"}</p>
             <div className="w-full max-w-md">
-              <StoreSearchBar slug={store.slug} query={query} selectedCategory={selectedCategory} categories={categories} />
+              <StoreSearchBar homeHref={storeHomeHref} query={query} selectedCategory={selectedCategory} categories={categories} />
             </div>
           </div>
           {products.length === 0 ? (
@@ -386,7 +391,7 @@ function EditorialTemplate({
             <div className="mt-4 grid grid-cols-2 justify-items-center gap-1 [@media(max-width:320px)]:grid-cols-1 sm:mt-5 sm:gap-3 lg:grid-cols-3 xl:grid-cols-4">
               {(rest.length > 0 ? rest : products).map((p) => (
                 <div key={p.id} className="w-full max-w-[320px] space-y-2">
-                  <ProductCard product={p} template="fashion_editorial" store={{ name: store.name, slug: store.slug, logo_url: store.logo_url, rating_avg: store.rating_avg, rating_count: store.rating_count, is_verified: store.is_verified }} />
+                  <ProductCard product={p} template="fashion_editorial" store={{ name: store.name, slug: store.slug, logo_url: store.logo_url, rating_avg: store.rating_avg, rating_count: store.rating_count, is_verified: store.is_verified }} currentSubdomainSlug={currentSubdomainSlug} />
                 </div>
               ))}
             </div>
@@ -422,6 +427,8 @@ function ShowcaseTemplate({
   bannerUrls,
   storeJsonLd,
   surfaceColor,
+  currentSubdomainSlug,
+  storeHomeHref,
 }: TemplateProps) {
   return (
     <>
@@ -508,7 +515,7 @@ function ShowcaseTemplate({
             </div>
             {/* Filters */}
             <div className="mb-4">
-              <StoreSearchBar slug={store.slug} query={query} selectedCategory={selectedCategory} categories={categories} />
+              <StoreSearchBar homeHref={storeHomeHref} query={query} selectedCategory={selectedCategory} categories={categories} />
             </div>
             {products.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-slate-300 bg-white py-16 text-center text-sm text-slate-500">No products found.</div>
@@ -516,7 +523,7 @@ function ShowcaseTemplate({
               <div className="mt-4 grid grid-cols-2 justify-items-center gap-1 [@media(max-width:320px)]:grid-cols-1 sm:mt-5 sm:gap-3 lg:grid-cols-3 xl:grid-cols-4">
                 {products.map((p) => (
                   <div key={p.id} className="w-full max-w-[320px] space-y-2">
-                  <ProductCard product={p} template="lifestyle_showcase" store={{ name: store.name, slug: store.slug, logo_url: store.logo_url, rating_avg: store.rating_avg, rating_count: store.rating_count, is_verified: store.is_verified }} />
+                  <ProductCard product={p} template="lifestyle_showcase" store={{ name: store.name, slug: store.slug, logo_url: store.logo_url, rating_avg: store.rating_avg, rating_count: store.rating_count, is_verified: store.is_verified }} currentSubdomainSlug={currentSubdomainSlug} />
                   </div>
                 ))}
               </div>
@@ -559,6 +566,8 @@ function GridTemplate({
   storeUrl,
   bannerUrls,
   storeJsonLd,
+  currentSubdomainSlug,
+  storeHomeHref,
 }: TemplateProps) {
   return (
     <>
@@ -650,7 +659,7 @@ function GridTemplate({
           <div>
             {/* Mobile search */}
             <div className="mb-4 lg:hidden">
-              <StoreSearchBar slug={store.slug} query={query} selectedCategory={selectedCategory} categories={categories} />
+              <StoreSearchBar homeHref={storeHomeHref} query={query} selectedCategory={selectedCategory} categories={categories} />
             </div>
             {/* Desktop search bar */}
             <div className="mb-4 hidden lg:block">
@@ -684,7 +693,7 @@ function GridTemplate({
               <div className="mt-4 grid grid-cols-2 justify-items-center gap-1 [@media(max-width:320px)]:grid-cols-1 sm:mt-5 sm:gap-3 lg:grid-cols-3 xl:grid-cols-4">
                 {products.map((p) => (
                   <div key={p.id} className="w-full max-w-[320px] space-y-2">
-                    <ProductCard key={p.id} product={p} template="modern_grid" store={{ name: store.name, slug: store.slug, logo_url: store.logo_url, rating_avg: store.rating_avg, rating_count: store.rating_count, is_verified: store.is_verified }} />
+                    <ProductCard key={p.id} product={p} template="modern_grid" store={{ name: store.name, slug: store.slug, logo_url: store.logo_url, rating_avg: store.rating_avg, rating_count: store.rating_count, is_verified: store.is_verified }} currentSubdomainSlug={currentSubdomainSlug} />
                   </div>
                 ))}
               </div>
@@ -720,6 +729,12 @@ type TemplateProps = {
   storeUrl: string;
   bannerUrls: string[];
   storeJsonLd: object;
+  /** See lib/current-subdomain.ts - which vendor slug (if any) this request
+   *  is being served under via subdomain rewrite. */
+  currentSubdomainSlug: string | null;
+  /** Correct href for "this store's own home page", in both subdomain and
+   *  apex/path-based modes. */
+  storeHomeHref: string;
 };
 
 // ─── Page ────────────────────────────────────────────────────────────────────
@@ -737,6 +752,14 @@ export default async function StorePage({ params, searchParams }: StorePageProps
   const products = storefrontData.products;
   const nicheNames = storefrontData.nicheNames;
   const completedOrdersCount = storefrontData.completedOrdersCount;
+
+  // Whether THIS request is being served via olas-gadgets.sellee.store (vs
+  // the plain sellee.store/store/olas-gadgets path). Needed so links back
+  // to this store's own home page and to its own products use the right
+  // form - see lib/current-subdomain.ts.
+  const currentSubdomainSlug = await getCurrentSubdomainSlug();
+  const isOwnSubdomain = currentSubdomainSlug === slug;
+  const storeHomeHref = isOwnSubdomain ? "/" : `/store/${slug}`;
 
   let isFollowing = false;
   if (session?.user?.id) {
@@ -802,6 +825,8 @@ export default async function StorePage({ params, searchParams }: StorePageProps
     storeUrl,
     bannerUrls,
     storeJsonLd,
+    currentSubdomainSlug,
+    storeHomeHref,
   };
 
   if (template === "fashion_editorial") return <EditorialTemplate {...props} />;

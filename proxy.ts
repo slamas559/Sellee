@@ -20,7 +20,10 @@ function rootDomain(): string {
 export default async function proxy(req: NextRequest) {
   const { pathname, search } = req.nextUrl;
 
-  
+  // ── Dashboard auth guard ──
+  // (Merged in from the previous auth-only proxy.ts, alongside the
+  // storefront-subdomain logic below - Next.js only loads a single
+  // proxy.ts/middleware.ts per project, so both concerns live here.)
   if (pathname.startsWith("/dashboard")) {
     const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
     if (!token) {
@@ -52,7 +55,20 @@ export default async function proxy(req: NextRequest) {
     }
 
     // "olas-gadgets.sellee.store/watch-ultra-2" -> "/store/olas-gadgets/watch-ultra-2"
-    const rewrittenPath = `/store/${slug}${pathname === "/" ? "" : pathname}`;
+    //
+    // Defensive case: some link elsewhere in the app might still be built
+    // the old way, as a plain "/store/:slug/..." path (that's correct on
+    // the main domain, where it's an absolute path from the root - but on a
+    // subdomain, a relative link like that resolves against the CURRENT
+    // subdomain origin, arrives here as pathname "/store/olas-gadgets/...",
+    // and prefixing it AGAIN would produce
+    // "/store/olas-gadgets/store/olas-gadgets/..." - a 404). If the
+    // incoming path already starts with "/store/<this same slug>", use it
+    // as-is instead of prefixing it a second time.
+    const alreadyPrefixed = pathname === `/store/${slug}` || pathname.startsWith(`/store/${slug}/`);
+    const rewrittenPath = alreadyPrefixed
+      ? pathname
+      : `/store/${slug}${pathname === "/" ? "" : pathname}`;
     const rewriteUrl = new URL(rewrittenPath + search, req.url);
 
     // The browser URL bar (and therefore usePathname() client-side) never
@@ -72,8 +88,20 @@ export default async function proxy(req: NextRequest) {
     if (match) {
       const [, slug, rest = ""] = match;
       if (!RESERVED_SUBDOMAINS.has(slug)) {
-        const redirectUrl = new URL(`https://${slug}.${domain}${rest ?? ""}${search}`);
-        return NextResponse.redirect(redirectUrl, 308);
+        // Match the actual protocol/port this request came in on, rather
+        // than hardcoding "https://" with no port - locally that builds an
+        // unreachable "https://olas-gadgets.localhost" (wrong scheme, dev
+        // server only listens on plain http:3000), which is exactly what
+        // was causing "Failed to fetch" when testing on localhost.
+        const protocol = req.nextUrl.protocol; // "http:" or "https:"
+        const port = req.nextUrl.port ? `:${req.nextUrl.port}` : "";
+        const redirectUrl = new URL(`${protocol}//${slug}.${domain}${port}${rest ?? ""}${search}`);
+        // 307, not 308: a 308 is a *permanent* redirect, which browsers
+        // cache aggressively and will keep reusing even after this logic
+        // changes again later - not something to bake in while this
+        // rollout is still settling. 307 preserves the same "don't change
+        // the request method" guarantee without the permanent caching.
+        return NextResponse.redirect(redirectUrl, 307);
       }
     }
   }

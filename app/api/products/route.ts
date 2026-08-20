@@ -14,11 +14,15 @@ const productSchema = z.object({
   description: z.string().max(500).optional().default(""),
   category: z.string().max(50).optional().default(""),
   price: z.number().min(0),
+  compare_at_price: z.number().positive().nullable().optional().default(null),
   stock_count: z.number().int().min(0),
   is_available: z.boolean().default(true),
   brand: z.string().max(80).optional().default(""),
   condition: z.string().max(20).optional().default(""),
-});
+}).refine(
+  (data) => data.compare_at_price === null || data.compare_at_price === undefined || data.compare_at_price > data.price,
+  { message: "compare_at_price must be greater than price", path: ["compare_at_price"] },
+);
 
 const ALLOWED_CONDITIONS = new Set(["new", "used", "refurbished"]);
 
@@ -200,7 +204,7 @@ export async function GET() {
     const supabase = createAdminSupabaseClient();
     const { data, error } = await supabase
       .from("products")
-      .select("id, store_id, slug, name, description, category, price, image_url, image_urls, rating_avg, rating_count, stock_count, is_available, created_at, brand, condition, attributes")
+      .select("id, store_id, slug, name, description, category, price, compare_at_price, image_url, image_urls, rating_avg, rating_count, stock_count, is_available, created_at, brand, condition, attributes")
       .eq("store_id", store.id)
       .order("created_at", { ascending: false });
 
@@ -241,6 +245,10 @@ export async function POST(request: Request) {
       description: formData.get("description") ?? "",
       category: formData.get("category") ?? "",
       price: Number(formData.get("price")),
+      compare_at_price:
+        formData.get("compare_at_price") && String(formData.get("compare_at_price")).trim()
+          ? Number(formData.get("compare_at_price"))
+          : null,
       stock_count: Number(formData.get("stock_count")),
       is_available: formData.get("is_available") === "true",
       brand: formData.get("brand") ?? "",
@@ -313,6 +321,7 @@ export async function POST(request: Request) {
         description: parsed.data.description || null,
         category: normalizedCategory || null,
         price: parsed.data.price,
+        compare_at_price: parsed.data.compare_at_price,
         image_url: imageUrl,
         image_urls: uploadedImageUrls,
         stock_count: parsed.data.stock_count,
@@ -321,7 +330,7 @@ export async function POST(request: Request) {
         condition: normalizeCondition(parsed.data.condition),
         attributes,
       })
-      .select("id, store_id, slug, name, description, category, price, image_url, image_urls, rating_avg, rating_count, stock_count, is_available, created_at, brand, condition, attributes")
+      .select("id, store_id, slug, name, description, category, price, compare_at_price, image_url, image_urls, rating_avg, rating_count, stock_count, is_available, created_at, brand, condition, attributes")
       .single();
 
     if (error || !data) {
@@ -339,4 +348,3 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unexpected create product error." }, { status: 500 });
   }
 }
-

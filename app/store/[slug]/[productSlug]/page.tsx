@@ -7,7 +7,8 @@ import { OrderButton } from "@/components/store/order-button";
 import WishlistButton from "@/components/store/wishlist-button";
 import { ProductMediaGallery } from "@/components/store/product-media-gallery";
 import { ProductDetailsSection } from "@/components/store/product-details-section";
-import { storeUrl as buildStoreUrl, storeProductUrl } from "@/lib/store-url";
+import { storeUrl as buildStoreUrl, storeProductUrl, mainAppUrl } from "@/lib/store-url";
+import { getCurrentSubdomainSlug } from "@/lib/current-subdomain";
 import { ProductReviewsSection } from "@/components/reviews/product-reviews-section";
 import { StarRating } from "@/components/store/star-rating";
 import { formatNaira, formatProductPathSegment, parseProductPathSegment } from "@/lib/format";
@@ -263,14 +264,21 @@ export default async function StoreProductPage({ params, searchParams }: Product
   };
 
   const from = Array.isArray(query.from) ? query.from[0] : query.from;
+  // See lib/current-subdomain.ts - which vendor slug (if any) this request
+  // is being served under via subdomain rewrite. Needed so the "back to
+  // store" breadcrumb (and the same-store product carousel below) don't
+  // build a relative "/store/:slug" link, which double-prefixes into a 404
+  // when the browser is already on that store's subdomain.
+  const currentSubdomainSlug = await getCurrentSubdomainSlug();
+  const storeHomeHref = currentSubdomainSlug === store.slug ? "/" : `/store/${store.slug}`;
   const backTarget =
     from === "home"
-      ? { href: "/", label: "Home" }
+      ? { href: currentSubdomainSlug ? mainAppUrl("/") : "/", label: "Home" }
       : from === "marketplace"
-        ? { href: "/marketplace", label: "Marketplace" }
+        ? { href: currentSubdomainSlug ? mainAppUrl("/marketplace") : "/marketplace", label: "Marketplace" }
         : from === "vendors"
-          ? { href: "/vendors", label: "Vendors" }
-          : { href: `/store/${store.slug}`, label: store.name };
+          ? { href: currentSubdomainSlug ? mainAppUrl("/vendors") : "/vendors", label: "Vendors" }
+          : { href: storeHomeHref, label: store.name };
 
   const isInStock = product.stock_count > 0;
 
@@ -501,6 +509,7 @@ export default async function StoreProductPage({ params, searchParams }: Product
                         rating_count: store.rating_count,
                       }}
                       variant="store"
+                      currentSubdomainSlug={currentSubdomainSlug}
                     />
                   </div>
                 ))}
@@ -544,6 +553,7 @@ export default async function StoreProductPage({ params, searchParams }: Product
                       product={item}
                       store={item.store}
                       variant="marketplace"
+                      currentSubdomainSlug={currentSubdomainSlug}
                     />
                   </div>
                 ))}

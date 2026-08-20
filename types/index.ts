@@ -69,6 +69,7 @@ export type ProductRecord = {
   description: string | null;
   category: string | null;
   price: number;
+  compare_at_price: number | null;
   image_url: string | null;
   image_urls: string[] | null;
   rating_avg: number | null;

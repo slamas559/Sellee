@@ -40,6 +40,7 @@ export type PublicProductLite = {
   description: string | null;
   category: string | null;
   price: number;
+  compare_at_price: number | null;
   image_url: string | null;
   image_urls: string[] | null;
   rating_avg: number | null;
@@ -78,7 +79,7 @@ const getHomeMarketplaceBaseDataInternal = async () => {
         .limit(24),
       supabase
         .from("products")
-        .select("id, store_id, slug, name, description, category, price, image_url, image_urls, rating_avg, rating_count, stock_count, created_at")
+        .select("id, store_id, slug, name, description, category, price, compare_at_price, image_url, image_urls, rating_avg, rating_count, stock_count, created_at")
         .eq("is_available", true)
         .order("created_at", { ascending: false })
         .limit(500),
@@ -216,7 +217,7 @@ const getMarketplaceProductsByStoreIdsInternal = async (
 
   let query = supabase
     .from("products")
-    .select("id, store_id, slug, name, description, category, price, image_url, image_urls, rating_avg, rating_count, stock_count, created_at")
+    .select("id, store_id, slug, name, description, category, price, compare_at_price, image_url, image_urls, rating_avg, rating_count, stock_count, created_at")
     .eq("is_available", true)
     .in("store_id", storeIds)
     .order("created_at", { ascending: false })
@@ -255,7 +256,7 @@ const getStorefrontPublicDataInternal = async (slug: string) => {
   const [{ data: products }, { data: storeNiches }, { count: completedOrdersCount }] = await Promise.all([
     supabase
       .from("products")
-      .select("id, store_id, slug, name, description, category, price, image_url, image_urls, rating_avg, rating_count, stock_count, is_available, created_at, brand, condition, attributes")
+      .select("id, store_id, slug, name, description, category, price, compare_at_price, image_url, image_urls, rating_avg, rating_count, stock_count, is_available, created_at, brand, condition, attributes")
       .eq("store_id", store.id)
       .eq("is_available", true)
       .order("created_at", { ascending: false }),
@@ -354,7 +355,7 @@ const getNicheLocationPageDataInternal = async (
   const { data: productsRaw } = await supabase
     .from("products")
     .select(
-      "id, store_id, slug, name, description, category, price, image_url, image_urls, rating_avg, rating_count, stock_count, is_available, created_at",
+      "id, store_id, slug, name, description, category, price, compare_at_price, image_url, image_urls, rating_avg, rating_count, stock_count, is_available, created_at",
     )
     .in("store_id", storeIds)
     .eq("is_available", true)

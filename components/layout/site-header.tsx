@@ -9,6 +9,7 @@ import logoText from "@/app/logos/image-text-logo.png";
 import { CategoriesMegaMenu } from "@/components/layout/categories-mega-menu";
 import { UserMenu } from "@/components/layout/user-menu";
 import { useSession } from "next-auth/react";
+import { mainAppUrl } from "@/lib/store-url";
 
 const HIDDEN_ON_ROUTES = ["/login", "/register", "/forgot-password", "/reset-password"];
 
@@ -29,6 +30,17 @@ type SiteHeaderProps = {
 export default function SiteHeader({ effectivePathname }: SiteHeaderProps = {}) {
   const observedPathname = usePathname() || "/";
   const pathname = effectivePathname || observedPathname;
+  // effectivePathname is only ever set (see the prop doc above) when this
+  // request is being served via a vendor's subdomain - in that case a
+  // plain relative app-wide link (logo, "Map", search) would resolve
+  // against THIS VENDOR'S OWN subdomain instead of the real site, the same
+  // issue already fixed for the product page's "Home" breadcrumb (see
+  // lib/store-url.ts's mainAppUrl doc comment). Route every app-wide nav
+  // target in this header through this helper rather than a bare "/path".
+  function appHref(path: string): string {
+    return effectivePathname ? mainAppUrl(path) : path;
+  }
+  const logoHref = appHref("/");
   const searchParams = useSearchParams();
   const router = useRouter();
   const { data: session } = useSession();
@@ -136,7 +148,7 @@ export default function SiteHeader({ effectivePathname }: SiteHeaderProps = {}) 
       setQ(s);
       setSuggestions([]);
       setShowSuggestions(false);
-      router.push(`/search?q=${encodeURIComponent(s)}`);
+      router.push(appHref(`/search?q=${encodeURIComponent(s)}`));
     } else if (e.key === "Escape") {
       setShowSuggestions(false);
     }
@@ -146,7 +158,7 @@ export default function SiteHeader({ effectivePathname }: SiteHeaderProps = {}) 
     setQ(s);
     setSuggestions([]);
     setShowSuggestions(false);
-    router.push(`/search?q=${encodeURIComponent(s)}`);
+    router.push(appHref(`/search?q=${encodeURIComponent(s)}`));
   }
 
   function clearInput() {
@@ -186,7 +198,7 @@ export default function SiteHeader({ effectivePathname }: SiteHeaderProps = {}) 
 
           {/* Logo */}
           <Link
-            href="/"
+            href={logoHref}
             className="shrink-0 flex items-center gap-2 rounded-xl px-2 py-1.5 transition hover:bg-slate-50"
           >
             <Image src={logoText} alt="Sellee" className="h-7 w-auto" priority />
@@ -195,7 +207,7 @@ export default function SiteHeader({ effectivePathname }: SiteHeaderProps = {}) 
           <CategoriesMegaMenu />
 
           <Link
-            href="/map"
+            href={appHref("/map")}
             className="flex shrink-0 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:border-emerald-200 hover:bg-emerald-50"
           >
             <MapIcon className="h-4 w-4" />
@@ -204,7 +216,7 @@ export default function SiteHeader({ effectivePathname }: SiteHeaderProps = {}) 
 
           {/* Search */}
           <div ref={wrapperRef} className="relative flex-1 max-w-xl mx-auto">
-            <form action="/search" onSubmit={handleSubmit} className={formClass}>
+            <form action={appHref("/search")} onSubmit={handleSubmit} className={formClass}>
               <Search
                 className={`shrink-0 h-4 w-4 transition-colors ${
                   isSearchFocused ? "text-emerald-500" : "text-slate-400"
@@ -284,7 +296,7 @@ export default function SiteHeader({ effectivePathname }: SiteHeaderProps = {}) 
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={() => {
                       setShowSuggestions(false);
-                      router.push(`/search?q=${encodeURIComponent(q)}`);
+                      router.push(appHref(`/search?q=${encodeURIComponent(q)}`));
                     }}
                     className="flex w-full items-center gap-2 text-sm font-medium text-emerald-600 hover:text-emerald-700 transition-colors"
                   >
@@ -305,7 +317,7 @@ export default function SiteHeader({ effectivePathname }: SiteHeaderProps = {}) 
         {/* ── Mobile top row ── */}
         <div className="flex sm:hidden h-14 items-center justify-between gap-3">
           <Link
-            href="/"
+            href={logoHref}
             className="shrink-0 flex items-center rounded-xl px-2 py-1.5 transition hover:bg-slate-50"
           >
             <Image src={logoText} alt="Sellee" className="h-6 w-auto" priority />
@@ -313,7 +325,7 @@ export default function SiteHeader({ effectivePathname }: SiteHeaderProps = {}) 
           <div className="flex shrink-0 items-center gap-2">
             <CategoriesMegaMenu compact />
             <Link
-              href="/map"
+              href={appHref("/map")}
               aria-label="Vendor map"
               className="flex items-center justify-center rounded-xl border border-slate-200 bg-white p-2 text-slate-700 transition hover:border-emerald-200 hover:bg-emerald-50"
             >
@@ -327,7 +339,7 @@ export default function SiteHeader({ effectivePathname }: SiteHeaderProps = {}) 
       {/* ── Mobile search bar ── */}
       <div className="sm:hidden border-t border-slate-100 px-4 py-2.5 bg-white">
         <div ref={mobileWrapperRef} className="relative">
-          <form action="/search" onSubmit={handleSubmit} className={formClass}>
+          <form action={appHref("/search")} onSubmit={handleSubmit} className={formClass}>
             <Search className="shrink-0 h-4 w-4 text-slate-400" />
             <input
               name="q"
@@ -402,7 +414,7 @@ export default function SiteHeader({ effectivePathname }: SiteHeaderProps = {}) 
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => {
                     setShowSuggestions(false);
-                    router.push(`/search?q=${encodeURIComponent(q)}`);
+                    router.push(appHref(`/search?q=${encodeURIComponent(q)}`));
                   }}
                   className="flex w-full items-center gap-2 text-sm font-medium text-emerald-600 hover:text-emerald-700 transition-colors"
                 >

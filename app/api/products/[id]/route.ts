@@ -15,12 +15,16 @@ const updateSchema = z.object({
   description: z.string().max(500).optional().default(""),
   category: z.string().max(50).optional().default(""),
   price: z.number().min(0),
+  compare_at_price: z.number().positive().nullable().optional().default(null),
   stock_count: z.number().int().min(0),
   is_available: z.boolean().default(true),
   remove_image: z.boolean().optional().default(false),
   brand: z.string().max(80).optional().default(""),
   condition: z.string().max(20).optional().default(""),
-});
+}).refine(
+  (data) => data.compare_at_price === null || data.compare_at_price === undefined || data.compare_at_price > data.price,
+  { message: "compare_at_price must be greater than price", path: ["compare_at_price"] },
+);
 
 const ALLOWED_CONDITIONS = new Set(["new", "used", "refurbished"]);
 
@@ -219,6 +223,10 @@ export async function PATCH(
       description: formData.get("description") ?? "",
       category: formData.get("category") ?? "",
       price: Number(formData.get("price")),
+      compare_at_price:
+        formData.get("compare_at_price") && String(formData.get("compare_at_price")).trim()
+          ? Number(formData.get("compare_at_price"))
+          : null,
       stock_count: Number(formData.get("stock_count")),
       is_available: formData.get("is_available") === "true",
       remove_image: formData.get("remove_image") === "true",
@@ -332,6 +340,7 @@ export async function PATCH(
         description: parsed.data.description || null,
         category: normalizedCategory || null,
         price: parsed.data.price,
+        compare_at_price: parsed.data.compare_at_price,
         stock_count: parsed.data.stock_count,
         is_available: parsed.data.is_available,
         brand: parsed.data.brand.trim() || null,
@@ -342,7 +351,7 @@ export async function PATCH(
       })
       .eq("id", id)
       .eq("store_id", store.id)
-      .select("id, store_id, slug, name, description, category, price, image_url, image_urls, rating_avg, rating_count, stock_count, is_available, created_at, brand, condition, attributes")
+      .select("id, store_id, slug, name, description, category, price, compare_at_price, image_url, image_urls, rating_avg, rating_count, stock_count, is_available, created_at, brand, condition, attributes")
       .single();
 
     if (error || !data) {
@@ -420,4 +429,3 @@ export async function DELETE(
     return NextResponse.json({ error: "Unexpected delete product error." }, { status: 500 });
   }
 }
-
