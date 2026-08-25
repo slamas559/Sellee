@@ -47,9 +47,9 @@ export function WhatsAppBotAccess({ botNumber }: WhatsAppBotAccessProps) {
           <p className="mt-1 text-sm text-slate-600">
             Open bot chat for order help, vendor commands, and quick store support.
           </p>
-          <p className="mt-1 text-sm text-slate-600">
+          {/* <p className="mt-1 text-sm text-slate-600">
             To access bot use your registered WhatsApp number.
-          </p>
+          </p> */}
           <p className="mt-2 text-xs font-medium text-slate-500">
             Bot number: <span className="font-semibold text-slate-700">{displayNumber}</span>
           </p>

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Heart } from "lucide-react";
+import { buildLoginUrl } from "@/lib/store-url";
 
 type Props = {
   productId: string | number;
@@ -43,7 +44,7 @@ export function WishlistButton({ productId }: Props) {
           method: "DELETE",
         });
         if (res.status === 401) {
-          window.location.href = `/login?callbackUrl=${encodeURIComponent(window.location.pathname)}`;
+          window.location.href = buildLoginUrl(window.location.href);
           return;
         }
         setActive(false);
@@ -54,7 +55,7 @@ export function WishlistButton({ productId }: Props) {
           body: JSON.stringify({ productId }),
         });
         if (res.status === 401) {
-          window.location.href = `/login?callbackUrl=${encodeURIComponent(window.location.pathname)}`;
+          window.location.href = buildLoginUrl(window.location.href);
           return;
         }
         setActive(true);

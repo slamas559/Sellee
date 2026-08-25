@@ -140,7 +140,7 @@ export type VendorBroadcastHistoryItem = {
 
 export async function getVendorOrders(
   vendorId: string,
-  opts?: { limit?: number; offset?: number },
+  opts?: { limit?: number; offset?: number; from?: Date | string | null; to?: Date | string | null },
 ): Promise<VendorOrderView[]> {
   const store = await getVendorStore(vendorId);
 
@@ -150,17 +150,33 @@ export async function getVendorOrders(
 
   const supabase = createAdminSupabaseClient();
 
-  const limit = opts?.limit ?? 20;
-  const offset = opts?.offset ?? 0;
-  const from = offset;
-  const to = offset + limit - 1;
-
-  const { data: orders } = await supabase
+  let query = supabase
     .from("orders")
-    .select("id, store_id, customer_name, customer_whatsapp, status, total_amount, payment_method, created_at")
+    .select(
+      "id, store_id, customer_name, customer_whatsapp, status, total_amount, payment_method, created_at, confirmed_at, delivered_at, confirmed_at_estimated, delivered_at_estimated",
+    )
     .eq("store_id", store.id)
-    .order("created_at", { ascending: false })
-    .range(from, to);
+    .order("created_at", { ascending: false });
+
+  const hasDateRange = Boolean(opts?.from || opts?.to);
+
+  if (opts?.from) {
+    query = query.gte("created_at", new Date(opts.from).toISOString());
+  }
+  if (opts?.to) {
+    query = query.lte("created_at", new Date(opts.to).toISOString());
+  }
+
+  if (hasDateRange) {
+    // Date-range mode (analytics): no offset pagination, just cap the result size.
+    query = query.limit(opts?.limit ?? 2000);
+  } else {
+    const limit = opts?.limit ?? 20;
+    const offset = opts?.offset ?? 0;
+    query = query.range(offset, offset + limit - 1);
+  }
+
+  const { data: orders } = await query;
 
   const typedOrders = ((orders as OrderRecord[]) ?? []);
 
@@ -211,6 +227,80 @@ export async function getVendorOrders(
     order,
     items: itemsByOrderId.get(order.id) ?? [],
   }));
+}
+
+/**
+ * Returns each customer's earliest confirmed/delivered order date for this vendor's store,
+ * across all time. Used to classify orders in a given period as "new" vs "repeat" customer.
+ * Capped at 5000 orders (ascending by created_at, so the first occurrence per customer is
+ * naturally their earliest order).
+ */
+export async function getVendorCustomerFirstOrderMap(vendorId: string): Promise<Map<string, Date>> {
+  const store = await getVendorStore(vendorId);
+  if (!store) {
+    return new Map();
+  }
+
+  const supabase = createAdminSupabaseClient();
+
+  const { data: orders } = await supabase
+    .from("orders")
+    .select("customer_whatsapp, created_at")
+    .eq("store_id", store.id)
+    .in("status", ["confirmed", "delivered"])
+    .order("created_at", { ascending: true })
+    .limit(5000);
+
+  const firstOrderByCustomer = new Map<string, Date>();
+
+  for (const row of (orders as Array<{ customer_whatsapp: string; created_at: string }>) ?? []) {
+    const phone = row.customer_whatsapp;
+    if (phone && !firstOrderByCustomer.has(phone)) {
+      firstOrderByCustomer.set(phone, new Date(row.created_at));
+    }
+  }
+
+  return firstOrderByCustomer;
+}
+
+export type StoreVisitRecord = {
+  id: string;
+  visitor_id: string;
+  path: string;
+  referrer: string | null;
+  source: string | null;
+  product_id: string | null;
+  created_at: string;
+};
+
+/** Fetches this vendor's store visits within an optional date range, capped at 5000 rows. */
+export async function getVendorStoreVisits(
+  vendorId: string,
+  opts?: { from?: Date | string | null; to?: Date | string | null },
+): Promise<StoreVisitRecord[]> {
+  const store = await getVendorStore(vendorId);
+  if (!store) {
+    return [];
+  }
+
+  const supabase = createAdminSupabaseClient();
+
+  let query = supabase
+    .from("store_visits")
+    .select("id, visitor_id, path, referrer, source, product_id, created_at")
+    .eq("store_id", store.id)
+    .order("created_at", { ascending: false })
+    .limit(5000);
+
+  if (opts?.from) {
+    query = query.gte("created_at", new Date(opts.from).toISOString());
+  }
+  if (opts?.to) {
+    query = query.lte("created_at", new Date(opts.to).toISOString());
+  }
+
+  const { data } = await query;
+  return (data as StoreVisitRecord[]) ?? [];
 }
 
 export async function getVendorWhatsAppLinkStatus(

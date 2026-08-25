@@ -310,7 +310,7 @@ export default function SiteHeader({ effectivePathname }: SiteHeaderProps = {}) 
 
           {/* Right actions */}
           <div className="shrink-0 flex items-center gap-2">
-            <UserMenu isLoggedIn={isLoggedIn} isVendor={isVendor} />
+            <UserMenu isLoggedIn={isLoggedIn} isVendor={isVendor} appHref={appHref} />
           </div>
         </div>
 
@@ -331,7 +331,7 @@ export default function SiteHeader({ effectivePathname }: SiteHeaderProps = {}) 
             >
               <MapIcon className="h-4 w-4" />
             </Link>
-            <UserMenu isLoggedIn={isLoggedIn} isVendor={isVendor} />
+            <UserMenu isLoggedIn={isLoggedIn} isVendor={isVendor} appHref={appHref} />
           </div>
         </div>
       </div>

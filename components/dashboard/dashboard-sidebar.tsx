@@ -13,11 +13,11 @@ type DashboardSidebarProps = {
 
 const navItems = [
   { href: "/dashboard", label: "Overview" },
+  { href: "/dashboard/analytics", label: "Analytics" },
   { href: "/dashboard/account", label: "Account" },
   { href: "/dashboard/store", label: "Storefront" },
   { href: "/dashboard/products", label: "Products" },
   { href: "/dashboard/orders", label: "Orders" },
-  { href: "/dashboard/analytics", label: "Analytics" },
   { href: "/dashboard/integrations", label: "Integrations" },
 ];
 

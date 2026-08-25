@@ -117,7 +117,7 @@ export default function AboutPage() {
                 href="/become-vendor"
                 className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-800 transition hover:bg-slate-50"
               >
-                Become a vendor
+                Start Selling
               </Link>
             </div>
           </div>

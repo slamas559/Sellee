@@ -16,6 +16,30 @@ export function formatNaira(value: number): string {
   }).format(value);
 }
 
+/** Formats a duration given in milliseconds as a short human string, e.g. "2h 15m" or "3d 4h". */
+export function formatDuration(ms: number): string {
+  if (!Number.isFinite(ms) || ms <= 0) {
+    return "—";
+  }
+
+  const minutes = Math.round(ms / 60000);
+
+  if (minutes < 60) {
+    return `${minutes}m`;
+  }
+
+  const hours = Math.floor(minutes / 60);
+  const remMinutes = minutes % 60;
+
+  if (hours < 24) {
+    return remMinutes > 0 ? `${hours}h ${remMinutes}m` : `${hours}h`;
+  }
+
+  const days = Math.floor(hours / 24);
+  const remHours = hours % 24;
+  return remHours > 0 ? `${days}d ${remHours}h` : `${days}d`;
+}
+
 const UUID_LIKE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export function formatProductPathSegment(product: {

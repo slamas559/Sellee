@@ -3,36 +3,35 @@ import type { RevenueChartData } from "@/components/dashboard/revenue-chart";
 import type { OrderStatusData } from "@/components/dashboard/order-status-chart";
 import type { TrendData } from "@/components/dashboard/order-trends-chart";
 import type { ProductPerformanceData } from "@/components/dashboard/product-performance-chart";
+import { bucketKey, enumerateBuckets, type AnalyticsRange } from "@/lib/date-range";
 
-// Generate revenue chart data for last 30 days
-export function generateRevenueChartData(orders: Array<{ order: OrderRecord; items: unknown[] }>): RevenueChartData[] {
-  const last30Days: { [key: string]: { revenue: number; orders: number } } = {};
+// Generate revenue chart data bucketed across the selected analytics range
+export function generateRevenueChartData(
+  orders: Array<{ order: OrderRecord; items: unknown[] }>,
+  range: AnalyticsRange,
+): RevenueChartData[] {
+  const buckets: { [key: string]: { revenue: number; orders: number } } = {};
+  const orderedKeys = enumerateBuckets(range, orders.map(({ order }) => order));
 
-  // Initialize last 30 days
-  for (let i = 29; i >= 0; i--) {
-    const date = new Date();
-    date.setDate(date.getDate() - i);
-    const dateStr = date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-    last30Days[dateStr] = { revenue: 0, orders: 0 };
+  for (const key of orderedKeys) {
+    buckets[key] = { revenue: 0, orders: 0 };
   }
 
-  // Aggregate data
   for (const { order } of orders) {
-    const orderDate = new Date(order.created_at);
-    const dateStr = orderDate.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    const key = bucketKey(new Date(order.created_at), range.granularity);
 
-    if (last30Days[dateStr]) {
-      last30Days[dateStr].orders += 1;
+    if (buckets[key]) {
+      buckets[key].orders += 1;
       if (order.status === "confirmed" || order.status === "delivered") {
-        last30Days[dateStr].revenue += Number(order.total_amount ?? 0);
+        buckets[key].revenue += Number(order.total_amount ?? 0);
       }
     }
   }
 
-  return Object.entries(last30Days).map(([date, data]) => ({
+  return orderedKeys.map((date) => ({
     date,
-    revenue: data.revenue,
-    orders: data.orders,
+    revenue: buckets[date].revenue,
+    orders: buckets[date].orders,
   }));
 }
 
@@ -68,38 +67,36 @@ export function generateOrderStatusData(orders: Array<{ order: OrderRecord; item
     }));
 }
 
-// Generate order trends for last 30 days
-export function generateOrderTrendsData(orders: Array<{ order: OrderRecord; items: unknown[] }>): TrendData[] {
-  const last30Days: { [key: string]: { confirmed: number; pending: number; delivered: number } } = {};
+// Generate order trends bucketed across the selected analytics range
+export function generateOrderTrendsData(
+  orders: Array<{ order: OrderRecord; items: unknown[] }>,
+  range: AnalyticsRange,
+): TrendData[] {
+  const buckets: { [key: string]: { confirmed: number; pending: number; delivered: number } } = {};
+  const orderedKeys = enumerateBuckets(range, orders.map(({ order }) => order));
 
-  // Initialize last 30 days
-  for (let i = 29; i >= 0; i--) {
-    const date = new Date();
-    date.setDate(date.getDate() - i);
-    const dateStr = date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-    last30Days[dateStr] = { confirmed: 0, pending: 0, delivered: 0 };
+  for (const key of orderedKeys) {
+    buckets[key] = { confirmed: 0, pending: 0, delivered: 0 };
   }
 
-  // Aggregate data
   for (const { order } of orders) {
-    const orderDate = new Date(order.created_at);
-    const dateStr = orderDate.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    const key = bucketKey(new Date(order.created_at), range.granularity);
 
-    if (last30Days[dateStr]) {
+    if (buckets[key]) {
       const status = (order.status ?? "pending_whatsapp").replace("pending_whatsapp", "pending");
       if (status === "confirmed") {
-        last30Days[dateStr].confirmed += 1;
+        buckets[key].confirmed += 1;
       } else if (status === "pending") {
-        last30Days[dateStr].pending += 1;
+        buckets[key].pending += 1;
       } else if (status === "delivered") {
-        last30Days[dateStr].delivered += 1;
+        buckets[key].delivered += 1;
       }
     }
   }
 
-  return Object.entries(last30Days).map(([date, data]) => ({
+  return orderedKeys.map((date) => ({
     date,
-    ...data,
+    ...buckets[date],
   }));
 }
 
@@ -129,4 +126,37 @@ export function generateProductPerformanceData(
     }))
     .sort((a, b) => b.revenue - a.revenue)
     .slice(0, 8);
+}
+
+export type VisitsChartData = {
+  date: string;
+  visits: number;
+  uniqueVisitors: number;
+};
+
+// Generate store-visits chart data bucketed across the selected analytics range
+export function generateVisitsChartData(
+  visits: Array<{ visitor_id: string; created_at: string }>,
+  range: AnalyticsRange,
+): VisitsChartData[] {
+  const buckets: { [key: string]: { visits: number; visitors: Set<string> } } = {};
+  const orderedKeys = enumerateBuckets(range, visits);
+
+  for (const key of orderedKeys) {
+    buckets[key] = { visits: 0, visitors: new Set() };
+  }
+
+  for (const visit of visits) {
+    const key = bucketKey(new Date(visit.created_at), range.granularity);
+    if (buckets[key]) {
+      buckets[key].visits += 1;
+      buckets[key].visitors.add(visit.visitor_id);
+    }
+  }
+
+  return orderedKeys.map((date) => ({
+    date,
+    visits: buckets[date].visits,
+    uniqueVisitors: buckets[date].visitors.size,
+  }));
 }

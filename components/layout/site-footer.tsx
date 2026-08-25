@@ -88,7 +88,7 @@ export function SiteFooter() {
               </li>
               <li>
                 <Link href="/become-vendor" className="transition hover:text-emerald-700">
-                  Become a Vendor
+                  Start Selling
                 </Link>
               </li>
             </ul>

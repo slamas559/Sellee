@@ -73,6 +73,27 @@ export function mainAppUrl(path = "/"): string {
   return `${publicAppUrl().replace(/\/$/, "")}${normalizedPath}`;
 }
 
+/**
+ * Builds a correct "/login?callbackUrl=..." URL, safe to call from a page
+ * being viewed on a vendor's subdomain.
+ *
+ * Two things go wrong without this: (1) "/login" is an app-wide route, so a
+ * plain relative "/login" link on a subdomain gets rewritten by proxy.ts
+ * against that subdomain and 404s, the same issue already fixed for the
+ * header's logo/Map/search links (see mainAppUrl above); (2) currentUrl
+ * needs to be the full absolute URL of wherever the user currently is
+ * (typically window.location.href, read inside a click handler - never
+ * during render, since window isn't available server-side and using it
+ * there would cause a hydration mismatch) so that after logging in on the
+ * real apex /login page, NextAuth can send them all the way back to the
+ * subdomain page they started on - not just a same-origin relative path.
+ * NextAuth also needs an explicit allowlist for that cross-origin redirect
+ * to be honored; see the `redirect` callback in lib/auth.ts.
+ */
+export function buildLoginUrl(currentUrl: string): string {
+  return `${mainAppUrl("/login")}?callbackUrl=${encodeURIComponent(currentUrl)}`;
+}
+
 /** Public, shareable URL for a vendor's storefront. */
 export function storeUrl(slug: string): string {
   if (storeSubdomainsEnabled()) {

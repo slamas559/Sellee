@@ -8,6 +8,7 @@ import { ProductShowcaseCard } from "@/components/marketplace/product-showcase-c
 import { BannerCarousel } from "@/components/store/banner-carousel";
 import { FollowStoreButton } from "@/components/store/follow-store-button";
 import { SocialShareActions } from "@/components/shared/social-share-actions";
+import { StoreVisitTracker } from "@/components/store/store-visit-tracker";
 import { StarRating } from "@/components/store/star-rating";
 import { VendorReviewsSection } from "@/components/reviews/vendor-reviews-section";
 import { authOptions } from "@/lib/auth";
@@ -760,6 +761,7 @@ export default async function StorePage({ params, searchParams }: StorePageProps
   const currentSubdomainSlug = await getCurrentSubdomainSlug();
   const isOwnSubdomain = currentSubdomainSlug === slug;
   const storeHomeHref = isOwnSubdomain ? "/" : `/store/${slug}`;
+  const isOwnerViewing = session?.user?.id === store.vendor_id;
 
   let isFollowing = false;
   if (session?.user?.id) {
@@ -829,8 +831,31 @@ export default async function StorePage({ params, searchParams }: StorePageProps
     storeHomeHref,
   };
 
-  if (template === "fashion_editorial") return <EditorialTemplate {...props} />;
-  if (template === "lifestyle_showcase") return <ShowcaseTemplate {...props} />;
-  if (template === "modern_grid") return <GridTemplate {...props} />;
-  return <MarketTemplate {...props} />;
+  if (template === "fashion_editorial")
+    return (
+      <>
+        <StoreVisitTracker storeId={store.id} isOwnerViewing={isOwnerViewing} />
+        <EditorialTemplate {...props} />
+      </>
+    );
+  if (template === "lifestyle_showcase")
+    return (
+      <>
+        <StoreVisitTracker storeId={store.id} isOwnerViewing={isOwnerViewing} />
+        <ShowcaseTemplate {...props} />
+      </>
+    );
+  if (template === "modern_grid")
+    return (
+      <>
+        <StoreVisitTracker storeId={store.id} isOwnerViewing={isOwnerViewing} />
+        <GridTemplate {...props} />
+      </>
+    );
+  return (
+    <>
+      <StoreVisitTracker storeId={store.id} isOwnerViewing={isOwnerViewing} />
+      <MarketTemplate {...props} />
+    </>
+  );
 }

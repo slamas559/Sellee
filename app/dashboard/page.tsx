@@ -17,6 +17,7 @@ import {
   generateRevenueChartData, 
   generateOrderStatusData 
 } from "@/lib/chart-utils";
+import { getAnalyticsRange } from "@/lib/date-range";
 
 export const metadata: Metadata = {
   title: "Dashboard",
@@ -26,14 +27,25 @@ export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
   const store = session?.user?.id ? await getVendorStore(session.user.id) : null;
   const products = session?.user?.id ? await getVendorProducts(session.user.id) : [];
-  // Fetch more orders for analytics
+  // Broad recent-orders fetch (not date-bound) - used only for the Pending
+  // Orders count, so an order awaiting action doesn't disappear from that
+  // count just because it's more than 7 days old.
   const orders = session?.user?.id ? await getVendorOrders(session.user.id, { limit: 100, offset: 0 }) : [];
   const whatsappLinkStatus = session?.user?.id
     ? await getVendorWhatsAppLinkStatus(session.user.id)
     : { linked: null, pending_code: null };
 
-  const confirmedOrders = orders.filter((item) => item.order.status === "confirmed");
-  const totalRevenue = confirmedOrders.reduce(
+  // The "little analytics" on this page (revenue figure + charts) are scoped
+  // to the last 7 days, matching the analytics page's default range.
+  const overviewRange = getAnalyticsRange("7d");
+  const recentOrders = session?.user?.id
+    ? await getVendorOrders(session.user.id, { from: overviewRange.from, to: overviewRange.to })
+    : [];
+
+  const confirmedRecentOrders = recentOrders.filter(
+    (item) => item.order.status === "confirmed" || item.order.status === "delivered",
+  );
+  const totalRevenue = confirmedRecentOrders.reduce(
     (sum, item) => sum + Number(item.order.total_amount ?? 0),
     0,
   );
@@ -45,8 +57,8 @@ export default async function DashboardPage() {
     : null;
 
   // Generate chart data
-  const revenueChartData = generateRevenueChartData(orders);
-  const orderStatusData = generateOrderStatusData(orders);
+  const revenueChartData = generateRevenueChartData(recentOrders, overviewRange);
+  const orderStatusData = generateOrderStatusData(recentOrders);
 
   if (!session?.user) {
     redirect("/login");
@@ -97,14 +109,14 @@ export default async function DashboardPage() {
           <h2 className="mt-2 text-2xl font-black text-slate-900">
             {formatNaira(totalRevenue)}
           </h2>
-          <p className="mt-1 text-sm text-slate-600">Confirmed orders only.</p>
+          <p className="mt-1 text-sm text-slate-600">Confirmed/delivered orders, last 7 days.</p>
         </article>
       </section>
 
       {/* Charts Section */}
       <section className="grid gap-4 lg:grid-cols-2">
-        {revenueChartData.length > 0 && <RevenueChart data={revenueChartData} />}
-        {orderStatusData.length > 0 && <OrderStatusChart data={orderStatusData} />}
+        <RevenueChart data={revenueChartData} rangeLabel={overviewRange.label} />
+        <OrderStatusChart data={orderStatusData} />
       </section>
 
       <section className="grid gap-4 lg:grid-cols-2">

@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { ProductShowcaseCard } from "@/components/marketplace/product-showcase-card";
 import { SocialShareActions } from "@/components/shared/social-share-actions";
+import { StoreVisitTracker } from "@/components/store/store-visit-tracker";
 import { OrderButton } from "@/components/store/order-button";
 import WishlistButton from "@/components/store/wishlist-button";
 import { ProductMediaGallery } from "@/components/store/product-media-gallery";
@@ -113,6 +116,7 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
 export default async function StoreProductPage({ params, searchParams }: ProductPageProps) {
   const { slug, productSlug } = await params;
   const query = await searchParams;
+  const session = await getServerSession(authOptions);
   const supabase = createAdminSupabaseClient();
   const parsedPath = parseProductPathSegment(productSlug);
 
@@ -281,9 +285,11 @@ export default async function StoreProductPage({ params, searchParams }: Product
           : { href: storeHomeHref, label: store.name };
 
   const isInStock = product.stock_count > 0;
+  const isOwnerViewing = session?.user?.id === store.vendor_id;
 
   return (
     <main className="min-h-screen bg-[#f8f7f5]">
+      <StoreVisitTracker storeId={store.id} productId={product.id} isOwnerViewing={isOwnerViewing} />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }}

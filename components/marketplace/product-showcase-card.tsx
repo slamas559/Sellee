@@ -19,6 +19,7 @@ type ProductShowcaseCardProps = {
     description: string | null;
     category: string | null;
     price: number;
+    compare_at_price?: number | null;
     image_url: string | null;
     image_urls: string[] | null;
     rating_avg: number | null;
@@ -65,15 +66,7 @@ export function ProductShowcaseCard({
         // double it up into "/store/:slug/store/:slug/..." and 404.
         `/${productPathRef}?from=${navigationSource}`
       : storeSubdomainsEnabled()
-        ? // Subdomains are live and this product belongs to some OTHER
-          // store than the one currently being viewed (including "no
-          // store at all" - e.g. clicking from the homepage or
-          // marketplace). A relative "/store/:slug/..." link would just
-          // get redirected to this exact URL by proxy.ts anyway, but that
-          // redirect happens mid cross-origin RSC fetch, which Next's
-          // client router can't follow - it always logs "Failed to fetch
-          // RSC payload" and falls back to a full reload. Building the
-          // real URL up front skips that failed round trip entirely.
+        ?
           `${storeProductUrl(store.slug, productPathRef)}?from=${navigationSource}`
         : // Subdomains disabled entirely: old relative path form.
           `/store/${store.slug}/${productPathRef}?from=${navigationSource}`;
@@ -112,6 +105,15 @@ export function ProductShowcaseCard({
     ? "bg-emerald-500 hover:bg-emerald-400"
     : "bg-emerald-600 hover:bg-emerald-700";
 
+  const hasPromo = Boolean(
+    product.compare_at_price && product.compare_at_price > product.price,
+  );
+  const discountPct = hasPromo
+    ? Math.round(
+        ((Number(product.compare_at_price) - product.price) / Number(product.compare_at_price)) * 100,
+      )
+    : null;
+    
   function nextSlide() {
     setIndex((prev) => (prev + 1) % images.length);
   }
@@ -270,6 +272,11 @@ export function ProductShowcaseCard({
           >
             {formatNaira(Number(product.price))}
           </span>
+          {hasPromo ? (
+              <span className={`pl-1 text-[10px] line-through tabular-nums sm:text-xs ${metaClass}`}>
+                {formatNaira(Number(product.compare_at_price))}
+              </span>
+            ) : null}
           <Link
             href={productHref}
             aria-label={`Open ${product.name}`}

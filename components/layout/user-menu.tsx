@@ -3,13 +3,23 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { SignOutButton } from "@/components/auth/sign-out-button";
+import { mainAppUrl } from "@/lib/store-url";
 
 type UserMenuProps = {
   isLoggedIn: boolean;
   isVendor: boolean;
+  /**
+   * Resolves an app-wide path ("/login", "/account", etc.) to a link that
+   * works correctly even when this menu is rendered on a vendor's
+   * subdomain - see appHref() in site-header.tsx (this menu is always part
+   * of the header, so it renders on every page including storefronts).
+   * Defaults to identity (plain relative paths) so this component still
+   * works standalone if ever rendered outside the header.
+   */
+  appHref?: (path: string) => string;
 };
 
-export function UserMenu({ isLoggedIn, isVendor }: UserMenuProps) {
+export function UserMenu({ isLoggedIn, isVendor, appHref = (path) => path }: UserMenuProps) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
 
@@ -67,14 +77,14 @@ export function UserMenu({ isLoggedIn, isVendor }: UserMenuProps) {
           {!isLoggedIn ? (
             <>
               <Link
-                href="/login"
+                href={appHref("/login")}
                 onClick={() => setOpen(false)}
                 className="block rounded-lg px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
               >
                 Login / Create account
               </Link>
               <Link
-                href="/become-vendor"
+                href={appHref("/become-vendor")}
                 onClick={() => setOpen(false)}
                 className="block rounded-lg px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
               >
@@ -85,7 +95,7 @@ export function UserMenu({ isLoggedIn, isVendor }: UserMenuProps) {
             <>
               {isVendor ? (
                 <Link
-                  href="/dashboard"
+                  href={appHref("/dashboard")}
                   onClick={() => setOpen(false)}
                   className="block rounded-lg px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
                 >
@@ -93,7 +103,7 @@ export function UserMenu({ isLoggedIn, isVendor }: UserMenuProps) {
                 </Link>
               ) : (
                 <Link
-                  href="/become-vendor"
+                  href={appHref("/become-vendor")}
                   onClick={() => setOpen(false)}
                   className="block rounded-lg px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
                 >
@@ -101,28 +111,28 @@ export function UserMenu({ isLoggedIn, isVendor }: UserMenuProps) {
                 </Link>
               )}
               <Link
-                href="/account"
+                href={appHref("/account")}
                 onClick={() => setOpen(false)}
                 className="block rounded-lg px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
               >
                 Account
               </Link>
               <Link
-                href="/account/orders"
+                href={appHref("/account/orders")}
                 onClick={() => setOpen(false)}
                 className="block rounded-lg px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
               >
                 My Orders
               </Link>
               <Link
-                href="/account/favorites"
+                href={appHref("/account/favorites")}
                 onClick={() => setOpen(false)}
                 className="block rounded-lg px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
               >
                 Saved items
               </Link>
               <Link
-                href="/account/follows"
+                href={appHref("/account/follows")}
                 onClick={() => setOpen(false)}
                 className="block rounded-lg px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
               >
@@ -130,7 +140,7 @@ export function UserMenu({ isLoggedIn, isVendor }: UserMenuProps) {
               </Link>
               <div className="mt-1 border-t border-slate-100 pt-1">
                 <SignOutButton
-                  callbackUrl="/"
+                  callbackUrl={mainAppUrl("/")}
                   label="Logout"
                   className="w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-50"
                 />
@@ -142,4 +152,3 @@ export function UserMenu({ isLoggedIn, isVendor }: UserMenuProps) {
     </div>
   );
 }
-

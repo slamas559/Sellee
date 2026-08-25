@@ -8,12 +8,12 @@ export type RevenueChartData = {
   orders: number;
 };
 
-export function RevenueChart({ data }: { data: RevenueChartData[] }) {
+export function RevenueChart({ data, rangeLabel }: { data: RevenueChartData[]; rangeLabel?: string }) {
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
       <div className="mb-4">
         <h3 className="text-lg font-semibold text-slate-900">Revenue & Orders</h3>
-        <p className="text-sm text-slate-600">Last 30 days performance</p>
+        <p className="text-sm text-slate-600">{rangeLabel ?? "Selected period"} performance</p>
       </div>
       <ResponsiveContainer width="100%" height={300}>
         <BarChart data={data} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>

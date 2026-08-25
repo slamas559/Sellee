@@ -728,7 +728,7 @@ export function ProductsManager({ initialProducts }: ProductsManagerProps) {
         </form>
       </section>
 
-      <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+      <section className="rounded-xl border border-slate-200 bg-white p-2 shadow-sm">
         <div className="mb-4 flex items-center justify-between gap-2">
           <div>
             <p className="text-sm font-medium text-emerald-700">Products</p>
@@ -753,9 +753,9 @@ export function ProductsManager({ initialProducts }: ProductsManagerProps) {
 
         {!isLoading && products.length > 0 ? (
           <>
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-4 grid-cols-2 sm:grid-cols-2 xl:grid-cols-3">
               {products.slice((currentPage - 1) * productsPerPage, currentPage * productsPerPage).map((product) => (
-                <article key={product.id} className="rounded-lg border border-slate-200 p-4">
+                <article key={product.id} className="rounded-lg border border-slate-200 p-1">
                   <div className="relative mb-3 h-40 w-full overflow-hidden rounded-md bg-slate-100">
                     {product.image_url ? (
                       <Image

@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
+import { buildLoginUrl, mainAppUrl } from "@/lib/store-url";
 
 type FollowStoreButtonProps = {
   storeId: string;
@@ -31,7 +32,7 @@ export function FollowStoreButton({
   if (!isLoggedIn) {
     return (
       <Link
-        href="/login?callbackUrl=/vendors"
+        href={buildLoginUrl(mainAppUrl("/vendors"))}
         className={`${baseClass} border border-slate-300 bg-white text-slate-700 hover:bg-slate-50`}
       >
         Follow

@@ -20,12 +20,12 @@ type NavItem = {
 
 const navItems: NavItem[] = [
   { href: "/dashboard", label: "Overview", icon: "home" },
-  { href: "/dashboard/account", label: "Account", icon: "user" },
+  { href: "/dashboard/analytics", label: "Analytics", icon: "chart" },
   { href: "/dashboard/store", label: "Storefront", icon: "store" },
   { href: "/dashboard/products", label: "Products", icon: "box" },
   { href: "/dashboard/orders", label: "Orders", icon: "orders" },
-  { href: "/dashboard/analytics", label: "Analytics", icon: "chart" },
   { href: "/dashboard/integrations", label: "Integrations", icon: "plug" },
+  { href: "/dashboard/account", label: "Account", icon: "user" },
 ];
 
 const bottomTabs = ["/dashboard", "/dashboard/products", "/dashboard/orders", "/dashboard/analytics", "/dashboard/account"];

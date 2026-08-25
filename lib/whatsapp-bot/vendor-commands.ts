@@ -242,7 +242,11 @@ export async function handleConfirmReject(
   const supabase = createAdminSupabaseClient();
   const { error: updateError } = await supabase
     .from("orders")
-    .update({ status: nextStatus })
+    .update(
+      nextStatus === "confirmed"
+        ? { status: nextStatus, confirmed_at: new Date().toISOString() }
+        : { status: nextStatus },
+    )
     .eq("id", order.id)
     .eq("store_id", store.id);
 
@@ -445,7 +449,7 @@ export async function handleMarkDelivered(
   const supabase = createAdminSupabaseClient();
   await supabase
     .from("orders")
-    .update({ status: "delivered" })
+    .update({ status: "delivered", delivered_at: new Date().toISOString() })
     .eq("id", order.id)
     .eq("store_id", store.id);
 

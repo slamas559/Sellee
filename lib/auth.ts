@@ -6,6 +6,7 @@ import { z } from "zod";
 import { logDevError } from "@/lib/logger";
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
 import { sendWelcomeEmail } from "@/app/actions/emails";
+import { storeSubdomainsEnabled } from "@/lib/store-url";
 
 const credentialsSchema = z.object({
   email: z.string().email(),
@@ -49,6 +50,23 @@ async function isDeletedAccountEmail(email: string): Promise<boolean> {
   return Boolean(data?.email);
 }
 
+// Same root-domain resolution used by lib/store-url.ts, duplicated here
+// (rather than imported) because this needs to stay a plain sync value
+// computed once at module load, not something that depends on a
+// request-scoped helper.
+const ROOT_DOMAIN =
+  process.env.NEXT_PUBLIC_ROOT_DOMAIN?.trim() ||
+  (() => {
+    try {
+      return new URL(process.env.NEXTAUTH_URL || "https://sellee.store").hostname.replace(/^www\./, "");
+    } catch {
+      return "sellee.store";
+    }
+  })();
+
+const USE_SECURE_COOKIES = (process.env.NEXTAUTH_URL || "").startsWith("https://");
+const COOKIE_PREFIX = USE_SECURE_COOKIES ? "__Secure-" : "";
+
 export const authOptions: NextAuthOptions = {
   debug: process.env.NODE_ENV === "development",
   session: {
@@ -57,6 +75,27 @@ export const authOptions: NextAuthOptions = {
   pages: {
     signIn: "/login",
   },
+  // Without this, NextAuth's session cookie is host-only - set on
+  // sellee.store, it's simply never sent along with a request to
+  // olas-gadgets.sellee.store, since browsers treat that as a different
+  // host entirely. A leading-dot domain (".sellee.store") tells the
+  // browser to attach the cookie to the root domain AND every subdomain,
+  // which is what actually lets someone stay logged in while browsing a
+  // vendor's storefront after signing in on the main site.
+  cookies: storeSubdomainsEnabled()
+    ? {
+        sessionToken: {
+          name: `${COOKIE_PREFIX}next-auth.session-token`,
+          options: {
+            httpOnly: true,
+            sameSite: "lax",
+            path: "/",
+            secure: USE_SECURE_COOKIES,
+            domain: `.${ROOT_DOMAIN}`,
+          },
+        },
+      }
+    : undefined,
   providers: [
     ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
       ? [
@@ -264,6 +303,42 @@ export const authOptions: NextAuthOptions = {
       }
 
       return true;
+    },
+    async redirect({ url, baseUrl }) {
+      // NextAuth's default redirect callback only allows a callbackUrl
+      // that's a relative path, or an absolute URL matching baseUrl
+      // EXACTLY - anything else (as an open-redirect precaution) silently
+      // falls back to baseUrl instead. That default would break the very
+      // real, legitimate case here: a customer logging in from a vendor's
+      // subdomain (olas-gadgets.sellee.store) needs to land back on THAT
+      // subdomain afterwards, not get bounced to the main site. Explicitly
+      // allow any origin that's a subdomain of the same root domain, or
+      // the root domain itself.
+      if (url.startsWith("/")) {
+        return `${baseUrl}${url}`;
+      }
+
+      try {
+        const target = new URL(url);
+        const base = new URL(baseUrl);
+        const rootDomain = (process.env.NEXT_PUBLIC_ROOT_DOMAIN?.trim() || base.hostname).replace(
+          /^www\./,
+          "",
+        );
+
+        const isSameOrigin = target.origin === base.origin;
+        const isTrustedSubdomain =
+          storeSubdomainsEnabled() &&
+          (target.hostname === rootDomain || target.hostname.endsWith(`.${rootDomain}`));
+
+        if (isSameOrigin || isTrustedSubdomain) {
+          return url;
+        }
+      } catch {
+        // Not a parseable absolute URL - fall through to the safe default.
+      }
+
+      return baseUrl;
     },
   },
 };

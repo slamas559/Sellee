@@ -245,7 +245,7 @@ export default async function Home({ searchParams }: HomeProps) {
   const isVendor = session?.user?.role === "vendor";
   const botNumber = process.env.NEXT_PUBLIC_WHATSAPP_BOT_NUMBER?.trim() ?? "";
   const heroPrimaryHref = !isLoggedIn ? "/login" : isVendor ? "/dashboard" : "/become-vendor";
-  const heroPrimaryLabel = !isLoggedIn ? "Login to start" : isVendor ? "Open Dashboard" : "Become a Vendor";
+  const heroPrimaryLabel = !isLoggedIn ? "Login to start" : isVendor ? "Open Dashboard" : "Start Selling";
   const websiteJsonLd = {
     "@context": "https://schema.org",
     "@type": "WebSite",

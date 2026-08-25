@@ -91,6 +91,10 @@ export type OrderRecord = {
   total_amount: number;
   payment_method: string | null;
   created_at: string;
+  confirmed_at: string | null;
+  delivered_at: string | null;
+  confirmed_at_estimated: boolean;
+  delivered_at_estimated: boolean;
 };
 
 export type OrderItemRecord = {

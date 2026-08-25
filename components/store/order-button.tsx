@@ -7,6 +7,7 @@ import { useEffect, useMemo, useState } from "react";
 import { MessageCircle } from "lucide-react";
 import { formatNaira } from "@/lib/format";
 import { buildOrderMessage, buildWaMeLink } from "@/lib/whatsapp";
+import { buildLoginUrl } from "@/lib/store-url";
 
 type OrderButtonProps = {
   storeId: string;
@@ -90,20 +91,18 @@ export function OrderButton({
     void loadMe();
   }, [status]);
 
-  function handleChat() {
+   function handleChat() {
     if (status !== "authenticated") {
-      const callbackUrl = encodeURIComponent(pathname || "/");
-      router.push(`/login?callbackUrl=${callbackUrl}`);
+      window.location.href = buildLoginUrl(window.location.href);
       return;
     }
-
+ 
     window.open(chatLink, "_blank", "noopener,noreferrer");
   }
 
   async function handleOrder() {
     if (status !== "authenticated") {
-      const callbackUrl = encodeURIComponent(pathname || "/");
-      router.push(`/login?callbackUrl=${callbackUrl}`);
+      window.location.href = buildLoginUrl(window.location.href);
       return;
     }
 
@@ -153,24 +152,11 @@ export function OrderButton({
     <div className="space-y-4 rounded-2xl border border-emerald-100 bg-white p-4 shadow-sm sm:p-5">
       <div>
         <p className="text-sm font-medium text-emerald-700">Order on WhatsApp</p>
-        <p className="mt-1 text-sm text-slate-600">
-          Choose quantity and continue with your account details prefilled.
-        </p>
       </div>
 
       {status === "unauthenticated" ? (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-          <p className="font-medium">Login required to place order.</p>
-          <p className="mt-1 text-xs text-amber-800">
-            We will use your account details to create and track this order.
-          </p>
-          <Link
-            href={`/login?callbackUrl=${encodeURIComponent(pathname || "/")}`}
-            className="mt-2 inline-flex rounded-md bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-700"
-          >
-            Login to continue
-          </Link>
-        </div>
+        <>
+        </>
       ) : (
         <div className="space-y-3 hidden rounded-xl border border-slate-200 bg-slate-50 p-3">
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Account</p>
@@ -194,9 +180,9 @@ export function OrderButton({
         </div>
       )}
 
-      <div className="space-y-2 text-sm">
+      <div className="flex flex-row items-center gap-4 space-y-2 text-sm">
         <span className="font-medium text-slate-700">Quantity</span>
-        <div className="inline-flex items-center overflow-hidden rounded-full border border-slate-300 bg-white shadow-sm">
+        <div className="inline-flex items-center overflow-hidden rounded-md border border-slate-300 bg-white shadow-sm">
           <button
             type="button"
             onClick={decreaseQuantity}
@@ -205,7 +191,7 @@ export function OrderButton({
           >
             -
           </button>
-          <span className="inline-flex h-10 min-w-[3rem] items-center justify-center border-x border-slate-200 px-3 text-sm font-semibold text-slate-900">
+          <span className="inline-flex h-10 min-w-[5rem] items-center justify-center border-x border-slate-200 px-3 text-sm font-semibold text-slate-900">
             {quantity}
           </span>
           <button

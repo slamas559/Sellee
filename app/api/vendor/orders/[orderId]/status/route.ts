@@ -80,9 +80,18 @@ export async function PATCH(
     );
   }
 
+  const statusUpdate: { status: string; confirmed_at?: string; delivered_at?: string } = {
+    status: parsed.data.status,
+  };
+  if (parsed.data.status === "confirmed") {
+    statusUpdate.confirmed_at = new Date().toISOString();
+  } else if (parsed.data.status === "delivered") {
+    statusUpdate.delivered_at = new Date().toISOString();
+  }
+
   const { data: updated, error: updateError } = await supabase
     .from("orders")
-    .update({ status: parsed.data.status })
+    .update(statusUpdate)
     .eq("id", orderId)
     .eq("store_id", store.id)
     .select("id,status")
