@@ -10,9 +10,7 @@ import { FollowStoreButton } from "@/components/store/follow-store-button";
 import { SocialShareActions } from "@/components/shared/social-share-actions";
 import { StoreVisitTracker } from "@/components/store/store-visit-tracker";
 import { StarRating } from "@/components/store/star-rating";
-import { VendorReviewsSection } from "@/components/reviews/vendor-reviews-section";
 import { authOptions } from "@/lib/auth";
-import { getCurrentSubdomainSlug } from "@/lib/current-subdomain";
 import {
   getThemeByPreset,
   normalizeStoreTemplate,
@@ -154,7 +152,6 @@ function MarketTemplate({
   storeUrl,
   bannerUrls,
   storeJsonLd,
-  currentSubdomainSlug,
   storeHomeHref,
 }: TemplateProps) {
   return (
@@ -164,15 +161,15 @@ function MarketTemplate({
 
         {/* Hero */}
         <section className="relative overflow-hidden" style={{ backgroundColor: primaryColor }}>
-          <div className="absolute inset-0 opacity-20"
-            style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")" }}
+          <div className="absolute inset-0"
+            // style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")" }}
           />
           {config.hero_image_url && (
             <Image
               src={config.hero_image_url}
               alt={store.name}
               fill
-              className="object-cover opacity-25"
+              className="object-cover"
               sizes="100vw"
             />
           )}
@@ -189,12 +186,12 @@ function MarketTemplate({
                   </div>
                 )}
                 <div>
-                  <h1 className="flex items-center gap-1.5 text-2xl font-black tracking-tight text-white sm:text-3xl">
-                    {store.name}
+                  <Link href={`${storeUrl}/profile`} className="flex cursor-pointer items-center gap-1.5 text-2xl font-black tracking-tight text-white sm:text-3xl">
+                    <span className="text-white">{store.name}</span>
                     {store.is_verified ? (
                       <BadgeCheck className="h-5 w-5 shrink-0 text-white" aria-label="Verified vendor" />
                     ) : null}
-                  </h1>
+                  </Link>
                   <p className="mt-0.5 text-sm text-white/80">{config.promo_text}</p>
                   {nicheNames.length > 0 && (
                     <div className="mt-1.5 flex flex-wrap gap-1.5">
@@ -247,17 +244,13 @@ function MarketTemplate({
             <div className="mt-4 grid grid-cols-2 justify-items-center gap-1 [@media(max-width:320px)]:grid-cols-1 sm:mt-5 sm:gap-3 lg:grid-cols-3 xl:grid-cols-4">
               {products.map((p) => (
                 <div key={p.id} className="w-full max-w-[320px] space-y-2">
-                  <ProductCard product={p} template="grocery_promo" store={{ name: store.name, slug: store.slug, logo_url: store.logo_url, rating_avg: store.rating_avg, rating_count: store.rating_count, is_verified: store.is_verified }} currentSubdomainSlug={currentSubdomainSlug} />
+                  <ProductCard product={p} template="grocery_promo" store={{ name: store.name, slug: store.slug, logo_url: store.logo_url, rating_avg: store.rating_avg, rating_count: store.rating_count, is_verified: store.is_verified }} />
                 </div>
               ))}
             </div>
           )}
         </div>
 
-        {/* Reviews */}
-        <div className="mx-auto max-w-7xl px-2 pb-12 sm:px-4" id="vendor-reviews">
-          <VendorReviewsSection storeId={store.id} initialRatingAvg={store.rating_avg} initialRatingCount={store.rating_count} />
-        </div>
       </main>
     </>
   );
@@ -282,7 +275,6 @@ function EditorialTemplate({
   storeUrl,
   bannerUrls,
   storeJsonLd,
-  currentSubdomainSlug,
   storeHomeHref,
 }: TemplateProps) {
   const featured = products.slice(0, 4);
@@ -294,9 +286,9 @@ function EditorialTemplate({
       <main className="min-h-screen bg-white">
 
         {/* Full-bleed dark hero */}
-        <section className="relative min-h-[420px] overflow-hidden bg-slate-950 sm:min-h-[520px]">
+        <section className="relative min-h-[420px] px-2 sm:px-20 overflow-hidden bg-slate-950 sm:min-h-[520px]">
           {config.hero_image_url && (
-            <Image src={config.hero_image_url} alt={store.name} fill className="object-cover opacity-40" sizes="100vw" priority />
+            <Image src={config.hero_image_url} alt={store.name} fill className="object-cover" sizes="100vw" priority />
           )}
           <div className="absolute inset-0 bg-gradient-to-b from-slate-950/20 via-slate-950/50 to-slate-950" />
 
@@ -308,10 +300,13 @@ function EditorialTemplate({
                   <Image src={store.logo_url} alt={store.name} fill className="object-cover" sizes="36px" />
                 </div>
               ) : null}
-              <span className="flex items-center gap-1 text-sm font-bold uppercase tracking-[0.18em] text-white/70">
-                {store.name}
-                {store.is_verified ? <BadgeCheck className="h-3.5 w-3.5 shrink-0 text-white/70" aria-label="Verified vendor" /> : null}
-              </span>
+              
+                <Link href={`${storeUrl}/profile`} className="flex cursor-pointer items-center gap-1 text-sm font-bold uppercase tracking-[0.18em] text-white/70">
+                  <span className="text-white">
+                    {store.name}
+                  </span>
+                  {store.is_verified ? <BadgeCheck className="h-3.5 w-3.5 shrink-0 text-white/70" aria-label="Verified vendor" /> : null}
+                </Link>
             </div>
             <div className="flex items-center gap-2">
               <FollowStoreButton storeId={store.id} storeSlug={store.slug} isLoggedIn={isLoggedIn} isOwner={Boolean(activeUserId && activeUserId === store.vendor_id)} initialFollowing={isFollowing} compact />
@@ -330,7 +325,6 @@ function EditorialTemplate({
             )}
             <h1 className="flex max-w-2xl flex-wrap items-center gap-2 text-4xl font-black leading-none tracking-tight text-white sm:text-6xl">
               {config.hero_title || store.name}
-              {store.is_verified ? <BadgeCheck className="h-7 w-7 shrink-0 text-white sm:h-9 sm:w-9" aria-label="Verified vendor" /> : null}
             </h1>
             {config.hero_subtitle && <p className="mt-3 max-w-xl text-base text-white/70">{config.hero_subtitle}</p>}
             <div className="mt-4 flex flex-wrap items-center gap-3">
@@ -364,7 +358,7 @@ function EditorialTemplate({
             <div className="flex gap-4 overflow-x-auto pb-2 [scrollbar-width:none]">
               {featured.map((p) => (
                 <div key={p.id} className="w-[56vw] max-w-[280px] shrink-0 sm:max-w-[280px]">
-                  <ProductCard product={p} template="fashion_editorial" store={{ name: store.name, slug: store.slug, logo_url: store.logo_url, rating_avg: store.rating_avg, rating_count: store.rating_count, is_verified: store.is_verified }} currentSubdomainSlug={currentSubdomainSlug} />
+                  <ProductCard product={p} template="fashion_editorial" store={{ name: store.name, slug: store.slug, logo_url: store.logo_url, rating_avg: store.rating_avg, rating_count: store.rating_count, is_verified: store.is_verified }} />
                 </div>
               ))}
             </div>
@@ -392,17 +386,13 @@ function EditorialTemplate({
             <div className="mt-4 grid grid-cols-2 justify-items-center gap-1 [@media(max-width:320px)]:grid-cols-1 sm:mt-5 sm:gap-3 lg:grid-cols-3 xl:grid-cols-4">
               {(rest.length > 0 ? rest : products).map((p) => (
                 <div key={p.id} className="w-full max-w-[320px] space-y-2">
-                  <ProductCard product={p} template="fashion_editorial" store={{ name: store.name, slug: store.slug, logo_url: store.logo_url, rating_avg: store.rating_avg, rating_count: store.rating_count, is_verified: store.is_verified }} currentSubdomainSlug={currentSubdomainSlug} />
+                  <ProductCard product={p} template="fashion_editorial" store={{ name: store.name, slug: store.slug, logo_url: store.logo_url, rating_avg: store.rating_avg, rating_count: store.rating_count, is_verified: store.is_verified }} />
                 </div>
               ))}
             </div>
           )}
         </div>
 
-        {/* Reviews */}
-        <div className="mx-auto max-w-7xl border-t border-slate-100 px-2 py-10 sm:px-4" id="vendor-reviews">
-          <VendorReviewsSection storeId={store.id} initialRatingAvg={store.rating_avg} initialRatingCount={store.rating_count} />
-        </div>
       </main>
     </>
   );
@@ -428,7 +418,6 @@ function ShowcaseTemplate({
   bannerUrls,
   storeJsonLd,
   surfaceColor,
-  currentSubdomainSlug,
   storeHomeHref,
 }: TemplateProps) {
   return (
@@ -448,14 +437,13 @@ function ShowcaseTemplate({
               ) : (
                 <div className="flex h-12 w-12 items-center justify-center rounded-xl font-black text-xl text-white" style={{ backgroundColor: primaryColor }}>{store.name.charAt(0)}</div>
               )}
-              <span className="flex items-center gap-1 text-sm font-semibold text-slate-500">
+              <Link href={`${storeUrl}/profile`} className="flex cursor-pointer items-center gap-1 text-sm font-semibold text-slate-500">
                 {store.name}
                 {store.is_verified ? <BadgeCheck className="h-3.5 w-3.5 shrink-0 text-emerald-600" aria-label="Verified vendor" /> : null}
-              </span>
+              </Link>
             </div>
             <h1 className="mt-5 flex flex-wrap items-center gap-2 text-4xl font-black leading-[1.05] tracking-tight text-slate-900 sm:text-5xl lg:text-6xl">
               {config.hero_title || store.name}
-              {store.is_verified ? <BadgeCheck className="h-7 w-7 shrink-0 text-emerald-600 sm:h-9 sm:w-9" aria-label="Verified vendor" /> : null}
             </h1>
             <p className="mt-4 max-w-md text-base leading-7 text-slate-600">{config.hero_subtitle}</p>
             {nicheNames.length > 0 && (
@@ -524,7 +512,7 @@ function ShowcaseTemplate({
               <div className="mt-4 grid grid-cols-2 justify-items-center gap-1 [@media(max-width:320px)]:grid-cols-1 sm:mt-5 sm:gap-3 lg:grid-cols-3 xl:grid-cols-4">
                 {products.map((p) => (
                   <div key={p.id} className="w-full max-w-[320px] space-y-2">
-                  <ProductCard product={p} template="lifestyle_showcase" store={{ name: store.name, slug: store.slug, logo_url: store.logo_url, rating_avg: store.rating_avg, rating_count: store.rating_count, is_verified: store.is_verified }} currentSubdomainSlug={currentSubdomainSlug} />
+                  <ProductCard product={p} template="lifestyle_showcase" store={{ name: store.name, slug: store.slug, logo_url: store.logo_url, rating_avg: store.rating_avg, rating_count: store.rating_count, is_verified: store.is_verified }} />
                   </div>
                 ))}
               </div>
@@ -539,10 +527,6 @@ function ShowcaseTemplate({
           </div>
         )}
 
-        {/* Reviews */}
-        <div className="mx-auto max-w-7xl px-2 pb-12 sm:px-4" id="vendor-reviews">
-          <VendorReviewsSection storeId={store.id} initialRatingAvg={store.rating_avg} initialRatingCount={store.rating_count} />
-        </div>
       </main>
     </>
   );
@@ -567,7 +551,6 @@ function GridTemplate({
   storeUrl,
   bannerUrls,
   storeJsonLd,
-  currentSubdomainSlug,
   storeHomeHref,
 }: TemplateProps) {
   return (
@@ -587,10 +570,10 @@ function GridTemplate({
                 <div className="flex h-9 w-9 items-center justify-center rounded-lg font-black text-white text-sm" style={{ backgroundColor: primaryColor }}>{store.name.charAt(0)}</div>
               )}
               <div>
-                <p className="flex items-center gap-1 text-sm font-bold text-slate-900">
+                <Link href={`${storeUrl}/profile`} className="flex cursor-pointer items-center gap-1 text-sm font-bold text-slate-900">
                   {store.name}
                   {store.is_verified ? <BadgeCheck className="h-3.5 w-3.5 shrink-0 text-emerald-600" aria-label="Verified vendor" /> : null}
-                </p>
+                </Link>
                 <StarRating value={store.rating_avg} count={store.rating_count} size="sm" />
                 {completedOrdersCount > 0 ? (
                   <p className="text-[11px] font-medium text-slate-500">{completedOrdersCount} completed orders</p>
@@ -694,16 +677,12 @@ function GridTemplate({
               <div className="mt-4 grid grid-cols-2 justify-items-center gap-1 [@media(max-width:320px)]:grid-cols-1 sm:mt-5 sm:gap-3 lg:grid-cols-3 xl:grid-cols-4">
                 {products.map((p) => (
                   <div key={p.id} className="w-full max-w-[320px] space-y-2">
-                    <ProductCard key={p.id} product={p} template="modern_grid" store={{ name: store.name, slug: store.slug, logo_url: store.logo_url, rating_avg: store.rating_avg, rating_count: store.rating_count, is_verified: store.is_verified }} currentSubdomainSlug={currentSubdomainSlug} />
+                    <ProductCard key={p.id} product={p} template="modern_grid" store={{ name: store.name, slug: store.slug, logo_url: store.logo_url, rating_avg: store.rating_avg, rating_count: store.rating_count, is_verified: store.is_verified }} />
                   </div>
                 ))}
               </div>
             )}
 
-            {/* Reviews */}
-            <div className="mt-8" id="vendor-reviews">
-              <VendorReviewsSection storeId={store.id} initialRatingAvg={store.rating_avg} initialRatingCount={store.rating_count} />
-            </div>
           </div>
         </div>
       </main>
@@ -730,11 +709,6 @@ type TemplateProps = {
   storeUrl: string;
   bannerUrls: string[];
   storeJsonLd: object;
-  /** See lib/current-subdomain.ts - which vendor slug (if any) this request
-   *  is being served under via subdomain rewrite. */
-  currentSubdomainSlug: string | null;
-  /** Correct href for "this store's own home page", in both subdomain and
-   *  apex/path-based modes. */
   storeHomeHref: string;
 };
 
@@ -754,13 +728,7 @@ export default async function StorePage({ params, searchParams }: StorePageProps
   const nicheNames = storefrontData.nicheNames;
   const completedOrdersCount = storefrontData.completedOrdersCount;
 
-  // Whether THIS request is being served via olas-gadgets.sellee.store (vs
-  // the plain sellee.store/store/olas-gadgets path). Needed so links back
-  // to this store's own home page and to its own products use the right
-  // form - see lib/current-subdomain.ts.
-  const currentSubdomainSlug = await getCurrentSubdomainSlug();
-  const isOwnSubdomain = currentSubdomainSlug === slug;
-  const storeHomeHref = isOwnSubdomain ? "/" : `/store/${slug}`;
+  const storeHomeHref = buildStoreUrl(slug);
   const isOwnerViewing = session?.user?.id === store.vendor_id;
 
   let isFollowing = false;
@@ -827,7 +795,6 @@ export default async function StorePage({ params, searchParams }: StorePageProps
     storeUrl,
     bannerUrls,
     storeJsonLd,
-    currentSubdomainSlug,
     storeHomeHref,
   };
 

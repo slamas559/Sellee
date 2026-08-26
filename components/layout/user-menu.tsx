@@ -8,14 +8,6 @@ import { mainAppUrl } from "@/lib/store-url";
 type UserMenuProps = {
   isLoggedIn: boolean;
   isVendor: boolean;
-  /**
-   * Resolves an app-wide path ("/login", "/account", etc.) to a link that
-   * works correctly even when this menu is rendered on a vendor's
-   * subdomain - see appHref() in site-header.tsx (this menu is always part
-   * of the header, so it renders on every page including storefronts).
-   * Defaults to identity (plain relative paths) so this component still
-   * works standalone if ever rendered outside the header.
-   */
   appHref?: (path: string) => string;
 };
 

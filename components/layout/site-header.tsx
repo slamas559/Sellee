@@ -9,36 +9,17 @@ import logoText from "@/app/logos/image-text-logo.png";
 import { CategoriesMegaMenu } from "@/components/layout/categories-mega-menu";
 import { UserMenu } from "@/components/layout/user-menu";
 import { useSession } from "next-auth/react";
-import { mainAppUrl } from "@/lib/store-url";
 
-const HIDDEN_ON_ROUTES = ["/login", "/register", "/forgot-password", "/reset-password"];
+const HIDDEN_ON_ROUTES = ["/login", "/register", "/forgot-password", "/reset-password", "/v"];
 
 type SiteHeaderProps = {
-  /**
-   * The path actually being rendered server-side, passed down from
-   * app/layout.tsx (sourced from the "x-sellee-pathname" header proxy.ts
-   * sets on vendor-subdomain requests). Needed because a subdomain request
-   * like "olas-gadgets.sellee.store/" is served via an internal rewrite to
-   * "/store/olas-gadgets" - the browser URL bar (and therefore
-   * usePathname()) never shows that, it still just shows "/". Falls back to
-   * the client-observed pathname for ordinary path-based navigation, where
-   * the two already agree.
-   */
-  effectivePathname?: string;
 };
 
-export default function SiteHeader({ effectivePathname }: SiteHeaderProps = {}) {
+export default function SiteHeader(_props: SiteHeaderProps = {}) {
   const observedPathname = usePathname() || "/";
-  const pathname = effectivePathname || observedPathname;
-  // effectivePathname is only ever set (see the prop doc above) when this
-  // request is being served via a vendor's subdomain - in that case a
-  // plain relative app-wide link (logo, "Map", search) would resolve
-  // against THIS VENDOR'S OWN subdomain instead of the real site, the same
-  // issue already fixed for the product page's "Home" breadcrumb (see
-  // lib/store-url.ts's mainAppUrl doc comment). Route every app-wide nav
-  // target in this header through this helper rather than a bare "/path".
+  const pathname = observedPathname;
   function appHref(path: string): string {
-    return effectivePathname ? mainAppUrl(path) : path;
+    return path;
   }
   const logoHref = appHref("/");
   const searchParams = useSearchParams();

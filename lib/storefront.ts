@@ -3,7 +3,6 @@ import type { StoreThemePreset, StorefrontConfig, StoreTemplate, StorefrontSecti
 export const DEFAULT_STOREFRONT_SECTIONS_ORDER: StorefrontSectionId[] = [
   "featured_products",
   "promo_strip",
-  "reviews",
 ];
 
 export const STOREFRONT_TEMPLATE_OPTIONS: Array<{

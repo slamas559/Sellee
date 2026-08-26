@@ -412,7 +412,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Store name cannot be converted to a valid slug." }, { status: 400 });
     }
 
-    const uniqueSlug = await ensureUniqueSlug(baseSlug, existingStore?.id);
+    const slug = existingStore ? existingStore.slug : await ensureUniqueSlug(baseSlug);
     const latitude = parsed.data.latitude ?? null;
     const longitude = parsed.data.longitude ?? null;
     const locationSource = latitude !== null && longitude !== null ? parsed.data.location_source ?? "manual" : null;
@@ -458,7 +458,6 @@ export async function POST(request: Request) {
         .from("stores")
         .update({
           name: parsedData.name,
-          slug: uniqueSlug,
           whatsapp_number: whatsappCheck.normalized,
           ...(numberChanged ? { whatsapp_verified_at: null } : {}),
           address_line1: parsedData.address_line1 || null,
@@ -498,10 +497,6 @@ export async function POST(request: Request) {
       const appUrl = process.env.NEXTAUTH_URL || "https://sellee.store";
       fetch(`${appUrl}/store/${data.slug}/opengraph-image`).catch(() => {});
 
-      if (existingStore?.slug && existingStore.slug !== data.slug) {
-        revalidateTag(CACHE_TAGS.storefrontBySlug(existingStore.slug), "max");
-      }
-
       const { data: promotedRows, error: roleError } = await supabase
         .from("users")
         .update({ role: "vendor" })
@@ -525,7 +520,7 @@ export async function POST(request: Request) {
       .insert({
         vendor_id: session.user.id,
         name: parsedData.name,
-        slug: uniqueSlug,
+        slug: slug,
         whatsapp_number: whatsappCheck.normalized,
         address_line1: parsedData.address_line1 || null,
         city: parsedData.city || null,

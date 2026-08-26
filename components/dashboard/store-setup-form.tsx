@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
-import { BadgeCheck } from "lucide-react";
+import { BadgeCheck, MapPin } from "lucide-react";
 import { AiRefineButton } from "@/components/ai/ai-refine-button";
 import {
   DEFAULT_STOREFRONT_CONFIG,
@@ -14,6 +14,7 @@ import {
   normalizeThemePreset,
 } from "@/lib/storefront";
 import type { StoreRecord, StoreTemplate, StorefrontSectionId } from "@/types";
+import { ChangeStoreUrlDialog } from "@/components/dashboard/change-store-url-dialog";
 import { storeUrl } from "@/lib/store-url";
 
 type StoreSetupFormProps = {
@@ -53,7 +54,6 @@ const INITIAL_UPLOAD_STATE: UploadState = {
 const SECTION_LABELS: Record<StorefrontSectionId, string> = {
   featured_products: "Featured products",
   promo_strip: "Promo strip",
-  reviews: "Reviews",
 };
 
 // ─── Template visual card ──────────────────────────────────────────────────
@@ -995,7 +995,10 @@ export function StoreSetupForm({ initialStore, initialEmailVerifiedAt = null }: 
                 <input value={form.address_line1} onChange={(e) => updateFormField("address_line1", e.target.value)} placeholder="12 Allen Avenue" className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none ring-emerald-300 transition focus:ring-2" />
               </label>
               <button type="button" onClick={useCurrentLocation} disabled={isDetectingLocation} className="shrink-0 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100 disabled:opacity-60">
-                {isDetectingLocation ? "Detecting…" : "📍 Detect"}
+                <span className="inline-flex items-center gap-1.5">
+                  <MapPin className="h-4 w-4" aria-hidden="true" />
+                  {isDetectingLocation ? "Detecting…" : "Detect"}
+                </span>
               </button>
             </div>
             <label className="space-y-1.5 text-sm">
@@ -1043,6 +1046,14 @@ export function StoreSetupForm({ initialStore, initialEmailVerifiedAt = null }: 
           )}
           {store?.slug && (
             <p className="self-center text-xs text-slate-500">{shareablePath}</p>
+          )}
+          {store?.slug && (
+            <ChangeStoreUrlDialog
+              currentSlug={store.slug}
+              onChanged={(newSlug) => {
+                setStore((prev) => (prev ? { ...prev, slug: newSlug } : prev));
+              }}
+            />
           )}
           {error && <p className="w-full rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-700">{error}</p>}
           {message && <p className="w-full rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700">{message}</p>}

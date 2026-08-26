@@ -17,8 +17,7 @@ export type StoreThemePreset =
 
 export type StorefrontSectionId =
   | "featured_products"
-  | "promo_strip"
-  | "reviews";
+  | "promo_strip";
 
 export type StorefrontConfig = {
   hero_title: string;

@@ -13,10 +13,9 @@ type ProductCardProps = {
     rating_count: number;
     is_verified?: boolean | null;
   };
-  currentSubdomainSlug?: string | null;
 };
 
-export function ProductCard({ product, store, template = "classic", currentSubdomainSlug }: ProductCardProps) {
+export function ProductCard({ product, store, template = "classic" }: ProductCardProps) {
   return (
     <ProductShowcaseCard
       product={product}
@@ -24,7 +23,6 @@ export function ProductCard({ product, store, template = "classic", currentSubdo
       variant="home"
       template={template}
       source="store"
-      currentSubdomainSlug={currentSubdomainSlug}
     />
   );
 }
