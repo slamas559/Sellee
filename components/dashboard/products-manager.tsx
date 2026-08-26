@@ -3,6 +3,13 @@
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import { AiRefineButton } from "@/components/ai/ai-refine-button";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from "@/components/ui/sheet";
 import { formatNaira } from "@/lib/format";
 import type { ProductRecord } from "@/types";
 
@@ -62,6 +69,7 @@ export function ProductsManager({ initialProducts }: ProductsManagerProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const productsPerPage = 12;
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
+  const [isFormOpen, setIsFormOpen] = useState(false);
   const [form, setForm] = useState<ProductFormState>(initialForm);
   const [dragActive, setDragActive] = useState(false);
   const imagePreviewUrls = useMemo(
@@ -133,6 +141,12 @@ export function ProductsManager({ initialProducts }: ProductsManagerProps) {
     });
     setMessage(null);
     setError(null);
+    setIsFormOpen(true);
+  }
+
+  function openAddForm() {
+    resetForm();
+    setIsFormOpen(true);
   }
 
   function resetForm() {
@@ -287,6 +301,7 @@ export function ProductsManager({ initialProducts }: ProductsManagerProps) {
 
       setMessage(payload.message ?? (isEditing ? "Product updated." : "Product created."));
       resetForm();
+      setIsFormOpen(false);
       await loadProducts();
     } catch {
       setError("Network error while saving product.");
@@ -317,6 +332,7 @@ export function ProductsManager({ initialProducts }: ProductsManagerProps) {
       setMessage(payload.message ?? "Product deleted.");
       if (editingProductId === productId) {
         resetForm();
+        setIsFormOpen(false);
       }
       await loadProducts();
     } catch {
@@ -326,16 +342,27 @@ export function ProductsManager({ initialProducts }: ProductsManagerProps) {
 
   return (
     <div className="space-y-6">
-      <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-        <p className="text-sm font-medium text-emerald-700">Product Form</p>
-        <h2 className="mt-1 text-xl font-semibold text-slate-900">
-          {editingProductId ? "Edit product" : "Add product"}
-        </h2>
-        <p className="mt-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
-          You can upload multiple product images. The first image is used as the cover image on cards.
-        </p>
+      <Sheet
+        open={isFormOpen}
+        onOpenChange={(open) => {
+          setIsFormOpen(open);
+          if (!open) {
+            resetForm();
+          }
+        }}
+      >
+        <SheetContent side="right" className="overflow-y-auto">
+          <SheetHeader>
+            <p className="text-sm font-medium text-emerald-700">Product Form</p>
+            <SheetTitle className="text-xl">
+              {editingProductId ? "Edit product" : "Add product"}
+            </SheetTitle>
+            <SheetDescription>
+              You can upload multiple product images. The first image is used as the cover image on cards.
+            </SheetDescription>
+          </SheetHeader>
 
-        <form onSubmit={handleSubmit} className="mt-5 grid gap-4 md:grid-cols-2">
+          <form onSubmit={handleSubmit} className="grid gap-4 px-6 pb-6 md:grid-cols-2">
           <label className="space-y-2 text-sm">
             <span className="font-medium text-slate-700">Name</span>
             <input
@@ -574,7 +601,7 @@ export function ProductsManager({ initialProducts }: ProductsManagerProps) {
                             onClick={() => moveExistingImageToPrimary(index)}
                             className="rounded-md border border-slate-300 px-2 py-1 text-[10px] font-semibold text-slate-700 hover:bg-slate-50"
                           >
-                            Make cover
+                            cover
                           </button>
                         ) : null}
                         <button
@@ -648,7 +675,7 @@ export function ProductsManager({ initialProducts }: ProductsManagerProps) {
                             onClick={() => moveSelectedImageToPrimary(index)}
                             className="rounded-md border border-slate-300 px-2 py-1 text-[10px] font-semibold text-slate-700 hover:bg-slate-50"
                           >
-                            Make cover
+                            cover
                           </button>
                         ) : null}
                         <button
@@ -715,32 +742,43 @@ export function ProductsManager({ initialProducts }: ProductsManagerProps) {
                   : "Add product"}
             </button>
 
-            {editingProductId ? (
-              <button
-                type="button"
-                onClick={resetForm}
-                className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50"
-              >
-                Cancel edit
-              </button>
-            ) : null}
+            <button
+              type="button"
+              onClick={() => {
+                resetForm();
+                setIsFormOpen(false);
+              }}
+              className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50"
+            >
+              Cancel
+            </button>
           </div>
         </form>
-      </section>
+        </SheetContent>
+      </Sheet>
 
       <section className="rounded-xl border border-slate-200 bg-white p-2 shadow-sm">
-        <div className="mb-4 flex items-center justify-between gap-2">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
           <div>
             <p className="text-sm font-medium text-emerald-700">Products</p>
-            <h2 className="mt-1 text-xl font-semibold text-slate-900">Your product list</h2>
+            <h2 className="mt-1 text-base font-semibold text-slate-900 sm:text-xl">Your product list</h2>
           </div>
-          <button
-            type="button"
-            onClick={() => void loadProducts()}
-            className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-          >
-            Refresh
-          </button>
+          <div className="flex shrink-0 gap-1.5 sm:gap-2">
+            <button
+              type="button"
+              onClick={openAddForm}
+              className="rounded-md bg-emerald-600 px-2 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 sm:px-3 sm:py-2 sm:text-sm"
+            >
+              + Add product
+            </button>
+            <button
+              type="button"
+              onClick={() => void loadProducts()}
+              className="rounded-md border border-slate-300 bg-white px-2 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 sm:px-3 sm:py-2 sm:text-sm"
+            >
+              Refresh
+            </button>
+          </div>
         </div>
 
         {isLoading ? <p className="text-sm text-slate-500">Loading products...</p> : null}
