@@ -11,7 +11,7 @@ function DeletedSessionGuard() {
   const { data: session } = useSession();
 
   useEffect(() => {
-    if (session?.error === "UserDeleted") {
+    if (session?.error === "UserDeleted" || session?.error === "UserSuspended") {
       void signOut({ callbackUrl: "/login" });
     }
   }, [session?.error]);

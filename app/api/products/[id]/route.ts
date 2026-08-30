@@ -6,6 +6,7 @@ import { z } from "zod";
 import { authOptions } from "@/lib/auth";
 import { slugify } from "@/lib/format";
 import { logDevError } from "@/lib/logger";
+import { deleteProductImagesFromStorage } from "@/lib/product-images";
 import { CACHE_TAGS } from "@/lib/public-cache";
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
 import { notifyRestockSubscribers } from "@/lib/whatsapp-bot/restock-alerts";
@@ -167,6 +168,7 @@ async function uploadProductImages(vendorId: string, files: File[]): Promise<str
   }
   return urls;
 }
+
 
 async function buildUniqueProductSlug(
   storeId: string,
@@ -359,6 +361,17 @@ export async function PATCH(
       return NextResponse.json({ error: "Could not update product." }, { status: 500 });
     }
 
+    // Any image that was on the product before but isn't in the final set
+    // (removed by the vendor, or dropped via keep_image_urls) is now orphaned
+    // in storage — clean it up now that the DB update has succeeded.
+    const priorImageUrls = [
+      ...existingImageUrls,
+      ...(existingProduct.image_url ? [existingProduct.image_url] : []),
+    ];
+    const finalImageUrlSet = new Set(imageUrls);
+    const orphanedImageUrls = [...new Set(priorImageUrls)].filter((url) => !finalImageUrlSet.has(url));
+    await deleteProductImagesFromStorage(orphanedImageUrls);
+
     const previousStock = Number(existingProduct.stock_count ?? 0);
     const nextStock = Number(parsed.data.stock_count);
     const becameInStock = previousStock <= 0 && nextStock > 0;
@@ -410,6 +423,20 @@ export async function DELETE(
     }
 
     const supabase = createAdminSupabaseClient();
+
+    // Grab the image URLs before the row is gone so we know what to clean up.
+    const { data: productToDelete, error: fetchError } = await supabase
+      .from("products")
+      .select("image_url, image_urls")
+      .eq("id", id)
+      .eq("store_id", store.id)
+      .maybeSingle();
+
+    if (fetchError) {
+      logDevError("products.delete.lookup", fetchError, { id, storeId: store.id });
+      return NextResponse.json({ error: "Could not load product." }, { status: 500 });
+    }
+
     const { error } = await supabase
       .from("products")
       .delete()
@@ -420,6 +447,13 @@ export async function DELETE(
       logDevError("products.delete", error, { id, storeId: store.id });
       return NextResponse.json({ error: "Could not delete product." }, { status: 500 });
     }
+
+    const imageUrlsToDelete = [
+      ...(Array.isArray(productToDelete?.image_urls) ? productToDelete.image_urls : []),
+      ...(productToDelete?.image_url ? [productToDelete.image_url] : []),
+    ].filter((value): value is string => typeof value === "string" && value.length > 0);
+
+    await deleteProductImagesFromStorage(imageUrlsToDelete);
 
     revalidatePublicCacheForStore(store.slug);
 

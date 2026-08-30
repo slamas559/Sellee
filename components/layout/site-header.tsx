@@ -10,7 +10,7 @@ import { CategoriesMegaMenu } from "@/components/layout/categories-mega-menu";
 import { UserMenu } from "@/components/layout/user-menu";
 import { useSession } from "next-auth/react";
 
-const HIDDEN_ON_ROUTES = ["/login", "/register", "/forgot-password", "/reset-password", "/v"];
+const HIDDEN_ON_ROUTES = ["/login", "/register", "/forgot-password", "/reset-password", "/v", "/admin-console"];
 
 type SiteHeaderProps = {
 };

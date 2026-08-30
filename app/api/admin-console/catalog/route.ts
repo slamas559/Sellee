@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { slugify } from "@/lib/format";
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
+import { requireAdminApi } from "@/lib/admin-auth";
+import { writeAuditLog } from "@/lib/audit-log";
 
 const createNicheSchema = z.object({
   type: z.literal("niche"),
@@ -40,17 +42,6 @@ const deleteSchema = z.union([
   }),
 ]);
 
-function getCatalogAdminPassword() {
-  return process.env.CATALOG_ADMIN_PASSWORD ?? process.env.ADMIN_CATALOG_PASSWORD ?? "";
-}
-
-function isAuthorized(request: Request) {
-  const configuredPassword = getCatalogAdminPassword();
-  if (!configuredPassword) return false;
-  const provided = request.headers.get("x-admin-password")?.trim() ?? "";
-  return provided.length > 0 && provided === configuredPassword;
-}
-
 async function loadCatalog() {
   const supabase = createAdminSupabaseClient();
   const [{ data: niches }, { data: categories }] = await Promise.all([
@@ -82,25 +73,17 @@ async function loadCatalog() {
   }));
 }
 
-export async function GET(request: Request) {
-  if (!isAuthorized(request)) {
-    return NextResponse.json(
-      { error: "Unauthorized. Missing or invalid admin password." },
-      { status: 401 },
-    );
-  }
+export async function GET() {
+  const session = await requireAdminApi();
+  if (session instanceof NextResponse) return session;
 
   const niches = await loadCatalog();
   return NextResponse.json({ niches });
 }
 
 export async function POST(request: Request) {
-  if (!isAuthorized(request)) {
-    return NextResponse.json(
-      { error: "Unauthorized. Missing or invalid admin password." },
-      { status: 401 },
-    );
-  }
+  const session = await requireAdminApi();
+  if (session instanceof NextResponse) return session;
 
   const body = await request.json();
   const parsedNiche = createNicheSchema.safeParse(body);
@@ -110,24 +93,38 @@ export async function POST(request: Request) {
   if (parsedNiche.success) {
     const name = parsedNiche.data.name.trim();
     const slug = slugify(parsedNiche.data.slug?.trim() || name);
-    const { error } = await supabase.from("niches").insert({ name, slug });
+    const { data, error } = await supabase.from("niches").insert({ name, slug }).select("id").single();
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
+    await writeAuditLog({
+      adminId: session.user.id,
+      action: "catalog.niche_created",
+      targetType: "niche",
+      targetId: data?.id,
+      metadata: { name, slug },
+    });
     return NextResponse.json({ ok: true, niches: await loadCatalog() });
   }
 
   if (parsedCategory.success) {
     const name = parsedCategory.data.name.trim();
     const slug = slugify(parsedCategory.data.slug?.trim() || name);
-    const { error } = await supabase.from("niche_categories").insert({
-      niche_id: parsedCategory.data.niche_id,
-      name,
-      slug,
-    });
+    const { data, error } = await supabase
+      .from("niche_categories")
+      .insert({ niche_id: parsedCategory.data.niche_id, name, slug })
+      .select("id")
+      .single();
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
+    await writeAuditLog({
+      adminId: session.user.id,
+      action: "catalog.category_created",
+      targetType: "niche_category",
+      targetId: data?.id,
+      metadata: { name, slug, niche_id: parsedCategory.data.niche_id },
+    });
     return NextResponse.json({ ok: true, niches: await loadCatalog() });
   }
 
@@ -135,12 +132,8 @@ export async function POST(request: Request) {
 }
 
 export async function PATCH(request: Request) {
-  if (!isAuthorized(request)) {
-    return NextResponse.json(
-      { error: "Unauthorized. Missing or invalid admin password." },
-      { status: 401 },
-    );
-  }
+  const session = await requireAdminApi();
+  if (session instanceof NextResponse) return session;
 
   const body = await request.json();
   const parsed = updateSchema.safeParse(body);
@@ -149,35 +142,28 @@ export async function PATCH(request: Request) {
   }
 
   const supabase = createAdminSupabaseClient();
-  if (parsed.data.type === "niche") {
-    const name = parsed.data.name.trim();
-    const slug = slugify(name);
-    const { error } = await supabase.from("niches").update({ name, slug }).eq("id", parsed.data.id);
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
-    }
-  } else {
-    const name = parsed.data.name.trim();
-    const slug = slugify(name);
-    const { error } = await supabase
-      .from("niche_categories")
-      .update({ name, slug })
-      .eq("id", parsed.data.id);
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
-    }
+  const name = parsed.data.name.trim();
+  const slug = slugify(name);
+  const table = parsed.data.type === "niche" ? "niches" : "niche_categories";
+  const { error } = await supabase.from(table).update({ name, slug }).eq("id", parsed.data.id);
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 400 });
   }
+
+  await writeAuditLog({
+    adminId: session.user.id,
+    action: parsed.data.type === "niche" ? "catalog.niche_renamed" : "catalog.category_renamed",
+    targetType: parsed.data.type === "niche" ? "niche" : "niche_category",
+    targetId: parsed.data.id,
+    metadata: { name, slug },
+  });
 
   return NextResponse.json({ ok: true, niches: await loadCatalog() });
 }
 
 export async function DELETE(request: Request) {
-  if (!isAuthorized(request)) {
-    return NextResponse.json(
-      { error: "Unauthorized. Missing or invalid admin password." },
-      { status: 401 },
-    );
-  }
+  const session = await requireAdminApi();
+  if (session instanceof NextResponse) return session;
 
   const body = await request.json();
   const parsed = deleteSchema.safeParse(body);
@@ -186,17 +172,18 @@ export async function DELETE(request: Request) {
   }
 
   const supabase = createAdminSupabaseClient();
-  if (parsed.data.type === "niche") {
-    const { error } = await supabase.from("niches").delete().eq("id", parsed.data.id);
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
-    }
-  } else {
-    const { error } = await supabase.from("niche_categories").delete().eq("id", parsed.data.id);
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
-    }
+  const table = parsed.data.type === "niche" ? "niches" : "niche_categories";
+  const { error } = await supabase.from(table).delete().eq("id", parsed.data.id);
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 400 });
   }
+
+  await writeAuditLog({
+    adminId: session.user.id,
+    action: parsed.data.type === "niche" ? "catalog.niche_deleted" : "catalog.category_deleted",
+    targetType: parsed.data.type === "niche" ? "niche" : "niche_category",
+    targetId: parsed.data.id,
+  });
 
   return NextResponse.json({ ok: true, niches: await loadCatalog() });
 }

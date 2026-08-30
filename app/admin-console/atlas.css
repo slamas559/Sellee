@@ -1,0 +1,186 @@
+/*
+ * Atlas — Sellee's internal admin console.
+ *
+ * Deliberately its own visual system, not a reskin of the marketplace's
+ * green/gold consumer branding: an operator needs an unambiguous signal
+ * that they are in a different, higher-stakes surface. Everything here is
+ * scoped under .atlas so it can never bleed into the public site.
+ *
+ * Palette is a "ledger / navigation instrument" idea — deep ink chrome,
+ * warm paper content area, a muted brass accent (not the indigo/purple
+ * that most generic admin templates default to). Numbers are set in
+ * monospace throughout so figures actually align in columns.
+ */
+
+.atlas {
+  --atlas-ink: #14171c;
+  --atlas-ink-soft: #2a2f38;
+  --atlas-ink-line: #363c47;
+  --atlas-paper: #f0efe9;
+  --atlas-paper-raised: #f8f7f3;
+  --atlas-line: #ddd9cd;
+  --atlas-text: #1c1f24;
+  --atlas-text-muted: #6b6559;
+  --atlas-text-on-ink: #eceae4;
+  --atlas-text-on-ink-muted: #9aa0ab;
+  --atlas-brass: #b1802f;
+  --atlas-brass-strong: #8f6624;
+  --atlas-signal: #3f6657;
+  --atlas-signal-bg: #e4ebe6;
+  --atlas-warn: #9c6b16;
+  --atlas-warn-bg: #f2e6cd;
+  --atlas-danger: #a5402f;
+  --atlas-danger-bg: #f3e3df;
+
+  background: var(--atlas-paper);
+  color: var(--atlas-text);
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  min-height: 100dvh;
+}
+
+.atlas-display {
+  font-family: var(--font-atlas-display), Georgia, serif;
+  letter-spacing: -0.01em;
+}
+
+.atlas-figure {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+/* Hairline borders everywhere instead of drop shadows — the console reads
+   as a set of precisely ruled panels, not a stack of floating cards. */
+.atlas-panel {
+  background: var(--atlas-paper-raised);
+  border: 1px solid var(--atlas-line);
+  border-radius: 3px;
+}
+
+.atlas-kicker {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--atlas-text-muted);
+}
+
+.atlas-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 2px 8px;
+  border-radius: 2px;
+  border: 1px solid transparent;
+  line-height: 1.6;
+}
+
+.atlas-badge[data-tone="active"] {
+  color: var(--atlas-signal);
+  background: var(--atlas-signal-bg);
+}
+
+.atlas-badge[data-tone="warn"] {
+  color: var(--atlas-warn);
+  background: var(--atlas-warn-bg);
+}
+
+.atlas-badge[data-tone="danger"] {
+  color: var(--atlas-danger);
+  background: var(--atlas-danger-bg);
+}
+
+.atlas-badge[data-tone="neutral"] {
+  color: var(--atlas-text-muted);
+  background: var(--atlas-line);
+}
+
+.atlas-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5em;
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 8px 14px;
+  border-radius: 3px;
+  border: 1px solid transparent;
+  transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
+  cursor: pointer;
+}
+
+.atlas-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.atlas-btn[data-variant="primary"] {
+  background: var(--atlas-ink);
+  color: var(--atlas-text-on-ink);
+}
+.atlas-btn[data-variant="primary"]:hover:not(:disabled) {
+  background: var(--atlas-ink-soft);
+}
+
+.atlas-btn[data-variant="outline"] {
+  background: transparent;
+  border-color: var(--atlas-line);
+  color: var(--atlas-text);
+}
+.atlas-btn[data-variant="outline"]:hover:not(:disabled) {
+  background: var(--atlas-line);
+}
+
+.atlas-btn[data-variant="danger"] {
+  background: transparent;
+  border-color: var(--atlas-danger);
+  color: var(--atlas-danger);
+}
+.atlas-btn[data-variant="danger"]:hover:not(:disabled) {
+  background: var(--atlas-danger-bg);
+}
+
+.atlas-input {
+  width: 100%;
+  font-size: 13px;
+  padding: 8px 10px;
+  border: 1px solid var(--atlas-line);
+  border-radius: 3px;
+  background: var(--atlas-paper-raised);
+  color: var(--atlas-text);
+}
+.atlas-input:focus {
+  outline: none;
+  border-color: var(--atlas-brass);
+  box-shadow: 0 0 0 1px var(--atlas-brass);
+}
+
+.atlas-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.atlas-table th {
+  text-align: left;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--atlas-text-muted);
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--atlas-ink);
+}
+
+.atlas-table td {
+  padding: 11px 12px;
+  border-bottom: 1px solid var(--atlas-line);
+  vertical-align: middle;
+}
+
+.atlas-table tbody tr:hover {
+  background: rgba(20, 23, 28, 0.03);
+}

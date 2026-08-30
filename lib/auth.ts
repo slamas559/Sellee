@@ -92,7 +92,7 @@ export const authOptions: NextAuthOptions = {
 
         const { data: user, error } = await supabase
           .from("users")
-          .select("id, email, full_name, password_hash, role")
+          .select("id, email, full_name, password_hash, role, status")
           .eq("email", email)
           .single();
 
@@ -111,6 +111,13 @@ export const authOptions: NextAuthOptions = {
         );
 
         if (!isValidPassword) {
+          return null;
+        }
+
+        // Suspended vendors/customers are blocked the same way a wrong
+        // password would be — no separate messaging, consistent with how
+        // this app already treats a nonexistent account.
+        if (user.status === "suspended") {
           return null;
         }
 
@@ -136,7 +143,7 @@ export const authOptions: NextAuthOptions = {
         const supabase = createAdminSupabaseClient();
         const { data: profile } = await supabase
           .from("users")
-          .select("email, role, full_name")
+          .select("email, role, full_name, status")
           .eq("id", token.sub)
           .maybeSingle();
 
@@ -148,8 +155,9 @@ export const authOptions: NextAuthOptions = {
         }
 
         token.isDeleted = false;
+        token.isSuspended = profile.status === "suspended";
         token.email = profile.email ?? token.email;
-        if (profile?.role === "vendor" || profile?.role === "customer") {
+        if (profile?.role === "vendor" || profile?.role === "customer" || profile?.role === "admin") {
           token.role = profile.role;
         }
         if (profile?.full_name) {
@@ -169,8 +177,18 @@ export const authOptions: NextAuthOptions = {
           return session;
         }
 
+        // Admin accounts are never suspended (they're revoked outright),
+        // so this only ever fires for vendor/customer sessions.
+        if (token.isSuspended) {
+          session.user.id = "";
+          session.user.role = "customer";
+          session.user.name = null;
+          session.error = "UserSuspended";
+          return session;
+        }
+
         session.user.id = token.sub ?? "";
-        session.user.role = (token.role as "vendor" | "customer") ?? "customer";
+        session.user.role = (token.role as "vendor" | "customer" | "admin") ?? "customer";
         session.user.name = token.name ?? session.user.name;
       }
 
@@ -194,12 +212,19 @@ export const authOptions: NextAuthOptions = {
 
       const { data: existingUser, error: existingError } = await supabase
         .from("users")
-        .select("id, full_name, email, role")
+        .select("id, full_name, email, role, status")
         .eq("email", email)
         .maybeSingle();
 
       if (existingError) {
         logDevError("auth.google.lookup-user", existingError, { email });
+        return false;
+      }
+
+      if (existingUser?.status === "suspended") {
+        logDevError("auth.google.suspended-account", "Suspended account attempted Google sign-in", {
+          email,
+        });
         return false;
       }
 

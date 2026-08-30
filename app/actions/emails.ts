@@ -2,6 +2,8 @@
 
 import { Resend } from "resend";
 import { appUrl } from "@/lib/app-url";
+import { createAdminSupabaseClient } from "@/lib/supabase-admin";
+import { logDevError } from "@/lib/logger";
 import SupportTicketEmail, {
   type SupportTicketEmailProps,
 } from "@/emails/SupportTicketEmail";
@@ -16,6 +18,12 @@ import EmailVerificationEmail, {
 import OrderNotificationEmail, {
   type OrderNotificationEmailProps,
 } from "@/emails/OrderNotificationEmail";
+import AdminInviteEmail, {
+  type AdminInviteEmailProps,
+} from "@/emails/AdminInviteEmail";
+import AdminBroadcastEmail, {
+  type AdminBroadcastEmailProps,
+} from "@/emails/AdminBroadcastEmail";
 
 const SYSTEM_FROM = "Sellee <hello@sellee.store>";
 const SUPPORT_FROM = "Sellee <support@sellee.store>";
@@ -52,6 +60,15 @@ export interface SendSupportTicketEmailInput extends SupportTicketEmailProps {
 }
 
 export interface SendOrderNotificationEmailInput extends OrderNotificationEmailProps {
+  to: string;
+}
+
+export interface SendAdminInviteEmailInput extends AdminInviteEmailProps {
+  to: string;
+  subject?: string;
+}
+
+export interface SendAdminBroadcastEmailInput extends AdminBroadcastEmailProps {
   to: string;
 }
 
@@ -317,55 +334,71 @@ export async function submitHelpCenterTicket({
       };
     }
 
-    const resend = getResendClient();
-    const ticketId = makeTicketId();
-    const { data, error } = await resend.emails.send({
-      from: SUPPORT_FROM,
-      to: SUPPORT_REPLY_TO,
-      replyTo: SUPPORT_REPLY_TO,
-      subject: `[${ticketId}] ${cleanIssueType}`,
-      html: `
-        <div style="font-family: Arial, sans-serif; color: #0f172a; line-height: 1.6;">
-          <h1 style="font-size: 22px; margin: 0 0 12px;">New Sellee support request</h1>
-          <p style="margin: 0 0 16px;">A user submitted the Help Center issue report form.</p>
-          <table style="border-collapse: collapse; width: 100%; max-width: 640px;">
-            <tr>
-              <td style="border: 1px solid #e2e8f0; padding: 10px; font-weight: 700;">Ticket ID</td>
-              <td style="border: 1px solid #e2e8f0; padding: 10px;">${escapeHtml(ticketId)}</td>
-            </tr>
-            <tr>
-              <td style="border: 1px solid #e2e8f0; padding: 10px; font-weight: 700;">Issue type</td>
-              <td style="border: 1px solid #e2e8f0; padding: 10px;">${escapeHtml(cleanIssueType)}</td>
-            </tr>
-            <tr>
-              <td style="border: 1px solid #e2e8f0; padding: 10px; font-weight: 700;">Name</td>
-              <td style="border: 1px solid #e2e8f0; padding: 10px;">${escapeHtml(cleanName)}</td>
-            </tr>
-            <tr>
-              <td style="border: 1px solid #e2e8f0; padding: 10px; font-weight: 700;">Requester email</td>
-              <td style="border: 1px solid #e2e8f0; padding: 10px;">${escapeHtml(cleanEmail)}</td>
-            </tr>
-          </table>
-          <h2 style="font-size: 16px; margin: 22px 0 8px;">Details</h2>
-          <p style="white-space: pre-wrap; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 14px;">${escapeHtml(cleanDetails)}</p>
-        </div>
-      `,
-      text: [
-        "New Sellee support request",
-        "",
-        `Ticket ID: ${ticketId}`,
-        `Issue type: ${cleanIssueType}`,
-        `Name: ${cleanName}`,
-        `Requester email: ${cleanEmail}`,
-        "",
-        "Details:",
-        cleanDetails,
-      ].join("\n"),
-    });
+        const resend = getResendClient();
+        const ticketId = makeTicketId();
 
-    if (error) {
-      return { success: false, error };
-    }
+        const supabase = createAdminSupabaseClient();
+        const { error: persistError } = await supabase.from("support_tickets").insert({
+          ticket_ref: ticketId,
+          requester_email: cleanEmail,
+          requester_name: cleanName,
+          issue_type: cleanIssueType,
+          details: cleanDetails,
+        });
+        if (persistError) {
+          // Don't block the actual support request over a persistence miss -
+          // the email still goes out either way. Just means this one won't
+          // show up in the admin inbox.
+          logDevError("support-tickets.persist", persistError, { ticketId });
+        }
+
+        const { data, error } = await resend.emails.send({
+          from: SUPPORT_FROM,
+          to: SUPPORT_REPLY_TO,
+          replyTo: SUPPORT_REPLY_TO,
+          subject: `[${ticketId}] ${cleanIssueType}`,
+          html: `
+            <div style="font-family: Arial, sans-serif; color: #0f172a; line-height: 1.6;">
+              <h1 style="font-size: 22px; margin: 0 0 12px;">New Sellee support request</h1>
+              <p style="margin: 0 0 16px;">A user submitted the Help Center issue report form.</p>
+              <table style="border-collapse: collapse; width: 100%; max-width: 640px;">
+                <tr>
+                  <td style="border: 1px solid #e2e8f0; padding: 10px; font-weight: 700;">Ticket ID</td>
+                  <td style="border: 1px solid #e2e8f0; padding: 10px;">${escapeHtml(ticketId)}</td>
+                </tr>
+                <tr>
+                  <td style="border: 1px solid #e2e8f0; padding: 10px; font-weight: 700;">Issue type</td>
+                  <td style="border: 1px solid #e2e8f0; padding: 10px;">${escapeHtml(cleanIssueType)}</td>
+                </tr>
+                <tr>
+                  <td style="border: 1px solid #e2e8f0; padding: 10px; font-weight: 700;">Name</td>
+                  <td style="border: 1px solid #e2e8f0; padding: 10px;">${escapeHtml(cleanName)}</td>
+                </tr>
+                <tr>
+                  <td style="border: 1px solid #e2e8f0; padding: 10px; font-weight: 700;">Requester email</td>
+                  <td style="border: 1px solid #e2e8f0; padding: 10px;">${escapeHtml(cleanEmail)}</td>
+                </tr>
+              </table>
+              <h2 style="font-size: 16px; margin: 22px 0 8px;">Details</h2>
+              <p style="white-space: pre-wrap; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 14px;">${escapeHtml(cleanDetails)}</p>
+            </div>
+          `,
+          text: [
+            "New Sellee support request",
+            "",
+            `Ticket ID: ${ticketId}`,
+            `Issue type: ${cleanIssueType}`,
+            `Name: ${cleanName}`,
+            `Requester email: ${cleanEmail}`,
+            "",
+            "Details:",
+            cleanDetails,
+          ].join("\n"),
+        });
+
+        if (error) {
+          return { success: false, error };
+        }
 
     await sendSupportTicketEmail({
       to: cleanEmail,
@@ -420,6 +453,66 @@ export async function sendOrderNotificationEmail({
         // Swallow logging errors
       }
     }
+
+    if (error) {
+      return { success: false, error };
+    }
+
+    return { success: true, data };
+  } catch (error) {
+    return { success: false, error: normalizeError(error) };
+  }
+}
+export async function sendAdminInviteEmail({
+  to,
+  subject = "You've been invited to Sellee's admin console",
+  inviterName,
+  acceptUrl,
+}: SendAdminInviteEmailInput): Promise<EmailActionResult> {
+  try {
+    const resend = getResendClient();
+    const { data, error } = await resend.emails.send({
+      from: SYSTEM_FROM,
+      to,
+      replyTo: SUPPORT_REPLY_TO,
+      subject,
+      react: AdminInviteEmail({ inviterName, acceptUrl }),
+    });
+
+    if (process.env.NODE_ENV === "development") {
+      try {
+        // eslint-disable-next-line no-console
+        console.debug("[sendAdminInviteEmail] resend response:", { data, error });
+      } catch (logErr) {
+        // Swallow logging errors
+      }
+    }
+
+    if (error) {
+      return { success: false, error };
+    }
+
+    return { success: true, data };
+  } catch (error) {
+    return { success: false, error: normalizeError(error) };
+  }
+}
+
+export async function sendAdminBroadcastEmail({
+  to,
+  subject,
+  paragraphs,
+  recipientName,
+}: SendAdminBroadcastEmailInput): Promise<EmailActionResult> {
+  try {
+    const resend = getResendClient();
+    const { data, error } = await resend.emails.send({
+      from: SYSTEM_FROM,
+      to,
+      replyTo: SUPPORT_REPLY_TO,
+      subject,
+      react: AdminBroadcastEmail({ subject, paragraphs, recipientName }),
+    });
 
     if (error) {
       return { success: false, error };

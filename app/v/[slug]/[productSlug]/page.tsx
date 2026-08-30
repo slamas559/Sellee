@@ -13,6 +13,7 @@ import { ProductDetailsSection } from "@/components/store/product-details-sectio
 import { storeUrl as buildStoreUrl, storeProductUrl } from "@/lib/store-url";
 import { ProductReviewsSection } from "@/components/reviews/product-reviews-section";
 import { StarRating } from "@/components/store/star-rating";
+import { ReportProductButton } from "@/components/store/report-product-button";
 import { formatNaira, formatProductPathSegment, parseProductPathSegment } from "@/lib/format";
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
 import type { ProductRecord, StoreRecord } from "@/types";
@@ -352,6 +353,7 @@ export default async function StoreProductPage({ params, searchParams }: Product
                     align="right"
                     triggerLabel="Share"
                   />
+                  <ReportProductButton productId={product.id} />
                 </div>
               </div>
               {/* Product name */}

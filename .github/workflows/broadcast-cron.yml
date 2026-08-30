@@ -1,0 +1,33 @@
+name: Run broadcast queues
+
+# Free alternative to Vercel's cron (which only runs once/day on the
+# Hobby plan). Runs every 10 minutes so a queued email or WhatsApp
+# broadcast actually finishes in a reasonable time instead of trickling
+# out over days. Each broadcast type is its own job so one failing never
+# blocks the other, and each shows up separately in the Actions log.
+#
+# Note: GitHub auto-disables scheduled workflows after 60 days with no
+# repo activity (commits, merges, etc.) - if broadcasts mysteriously stop
+# processing, check Actions > this workflow > "Enable workflow" first.
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch: {}
+
+jobs:
+  email-broadcasts:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Process pending email broadcast recipients
+        run: |
+          curl -sf -X POST "https://sellee.store/api/email-broadcasts/run?limit=25" \
+            -H "Authorization: Bearer ${{ secrets.EMAIL_BROADCAST_CRON_SECRET }}"
+
+  whatsapp-broadcasts:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Process pending WhatsApp broadcast recipients
+        run: |
+          curl -sf -X POST "https://sellee.store/api/whatsapp/broadcasts/run?limit=20" \
+            -H "Authorization: Bearer ${{ secrets.WHATSAPP_BROADCAST_CRON_SECRET }}"

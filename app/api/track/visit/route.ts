@@ -23,16 +23,13 @@ function classifySource(referrer: string | null | undefined): string {
   try {
     const host = new URL(referrer).hostname.replace(/^www\./, "");
     if (host.includes("whatsapp")) return "whatsapp";
-    if (host.includes("google") || host.includes("bing") || host.includes("duckduckgo")) return "search";
-    if (
-      host.includes("facebook") ||
-      host.includes("instagram") ||
-      host.includes("tiktok") ||
-      host.includes("twitter") ||
-      host.includes("x.com")
-    ) {
-      return "social";
-    }
+    if (host.includes("youtube") || host.includes("youtu.be")) return "youtube";
+    if (host.includes("google")) return "google";
+    if (host.includes("bing")) return "bing";
+    if (host.includes("duckduckgo")) return "duckduckgo";
+    if (host.includes("facebook") || host.includes("instagram")) return "meta";
+    if (host.includes("tiktok")) return "tiktok";
+    if (host.includes("twitter") || host.includes("x.com")) return "twitter";
     if (host.includes("sellee.store")) return "sellee";
     return "other";
   } catch {
