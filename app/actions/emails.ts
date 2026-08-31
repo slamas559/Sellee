@@ -4,6 +4,8 @@ import { Resend } from "resend";
 import { appUrl } from "@/lib/app-url";
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
 import { logDevError } from "@/lib/logger";
+import { adminConsoleUrl } from "@/lib/app-url";
+
 import SupportTicketEmail, {
   type SupportTicketEmailProps,
 } from "@/emails/SupportTicketEmail";
