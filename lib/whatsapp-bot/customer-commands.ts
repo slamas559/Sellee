@@ -712,7 +712,7 @@ async function handleSearchProducts(
     const store = storesMap.get(product.store_id);
     const storeName = store?.name ?? "Store";
     const productUrl = store?.slug
-      ? `${baseUrl}/store/${store.slug}/${formatProductPathSegment({
+      ? `${baseUrl}/v/${store.slug}/${formatProductPathSegment({
           id: product.id,
           slug: product.slug,
           name: product.name,

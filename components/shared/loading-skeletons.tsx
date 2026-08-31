@@ -172,7 +172,7 @@ export function VendorsLoadingSkeleton() {
 
 // ── Vendor storefront ──
 // Mirrors the common shape shared by all storefront templates in
-// app/store/[slug]/page.tsx: logo/name/rating header row -> banner carousel
+// app/v/[slug]/page.tsx: logo/name/rating header row -> banner carousel
 // -> product grid. Individual templates vary further, but this common
 // skeleton is a far closer match than a bare banner+grid with no vendor
 // identity row at all.
@@ -208,7 +208,7 @@ export function StoreLoadingSkeleton() {
 }
 
 // ── Product details ──
-// Mirrors app/store/[slug]/[productSlug]/page.tsx: media gallery + sticky
+// Mirrors app/v/[slug]/[productSlug]/page.tsx: media gallery + sticky
 // info column (sold-by row, title, rating, price+stock, description,
 // product-info table, vendor card, CTA buttons) -> reviews -> more-from-
 // vendor carousel -> related-products carousel.
@@ -411,7 +411,7 @@ export function DashboardAnalyticsLoadingSkeleton() {
 }
 
 // ── Dashboard: storefront settings ──
-// Mirrors app/dashboard/store/page.tsx + StoreSetupForm: header -> a single
+// Mirrors app/dashboard/v/page.tsx + StoreSetupForm: header -> a single
 // large form panel (image upload row, several field rows, template picker
 // grid).
 export function DashboardStoreLoadingSkeleton() {

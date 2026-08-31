@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { storeProductUrl } from "@/lib/store-url";
+import { formatProductPathSegment } from "@/lib/format";
 import { useCallback, useEffect, useState } from "react";
 
 interface Ticket {
@@ -22,7 +24,7 @@ interface Report {
   details: string | null;
   status: "open" | "dismissed" | "actioned";
   created_at: string;
-  product: { id: string; name: string; store_id: string; store: { name: string; slug: string } | null } | null;
+  product: { id: string; name: string; slug: string; store_id: string; store: { name: string; slug: string } | null } | null;
 }
 
 function formatDate(iso: string) {
@@ -195,17 +197,17 @@ function ReportsSection() {
               {report.reporter_email || "Anonymous"} · {formatDate(report.created_at)}
             </p>
             <div className="mt-3 flex flex-wrap items-center gap-2">
-              {report.product ? (
+              {report.product?.store ? (
                 <Link
-                  href={`/v/${report.product.store?.slug ?? ""}`}
-                  target="_blank"
-                  className="atlas-btn"
-                  data-variant="outline"
-                  style={{ padding: "4px 10px", fontSize: 11.5 }}
+                    href={storeProductUrl(report.product.store.slug, formatProductPathSegment(report.product))}
+                    target="_blank"
+                    className="atlas-btn"
+                    data-variant="outline"
+                    style={{ padding: "4px 10px", fontSize: 11.5 }}
                 >
-                  View storefront ↗
+                    View product ↗
                 </Link>
-              ) : null}
+            ) : null}
               <button
                 type="button"
                 disabled={busyId === report.id}

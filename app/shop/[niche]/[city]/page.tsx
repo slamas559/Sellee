@@ -94,7 +94,7 @@ export default async function NicheLocationPage({ params }: PageProps) {
             item: {
               "@type": "LocalBusiness",
               name: store.name,
-              url: `${appBaseUrl}/store/${store.slug}`,
+              url: `${appBaseUrl}/v/${store.slug}`,
               image: store.logo_url || undefined,
               address: {
                 "@type": "PostalAddress",
@@ -135,7 +135,7 @@ export default async function NicheLocationPage({ params }: PageProps) {
                     product.stock_count > 0
                       ? "https://schema.org/InStock"
                       : "https://schema.org/OutOfStock",
-                  url: store ? `${appBaseUrl}/store/${store.slug}/${product.slug ?? product.id}` : undefined,
+                  url: store ? `${appBaseUrl}/v/${store.slug}/${product.slug ?? product.id}` : undefined,
                 },
                 aggregateRating:
                   typeof product.rating_avg === "number" && product.rating_count > 0

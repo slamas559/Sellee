@@ -78,8 +78,8 @@ npm run dev
 - `/dashboard/orders`
 - `/dashboard/analytics`
 - `/marketplace`
-- `/store/[slug]`
-- `/store/[slug]/[productId]`
+- `/v/[slug]`
+- `/v/[slug]/[productId]`
 
 ## API Routes
 

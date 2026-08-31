@@ -42,8 +42,8 @@ export async function generateMetadata({ params }: StorePageProps): Promise<Meta
   const description =
     config.hero_subtitle ||
     `Browse products from ${label} on Sellee and order through WhatsApp-powered workflows.`;
-  const imageUrl = `https://sellee.store/store/${slug}/opengraph-image`;
-  const canonical = `/store/${slug}`;
+  const imageUrl = `https://sellee.store/v/${slug}/opengraph-image`;
+  const canonical = `/v/${slug}`;
   const logoUrl = store?.logo_url ?? null;
 
   return {
@@ -612,7 +612,7 @@ function GridTemplate({
                   <p className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-400">Categories</p>
                   <div className="space-y-1">
                     <Link
-                      href={`/store/${store.slug}${query ? `?q=${encodeURIComponent(query)}` : ""}`}
+                      href={`/v/${store.slug}${query ? `?q=${encodeURIComponent(query)}` : ""}`}
                       className={`flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm font-medium transition ${!selectedCategory ? "text-white" : "text-slate-600 hover:bg-slate-50"}`}
                       style={!selectedCategory ? { backgroundColor: primaryColor } : {}}
                     >
@@ -621,7 +621,7 @@ function GridTemplate({
                     {categories.map((cat) => (
                       <Link
                         key={cat}
-                        href={`/store/${store.slug}?category=${encodeURIComponent(cat)}${query ? `&q=${encodeURIComponent(query)}` : ""}`}
+                        href={`/v/${store.slug}?category=${encodeURIComponent(cat)}${query ? `&q=${encodeURIComponent(query)}` : ""}`}
                         className={`flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm font-medium transition ${selectedCategory === cat ? "text-white" : "text-slate-600 hover:bg-slate-50"}`}
                         style={selectedCategory === cat ? { backgroundColor: primaryColor } : {}}
                       >
@@ -647,7 +647,7 @@ function GridTemplate({
             </div>
             {/* Desktop search bar */}
             <div className="mb-4 hidden lg:block">
-              <form className="flex gap-2" action={`/store/${store.slug}`}>
+              <form className="flex gap-2" action={`/v/${store.slug}`}>
                 <input name="q" defaultValue={query} placeholder="Search products…" className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none ring-slate-300 transition focus:ring-2" />
                 {selectedCategory ? <input type="hidden" name="category" value={selectedCategory} /> : null}
                 <button type="submit" className="rounded-lg px-4 py-2 text-sm font-semibold text-white" style={{ backgroundColor: primaryColor }}>Search</button>

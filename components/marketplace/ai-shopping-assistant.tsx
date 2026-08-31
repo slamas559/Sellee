@@ -50,7 +50,7 @@ const BASE_SUGGESTIONS = ["Something under ₦5,000", "Gift ideas", "What's tren
 const STORE_SUGGESTIONS = ["What's popular in this store?", "Search everywhere instead"];
 
 function ProductMiniCard({ product }: { product: AssistantProductCard }) {
-  const href = `/store/${product.store_slug}/${formatProductPathSegment(product)}?from=ai_assistant`;
+  const href = `/v/${product.store_slug}/${formatProductPathSegment(product)}?from=ai_assistant`;
 
   return (
     <Link

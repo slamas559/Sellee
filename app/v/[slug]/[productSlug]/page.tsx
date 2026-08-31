@@ -74,7 +74,7 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
     product?.description?.replace(/\s+/g, " ").trim() ||
     `Check out this product from ${label} on Sellee.`;
   // const image = product?.image_url || "https://sellee.store/opengraph-image.png";
-  // const image = `https://www.sellee.store/store/${slug}/${productSlug}/opengraph-image?v=78`;
+  // const image = `https://www.sellee.store/v/${slug}/${productSlug}/opengraph-image?v=78`;
 
   const canonicalRef = product
     ? formatProductPathSegment({
@@ -84,7 +84,7 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
       })
     : productSlug;
   const canonicalPublicUrl = storeProductUrl(slug, canonicalRef);
-  const image = `https://www.sellee.store/store/${slug}/${canonicalRef}/opengraph-image`;
+  const image = `https://www.sellee.store/v/${slug}/${canonicalRef}/opengraph-image`;
 
   return {
     metadataBase: new URL("https://www.sellee.store"),
@@ -166,7 +166,7 @@ export default async function StoreProductPage({ params, searchParams }: Product
   if (productSlug !== canonicalProductRef) {
     const from = Array.isArray(query.from) ? query.from[0] : query.from;
     const fromQuery = from ? `?from=${encodeURIComponent(from)}` : "";
-    redirect(`/store/${slug}/${canonicalProductRef}${fromQuery}`);
+    redirect(`/v/${slug}/${canonicalProductRef}${fromQuery}`);
   }
 
   const vendorProductsPromise = supabase

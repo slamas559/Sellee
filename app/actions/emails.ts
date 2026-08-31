@@ -523,3 +523,73 @@ export async function sendAdminBroadcastEmail({
     return { success: false, error: normalizeError(error) };
   }
 }
+
+export interface SendProductReportNotificationInput {
+  productId: string;
+  productName: string;
+  productUrl: string;
+  storeName: string;
+  reason: string;
+  details?: string | null;
+  reporterEmail?: string | null;
+}
+
+/**
+ * Internal notification to support@sellee.store when a customer reports a
+ * product - mirrors the plain-HTML internal notification already sent for
+ * Help Center tickets, just aimed at a different admin (support-panel.tsx
+ * covers the dashboard side; this covers the inbox side).
+ */
+export async function sendProductReportNotificationEmail({
+  productId,
+  productName,
+  productUrl,
+  storeName,
+  reason,
+  details,
+  reporterEmail,
+}: SendProductReportNotificationInput): Promise<EmailActionResult> {
+  try {
+    const resend = getResendClient();
+    const { data, error } = await resend.emails.send({
+      from: SUPPORT_FROM,
+      to: SUPPORT_REPLY_TO,
+      replyTo: SUPPORT_REPLY_TO,
+      subject: `[Report] ${productName}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; color: #0f172a; line-height: 1.6;">
+          <h1 style="font-size: 22px; margin: 0 0 12px;">A product was reported</h1>
+          <table style="border-collapse: collapse; width: 100%; max-width: 640px;">
+            <tr>
+              <td style="border: 1px solid #e2e8f0; padding: 10px; font-weight: 700;">Product</td>
+              <td style="border: 1px solid #e2e8f0; padding: 10px;">${escapeHtml(productName)}</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #e2e8f0; padding: 10px; font-weight: 700;">Store</td>
+              <td style="border: 1px solid #e2e8f0; padding: 10px;">${escapeHtml(storeName)}</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #e2e8f0; padding: 10px; font-weight: 700;">Reason</td>
+              <td style="border: 1px solid #e2e8f0; padding: 10px;">${escapeHtml(reason)}</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #e2e8f0; padding: 10px; font-weight: 700;">Reporter</td>
+              <td style="border: 1px solid #e2e8f0; padding: 10px;">${escapeHtml(reporterEmail || "Anonymous")}</td>
+            </tr>
+          </table>
+          ${details ? `<h2 style="font-size: 16px; margin: 22px 0 8px;">Details</h2><p>${escapeHtml(details)}</p>` : ""}
+          <p style="margin-top: 22px;"><a href="${productUrl}">View the product</a> · <a href="${adminConsoleUrl("/admin-console/support")}">Open in Atlas</a></p>
+          <p style="margin-top: 10px; font-size: 12px; color: #64748b;">Product ID: ${escapeHtml(productId)}</p>
+        </div>
+      `,
+    });
+
+    if (error) {
+      return { success: false, error };
+    }
+
+    return { success: true, data };
+  } catch (error) {
+    return { success: false, error: normalizeError(error) };
+  }
+}

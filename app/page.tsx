@@ -14,7 +14,7 @@ import {
   getMarketplaceStatsCached,
   getStoreNichesAndFollowersCached,
 } from "@/lib/public-cache";
-import { BadgeCheck, MessageCircle, Package, Search, SearchIcon, Store } from "lucide-react";
+import { Search, SearchIcon } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Sellee | Discover Local Vendors and Products and Order via WhatsApp",
@@ -277,8 +277,6 @@ export default async function Home({ searchParams }: HomeProps) {
       />
       
       <section className="relative overflow-hidden rounded-3xl border border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-amber-100 p-4 sm:p-8">
-        <div className="absolute -right-16 -top-20 h-56 w-56 rounded-full bg-emerald-300/50 blur-3xl" />
-        <div className="absolute -bottom-20 -left-10 h-44 w-44 rounded-full bg-amber-300/55 blur-3xl" />
         <HeroIconScatter />
 
         <div className="relative z-10 grid gap-6 lg:grid-cols-[1.1fr_0.9fr] lg:items-center lg:gap-8">
@@ -286,7 +284,7 @@ export default async function Home({ searchParams }: HomeProps) {
             <p className="inline-flex rounded-full bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">
               Shop Nearby, Faster
             </p>
-            <h1 className="max-w-xl text-3xl font-black tracking-tight text-slate-900 sm:text-5xl">
+            <h1 className="font-display max-w-xl text-3xl font-bold tracking-tight text-slate-900 sm:text-5xl">
               Discover trusted local vendors and products in one place.
             </h1>
             <p className="max-w-xl text-sm leading-6 text-slate-600 sm:text-base sm:leading-7">
@@ -309,49 +307,40 @@ export default async function Home({ searchParams }: HomeProps) {
           </div>
 
           <div className="hidden gap-3 sm:grid sm:grid-cols-2">
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
-                <Store className="h-4.5 w-4.5" />
-              </span>
+            <div className="border-l-2 border-emerald-500 bg-white/70 py-1 pl-4">
               {showRealMarketplaceStats ? (
                 <>
-                  <p className="mt-3 text-2xl font-black text-slate-900">{totalStores}+</p>
+                  <p className="font-display text-3xl font-bold text-slate-900">{totalStores}+</p>
                   <p className="mt-0.5 text-xs font-medium text-slate-500">Active Vendors</p>
                 </>
               ) : (
                 <>
-                  <p className="mt-3 text-sm font-bold text-slate-900">Local Vendors</p>
+                  <p className="text-sm font-bold text-slate-900">Local Vendors</p>
                   <p className="mt-0.5 text-xs leading-5 text-slate-500">Discover sellers near you.</p>
                 </>
               )}
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-100 text-amber-700">
-                {showRealMarketplaceStats ? <Package className="h-4.5 w-4.5" /> : <BadgeCheck className="h-4.5 w-4.5" />}
-              </span>
+            <div className="border-l-2 border-amber-500 bg-white/70 py-1 pl-4">
               {showRealMarketplaceStats ? (
                 <>
-                  <p className="mt-3 text-2xl font-black text-slate-900">{totalProducts}+</p>
+                  <p className="font-display text-3xl font-bold text-slate-900">{totalProducts}+</p>
                   <p className="mt-0.5 text-xs font-medium text-slate-500">Products Listed</p>
                 </>
               ) : (
                 <>
-                  <p className="mt-3 text-sm font-bold text-slate-900">Verified Storefronts</p>
+                  <p className="text-sm font-bold text-slate-900">Verified Storefronts</p>
                   <p className="mt-0.5 text-xs leading-5 text-slate-500">Real vendors, real reviews.</p>
                 </>
               )}
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
-                <MessageCircle className="h-4.5 w-4.5" />
-              </span>
-              <p className="mt-3 text-sm font-bold text-slate-900">WhatsApp-Powered</p>
+            <div className="border-l-2 border-emerald-500 bg-white/70 py-1 pl-4">
+              <p className="text-sm font-bold text-slate-900">WhatsApp-Powered</p>
               <p className="mt-0.5 text-xs leading-5 text-slate-500">Order directly through chat, no app to download.</p>
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="border-l-2 border-amber-500 bg-white/70 py-1 pl-4">
               <p className="text-xs font-medium text-slate-500">Featured Search</p>
               <p className="mt-1 text-sm font-bold text-emerald-700">
                 {q ? `Results for "${q}"` : "Trending in your marketplace now"}
@@ -361,11 +350,11 @@ export default async function Home({ searchParams }: HomeProps) {
         </div>
       </section>
 
-      <div className="grid grid-cols-3 gap-2 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:hidden">
+      <div className="grid grid-cols-3 gap-2 rounded-2xl border border-slate-200 bg-white p-3 sm:hidden">
         <div className="text-center">
           {showRealMarketplaceStats ? (
             <>
-              <p className="text-lg font-black text-slate-900">{totalStores}+</p>
+              <p className="font-display text-lg font-bold text-slate-900">{totalStores}+</p>
               <p className="text-[10px] font-medium text-slate-500">Vendors</p>
             </>
           ) : (
@@ -378,7 +367,7 @@ export default async function Home({ searchParams }: HomeProps) {
         <div className="border-x border-slate-100 text-center">
           {showRealMarketplaceStats ? (
             <>
-              <p className="text-lg font-black text-slate-900">{totalProducts}+</p>
+              <p className="font-display text-lg font-bold text-slate-900">{totalProducts}+</p>
               <p className="text-[10px] font-medium text-slate-500">Products</p>
             </>
           ) : (
@@ -389,16 +378,16 @@ export default async function Home({ searchParams }: HomeProps) {
           )}
         </div>
         <div className="text-center">
-          <p className="text-[15px] font-black text-slate-900">WhatsApp</p>
+          <p className="font-display text-[15px] font-bold text-slate-900">WhatsApp</p>
           <p className="text-[10px] font-medium text-slate-500">Powered Orders</p>
         </div>
       </div>
 
       {botNumber ? <WhatsAppBotAccess botNumber={botNumber} /> : null}
 
-      <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+      <section className="border-t border-slate-200 pt-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-lg font-bold text-slate-900 sm:text-xl">Browse Categories</h2>
+          <h2 className="font-display text-lg font-bold text-slate-900 sm:text-xl">Browse Categories</h2>
           {niche ? (
             <Link href={q ? `/search?q=${encodeURIComponent(q)}` : `/search`} className="text-sm font-medium text-emerald-700 hover:underline">
               Clear niche
@@ -420,7 +409,7 @@ export default async function Home({ searchParams }: HomeProps) {
         }))}
       />
 
-      <section id="market" className="sm:rounded-3xl border border-slate-200 bg-white p-1.5 shadow-sm sm:p-5">
+      <section id="market" className="border-t border-slate-200 pt-5">
         {products.length === 0 ? (
           <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-6 text-sm text-slate-600">
             No products match this filter yet.

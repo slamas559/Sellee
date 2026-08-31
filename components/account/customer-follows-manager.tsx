@@ -97,7 +97,7 @@ export function CustomerFollowsManager({ initialFollows }: { initialFollows: Fol
       </div>
 
       <p className="text-xs text-slate-500">
-        You can copy a store slug from any store URL: <code>/store/store-slug</code>
+        You can copy a store slug from any store URL: <code>/v/store-slug</code>
       </p>
 
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
@@ -109,7 +109,7 @@ export function CustomerFollowsManager({ initialFollows }: { initialFollows: Fol
           {follows.map((store) => (
             <article key={store.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 p-3">
               <div>
-                <Link href={`/store/${store.slug}`} className="text-sm font-semibold text-slate-900 hover:text-emerald-700">
+                <Link href={`/v/${store.slug}`} className="text-sm font-semibold text-slate-900 hover:text-emerald-700">
                   {store.name}
                 </Link>
                 <p className="text-xs text-slate-500">

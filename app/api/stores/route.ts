@@ -495,7 +495,7 @@ export async function POST(request: Request) {
 
       // After revalidatePublicCacheForStore(slug)
       const appUrl = process.env.NEXTAUTH_URL || "https://sellee.store";
-      fetch(`${appUrl}/store/${data.slug}/opengraph-image`).catch(() => {});
+      fetch(`${appUrl}/v/${data.slug}/opengraph-image`).catch(() => {});
 
       const { data: promotedRows, error: roleError } = await supabase
         .from("users")
@@ -555,7 +555,7 @@ export async function POST(request: Request) {
     revalidatePublicCacheForStore(data.slug);
 
     const appUrl = process.env.NEXTAUTH_URL || "https://sellee.store";
-    fetch(`${appUrl}/store/${data.slug}/opengraph-image`).catch(() => {});
+    fetch(`${appUrl}/v/${data.slug}/opengraph-image`).catch(() => {});
 
     const { data: promotedRows, error: roleError } = await supabase
       .from("users")

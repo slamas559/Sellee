@@ -16,7 +16,7 @@ export async function GET(request: Request) {
   let query = supabase
     .from("product_reports")
     .select(
-      "id, product_id, reporter_email, reason, details, status, created_at, product:product_id(id, name, image_url, store_id, store:store_id(name, slug))",
+        "id, product_id, reporter_email, reason, details, status, created_at, product:product_id(id, name, slug, image_url, store_id, store:store_id(name, slug))",
     )
     .order("created_at", { ascending: false })
     .limit(200);
