@@ -58,7 +58,7 @@ export default async function DashboardOrdersPage({ searchParams }: { searchPara
 
   return (
     <section className="space-y-4">
-      <header className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+      <header className="rounded-lg border border-slate-200 bg-white p-5">
         <p className="text-sm font-medium text-emerald-700">Orders</p>
         <div className="mt-1 flex flex-wrap items-center gap-2">
           <h1 className="text-2xl font-black text-slate-900">WhatsApp Order Requests</h1>
@@ -77,31 +77,31 @@ export default async function DashboardOrdersPage({ searchParams }: { searchPara
       </header>
 
       <section className="grid gap-4 grid-cols-2 sm:grid-cols-4">
-        <article className="rounded-xl border border-emerald-100 bg-white p-4 shadow-sm">
+        <article className="rounded-lg border border-slate-200 bg-white p-4">
           <p className="text-sm text-slate-500">Total Orders</p>
-          <h2 className="mt-1 text-xl font-black text-slate-900">{orders.length}</h2>
+          <h2 className="mt-1 font-mono text-xl font-black tabular-nums text-slate-900">{orders.length}</h2>
         </article>
-        <article className="rounded-xl border border-emerald-100 bg-white p-4 shadow-sm">
+        <article className="rounded-lg border border-slate-200 bg-white p-4">
           <p className="text-sm text-slate-500">Confirmed</p>
-          <h2 className="mt-1 text-xl font-black text-slate-900">{confirmedCount}</h2>
+          <h2 className="mt-1 font-mono text-xl font-black tabular-nums text-slate-900">{confirmedCount}</h2>
         </article>
-        <article className="rounded-xl border border-blue-100 bg-white p-4 shadow-sm">
+        <article className="rounded-lg border border-blue-100 bg-white p-4">
           <p className="text-sm text-slate-500">Delivered</p>
-          <h2 className="mt-1 text-xl font-black text-slate-900">{deliveredCount}</h2>
+          <h2 className="mt-1 font-mono text-xl font-black tabular-nums text-slate-900">{deliveredCount}</h2>
           <p className="mt-1 text-xs text-slate-500">
             Revenue: {formatNaira(totalRevenue)}
           </p>
         </article>
-        <article className="rounded-xl border border-amber-200 bg-amber-50 p-4 shadow-sm">
+        <article className="rounded-lg border border-amber-200 bg-amber-50 p-4">
           <p className="text-sm text-amber-900/80">Pending</p>
-          <h2 className="mt-1 text-xl font-black text-amber-950">{pendingCount}</h2>
+          <h2 className="mt-1 font-mono text-xl font-black tabular-nums text-amber-950">{pendingCount}</h2>
           <p className="mt-1 text-xs text-amber-900/80">
             Pending value: {formatNaira(pendingValue)}
           </p>
         </article>
       </section>
 
-      <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+      <section className="rounded-lg border border-slate-200 bg-white p-5">
         {orders.length === 0 ? (
           <p className="text-sm text-slate-600">
             No orders yet. Share your store link and place a test order.

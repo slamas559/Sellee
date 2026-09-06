@@ -18,7 +18,7 @@ export default async function VendorStoreSetupPage() {
   ]);
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-5 px-3 py-6 sm:px-4 sm:py-8">
-      <header className="rounded-2xl border border-emerald-100 bg-gradient-to-r from-white via-emerald-50 to-amber-50 p-5 shadow-sm sm:p-6">
+      <header className="rounded-xl border border-emerald-100 bg-emerald-50 p-5 shadow-sm sm:p-6">
         <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">Vendor setup</p>
         <h1 className="mt-1 text-2xl font-black tracking-tight text-slate-900">Set up your store</h1>
         <p className="mt-1 text-sm text-slate-600">Complete your store profile to unlock dashboard tools and start selling on Sellee.</p>

@@ -3,7 +3,6 @@ import Link from "next/link";
 import { getServerSession } from "next-auth";
 import logoText from "@/app/logos/image-text-logo.png";
 import { NearbyVendors } from "@/components/landing/nearby-vendors";
-import { HeroIconScatter } from "@/components/landing/hero-icon-scatter";
 import { WhatsAppBotAccess } from "@/components/landing/whatsapp-bot-access";
 import { UserMenu } from "@/components/layout/user-menu";
 import { CategoryScrollRow } from "@/components/marketplace/category-scroll-row";
@@ -275,11 +274,9 @@ export default async function Home({ searchParams }: HomeProps) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
       />
-      
-      <section className="relative overflow-hidden rounded-3xl border border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-amber-100 p-4 sm:p-8">
-        <HeroIconScatter />
 
-        <div className="relative z-10 grid gap-6 lg:grid-cols-[1.1fr_0.9fr] lg:items-center lg:gap-8">
+      <section className="rounded-xl border border-slate-200 bg-emerald-50 p-4 sm:p-8">
+        <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr] lg:items-center lg:gap-8">
           <div className="space-y-4 sm:space-y-5">
             <p className="inline-flex rounded-full bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">
               Shop Nearby, Faster
@@ -290,24 +287,24 @@ export default async function Home({ searchParams }: HomeProps) {
             <p className="max-w-xl text-sm leading-6 text-slate-600 sm:text-base sm:leading-7">
               Browse categories, compare stores, and order directly through WhatsApp-powered workflows.
             </p>
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap items-center gap-5">
               <Link
                 href={heroPrimaryHref}
-                className="rounded-full bg-emerald-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700"
+                className="rounded-lg bg-emerald-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700"
               >
                 <span className="text-white">{heroPrimaryLabel}</span>
               </Link>
               <Link
                 href="/marketplace"
-                className="rounded-full border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-800 transition hover:bg-slate-50"
+                className="text-sm font-semibold text-slate-800 underline decoration-slate-300 underline-offset-4 transition hover:text-emerald-700 hover:decoration-emerald-400"
               >
-                Browse Market
+                Browse Market →
               </Link>
             </div>
           </div>
 
           <div className="hidden gap-3 sm:grid sm:grid-cols-2">
-            <div className="border-l-2 border-emerald-500 bg-white/70 py-1 pl-4">
+            <div className="border-l-2 border-emerald-500 bg-white py-1 pl-4">
               {showRealMarketplaceStats ? (
                 <>
                   <p className="font-display text-3xl font-bold text-slate-900">{totalStores}+</p>
@@ -321,7 +318,7 @@ export default async function Home({ searchParams }: HomeProps) {
               )}
             </div>
 
-            <div className="border-l-2 border-amber-500 bg-white/70 py-1 pl-4">
+            <div className="border-l-2 border-emerald-500 bg-white py-1 pl-4">
               {showRealMarketplaceStats ? (
                 <>
                   <p className="font-display text-3xl font-bold text-slate-900">{totalProducts}+</p>
@@ -335,12 +332,12 @@ export default async function Home({ searchParams }: HomeProps) {
               )}
             </div>
 
-            <div className="border-l-2 border-emerald-500 bg-white/70 py-1 pl-4">
+            <div className="border-l-2 border-emerald-500 bg-white py-1 pl-4">
               <p className="text-sm font-bold text-slate-900">WhatsApp-Powered</p>
               <p className="mt-0.5 text-xs leading-5 text-slate-500">Order directly through chat, no app to download.</p>
             </div>
 
-            <div className="border-l-2 border-amber-500 bg-white/70 py-1 pl-4">
+            <div className="border-l-2 border-emerald-500 bg-white py-1 pl-4">
               <p className="text-xs font-medium text-slate-500">Featured Search</p>
               <p className="mt-1 text-sm font-bold text-emerald-700">
                 {q ? `Results for "${q}"` : "Trending in your marketplace now"}
@@ -350,7 +347,7 @@ export default async function Home({ searchParams }: HomeProps) {
         </div>
       </section>
 
-      <div className="grid grid-cols-3 gap-2 rounded-2xl border border-slate-200 bg-white p-3 sm:hidden">
+      <div className="grid grid-cols-3 gap-2 rounded-xl border border-slate-200 bg-white p-3 sm:hidden">
         <div className="text-center">
           {showRealMarketplaceStats ? (
             <>
@@ -411,7 +408,7 @@ export default async function Home({ searchParams }: HomeProps) {
 
       <section id="market" className="border-t border-slate-200 pt-5">
         {products.length === 0 ? (
-          <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-6 text-sm text-slate-600">
+          <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-6 text-sm text-slate-600">
             No products match this filter yet.
           </div>
         ) : (

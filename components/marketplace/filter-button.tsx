@@ -29,7 +29,7 @@ export function FilterButton({ state, categories, grouped_categories, hasLocatio
       <button
         aria-expanded={isOpen}
         onClick={() => setIsOpen(true)}
-        className="inline-flex items-center rounded-3xl border shadow-sm border-emerald-200/80 px-4 py-2 bg-white/30 backdrop-blur-sm gap-1.5 text-sm font-semibold text-slate-800"
+        className="inline-flex items-center rounded-full border shadow-sm border-emerald-200/80 px-4 py-2 bg-white/90 backdrop-blur-sm gap-1.5 text-sm font-semibold text-slate-800"
       >
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4 text-emerald-700" aria-hidden="true">
           <path d="M3 5h18" />

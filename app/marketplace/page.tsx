@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { X } from "lucide-react";
 import { ProductShowcaseCard } from "@/components/marketplace/product-showcase-card";
 import { LocationFilterButton } from "@/components/marketplace/location-filter-button";
 import { formatNaira } from "@/lib/format";
@@ -415,13 +416,13 @@ export default async function MarketplacePage({ searchParams }: MarketplacePageP
 
   return (
     <main className="mx-auto flex w-full max-w-[1400px] flex-1 flex-col gap-6 px-2 py-6 sm:px-3 lg:py-8">
-      <header className="rounded-3xl border border-emerald-100 bg-white p-5 shadow-sm sm:p-6">
+      <header className="rounded-xl border border-emerald-100 bg-white p-5 shadow-sm sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">Marketplace</p>
             <h1 className="mt-1 text-3xl font-black tracking-tight text-slate-900">Discover Products from Vendors</h1>
           </div>
-          <Link href="/" className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">Back Home</Link>
+          <Link href="/" className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">Back Home</Link>
         </div>
       </header>
 
@@ -430,7 +431,7 @@ export default async function MarketplacePage({ searchParams }: MarketplacePageP
 
         {/* bigger screen filter */}
       <div className="grid gap-6 lg:grid-cols-[300px_1fr]">
-        <aside className="top-25 hidden h-fit rounded-3xl border border-emerald-200/80 bg-white/90 p-5 shadow-[0_18px_45px_-28px_rgba(16,185,129,0.35)] backdrop-blur lg:block">
+        <aside className="top-25 hidden h-fit rounded-xl border border-emerald-100 bg-white p-5 shadow-sm lg:block">
           <div className="mb-4 border-b border-slate-100 pb-4">
             <p className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-3.5 w-3.5" aria-hidden="true">
@@ -446,7 +447,7 @@ export default async function MarketplacePage({ searchParams }: MarketplacePageP
             hasLocationFilter={hasLocationFilter} />
         </aside>
 
-        <section className="rounded-3xl border border-emerald-100 bg-white p-3 shadow-sm sm:p-5">
+        <section className="rounded-xl border border-emerald-100 bg-white p-3 shadow-sm sm:p-5">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
             <h2 className="text-xl font-bold text-slate-900">Products</h2>
             <p className="text-sm text-slate-600">{products.length} results</p>
@@ -457,15 +458,15 @@ export default async function MarketplacePage({ searchParams }: MarketplacePageP
               {activeFilters.map((filter) => (
                 <Link key={filter.label} href={filter.clearHref} className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-800 transition hover:bg-emerald-100" title={`Clear ${filter.label}`}>
                   <span>{filter.label}</span>
-                  <span aria-hidden="true">x</span>
+                  <X className="h-3 w-3" aria-hidden="true" />
                 </Link>
               ))}
-              <Link href="/marketplace" className="inline-flex items-center rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-50">Clear all</Link>
+              <Link href="/marketplace" className="inline-flex items-center rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-50">Clear all</Link>
             </div>
           ) : null}
 
           {products.length === 0 ? (
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 text-sm text-slate-600">No products match your current filters.</div>
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-5 text-sm text-slate-600">No products match your current filters.</div>
           ) : (
             <div className="grid grid-cols-2 justify-items-center gap-2 [@media(max-width:240px)]:grid-cols-1 sm:gap-3 xl:grid-cols-4">
               {products.map((product) => (

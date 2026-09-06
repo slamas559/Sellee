@@ -35,7 +35,7 @@ export function WhatsAppBotAccess({ botNumber }: WhatsAppBotAccessProps) {
   }
 
   return (
-    <section className="rounded-3xl border border-emerald-100 bg-white p-4 shadow-sm sm:p-5">
+    <section className="rounded-xl border border-emerald-100 bg-white p-4 shadow-sm sm:p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">
@@ -47,9 +47,6 @@ export function WhatsAppBotAccess({ botNumber }: WhatsAppBotAccessProps) {
           <p className="mt-1 text-sm text-slate-600">
             Open bot chat for order help, vendor commands, and quick store support.
           </p>
-          {/* <p className="mt-1 text-sm text-slate-600">
-            To access bot use your registered WhatsApp number.
-          </p> */}
           <p className="mt-2 text-xs font-medium text-slate-500">
             Bot number: <span className="font-semibold text-slate-700">{displayNumber}</span>
           </p>
@@ -67,12 +64,12 @@ export function WhatsAppBotAccess({ botNumber }: WhatsAppBotAccessProps) {
         </div>
       </div>
 
-      <div className="mt-3 flex flex-wrap gap-2.5">
+      <div className="mt-3 flex flex-wrap items-center gap-5">
         <a
           href={chatLink}
           target="_blank"
           rel="noreferrer"
-          className="inline-flex items-center rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-emerald-700 sm:text-sm"
+          className="inline-flex items-center rounded-lg bg-emerald-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-emerald-700 sm:text-sm"
         >
           <span className="text-white">
             Open WhatsApp
@@ -81,8 +78,8 @@ export function WhatsAppBotAccess({ botNumber }: WhatsAppBotAccessProps) {
         <button
           type="button"
           onClick={handleCopyNumber}
-          className="rounded-full border border-slate-300 bg-white px-4 py-2 text-xs font-semibold text-slate-800 transition hover:bg-slate-50 sm:text-sm"
-        >
+          className="text-xs font-semibold text-slate-800 underline decoration-slate-300 underline-offset-4 transition hover:text-emerald-700 hover:decoration-emerald-400 sm:text-sm"
+>
           {copied ? "Number Copied" : "Copy Bot Number"}
         </button>
       </div>

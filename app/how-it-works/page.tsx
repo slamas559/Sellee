@@ -4,7 +4,6 @@ import Link from "next/link";
 import {
   ArrowRight,
   Bot,
-  CheckCircle2,
   ClipboardList,
   Heart,
   MapPin,
@@ -129,6 +128,24 @@ const imageStories = [
   },
 ];
 
+const smootherFeatures = [
+  {
+    icon: MapPin,
+    title: "Nearby discovery",
+    description: "Customers can find vendors around their location and shop with more confidence.",
+  },
+  {
+    icon: MessageCircle,
+    title: "Chat commerce",
+    description: "Orders continue in WhatsApp, where many customers and vendors already coordinate.",
+  },
+  {
+    icon: ShieldCheck,
+    title: "Trust signals",
+    description: "Ratings, follows, storefront details, and product photos help reduce uncertainty.",
+  },
+];
+
 export default function HowItWorksPage() {
   const howItWorksJsonLd = {
     "@context": "https://schema.org",
@@ -151,7 +168,7 @@ export default function HowItWorksPage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(howItWorksJsonLd) }}
       />
 
-      <section className="overflow-hidden rounded-3xl border border-emerald-100 bg-white shadow-sm">
+      <section className="overflow-hidden rounded-xl border border-emerald-100 bg-white">
         <div className="grid gap-0 lg:grid-cols-[0.95fr_1.05fr]">
           <div className="flex flex-col justify-center p-5 sm:p-8 lg:p-10">
             <p className="inline-flex w-fit rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">
@@ -165,17 +182,17 @@ export default function HowItWorksPage() {
               faster way to discover nearby products and continue the purchase
               through a familiar WhatsApp conversation.
             </p>
-            <div className="mt-6 flex flex-wrap gap-3">
+            <div className="mt-6 flex flex-wrap items-center gap-5">
               <Link
                 href="/become-vendor"
-                className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-5 py-3 text-sm font-semibold transition hover:bg-emerald-700"
+                className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-5 py-3 text-sm font-semibold transition hover:bg-emerald-700"
               >
                 <span className="text-white">Start selling</span>
                 <ArrowRight className="h-4 w-4 text-white" aria-hidden="true" />
               </Link>
               <Link
                 href="/marketplace"
-                className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-800 transition hover:bg-slate-50"
+                className="text-sm font-semibold text-slate-800 underline decoration-slate-300 underline-offset-4 transition hover:text-emerald-700 hover:decoration-emerald-400"
               >
                 Shop marketplace
               </Link>
@@ -193,9 +210,9 @@ export default function HowItWorksPage() {
               unoptimized
             />
             <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/50 to-emerald-950/10" />
-            <div className="absolute inset-x-4 bottom-4 rounded-3xl border border-white/15 bg-white/95 p-4 shadow-sm backdrop-blur sm:inset-x-6 sm:bottom-6 sm:p-5">
+            <div className="absolute inset-x-4 bottom-4 rounded-xl border border-white/15 bg-white/95 p-4 backdrop-blur sm:inset-x-6 sm:bottom-6 sm:p-5">
               <div className="flex items-start gap-3">
-                <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700">
+                <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
                   <Bot className="h-5 w-5" aria-hidden="true" />
                 </span>
                 <div>
@@ -229,7 +246,7 @@ export default function HowItWorksPage() {
         />
       </section>
 
-      <section className="rounded-3xl border border-emerald-100 bg-white p-5 shadow-sm sm:p-6 lg:p-8">
+      <section className="rounded-xl border border-emerald-100 bg-white p-5 shadow-sm sm:p-6 lg:p-8">
         <div className="mx-auto max-w-3xl text-center">
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">
             The shared order loop
@@ -243,23 +260,16 @@ export default function HowItWorksPage() {
           </p>
         </div>
 
-        <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="relative mt-10 grid gap-8 sm:grid-cols-4">
+          <div className="pointer-events-none absolute left-0 right-0 top-5 hidden h-px bg-slate-200 sm:block" />
           {sharedFlow.map((step, index) => (
-            <article
-              key={step.label}
-              className="rounded-3xl border border-slate-200 bg-slate-50/80 p-4"
-            >
-              <div className="flex items-center justify-between gap-3">
-                <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-white text-sm font-black text-emerald-700 shadow-sm">
-                  {index + 1}
-                </span>
-                <CheckCircle2 className="h-5 w-5 text-emerald-600" aria-hidden="true" />
-              </div>
-              <h3 className="mt-4 text-lg font-bold text-slate-900">{step.label}</h3>
-              <p className="mt-2 text-sm leading-6 text-slate-600">
-                {step.description}
-              </p>
-            </article>
+            <div key={step.label} className="relative text-center">
+              <span className="relative z-10 inline-flex h-10 w-10 items-center justify-center rounded-full border-2 border-emerald-600 bg-white text-sm font-black text-emerald-700">
+                {index + 1}
+              </span>
+              <h3 className="mt-3 text-base font-bold text-slate-900">{step.label}</h3>
+              <p className="mt-1 text-sm leading-6 text-slate-600">{step.description}</p>
+            </div>
           ))}
         </div>
       </section>
@@ -268,7 +278,7 @@ export default function HowItWorksPage() {
         {imageStories.map((story) => (
           <article
             key={story.title}
-            className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm"
+            className="overflow-hidden rounded-xl border border-slate-200 bg-white"
           >
             <div className="relative aspect-[4/3] bg-slate-100 sm:aspect-[16/10]">
               <Image
@@ -293,9 +303,9 @@ export default function HowItWorksPage() {
       </section>
 
       <section className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
-        <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+        <div className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
           <div className="flex items-center gap-3">
-            <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700">
+            <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
               <ClipboardList className="h-5 w-5" aria-hidden="true" />
             </span>
             <div>
@@ -314,26 +324,20 @@ export default function HowItWorksPage() {
           </p>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-3">
-          <FeatureCard
-            icon={MapPin}
-            title="Nearby discovery"
-            description="Customers can find vendors around their location and shop with more confidence."
-          />
-          <FeatureCard
-            icon={MessageCircle}
-            title="Chat commerce"
-            description="Orders continue in WhatsApp, where many customers and vendors already coordinate."
-          />
-          <FeatureCard
-            icon={ShieldCheck}
-            title="Trust signals"
-            description="Ratings, follows, storefront details, and product photos help reduce uncertainty."
-          />
+        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+          <div className="grid h-full divide-y divide-slate-100 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+            {smootherFeatures.map(({ icon: Icon, title, description }) => (
+              <div key={title} className="p-5">
+                <Icon className="h-5 w-5 text-emerald-700" aria-hidden="true" />
+                <h3 className="mt-3 text-base font-bold text-slate-900">{title}</h3>
+                <p className="mt-1.5 text-sm leading-6 text-slate-600">{description}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
-      <section className="overflow-hidden rounded-3xl border border-emerald-200 bg-emerald-600 text-white shadow-sm">
+      <section className="overflow-hidden rounded-xl border border-emerald-200 bg-emerald-600 text-white">
         <div className="grid gap-5 p-5 sm:p-6 md:grid-cols-[1fr_auto] md:items-center lg:p-8">
           <div className="max-w-2xl">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-50">
@@ -347,16 +351,16 @@ export default function HowItWorksPage() {
               are easier to discover and contact.
             </p>
           </div>
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap items-center gap-5">
             <Link
               href="/become-vendor"
-              className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-semibold transition hover:bg-emerald-50"
+              className="inline-flex items-center gap-2 rounded-lg bg-white px-5 py-3 text-sm font-semibold transition hover:bg-emerald-50"
             >
               <span className="text-emerald-700">Become a vendor</span>
             </Link>
             <Link
               href="/vendors"
-              className="inline-flex items-center gap-2 rounded-full border border-white/40 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
+              className="text-sm font-semibold text-white underline decoration-white/40 underline-offset-4 transition hover:decoration-white"
             >
               Explore vendors
             </Link>
@@ -385,7 +389,7 @@ function JourneyPanel({
   steps: JourneyStep[];
 }) {
   return (
-    <section className="rounded-3xl border border-emerald-100 bg-white p-5 shadow-sm sm:p-6">
+    <section className="rounded-xl border border-emerald-100 bg-white p-5 sm:p-6">
       <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">
         {eyebrow}
       </p>
@@ -394,52 +398,36 @@ function JourneyPanel({
       </h2>
       <p className="mt-3 text-sm leading-7 text-slate-600">{description}</p>
 
-      <div className="mt-5 grid gap-3">
+      <div className="mt-6">
         {steps.map((step, index) => {
           const Icon = step.icon;
+          const isLast = index === steps.length - 1;
           return (
-            <article
-              key={step.title}
-              className="grid grid-cols-[44px_1fr] gap-3 rounded-2xl border border-slate-200 bg-slate-50/80 p-3"
-            >
-              <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-emerald-700 shadow-sm">
-                <Icon className="h-5 w-5" aria-hidden="true" />
+            <div key={step.title} className="relative flex gap-4 pb-6 last:pb-0">
+              {!isLast ? (
+                <span
+                  className="absolute left-5 top-10 h-[calc(100%-2rem)] w-px bg-slate-200"
+                  aria-hidden="true"
+                />
+              ) : null}
+              <span className="relative z-10 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-emerald-200 bg-white text-emerald-700">
+                <Icon className="h-4 w-4" aria-hidden="true" />
               </span>
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+              <div className="pt-1">
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
                   Step {index + 1}
                 </p>
-                <h3 className="mt-1 text-base font-bold text-slate-900">
+                <h3 className="mt-0.5 text-base font-bold text-slate-900">
                   {step.title}
                 </h3>
                 <p className="mt-1 text-sm leading-6 text-slate-600">
                   {step.description}
                 </p>
               </div>
-            </article>
+            </div>
           );
         })}
       </div>
     </section>
-  );
-}
-
-function FeatureCard({
-  icon: Icon,
-  title,
-  description,
-}: {
-  icon: typeof Store;
-  title: string;
-  description: string;
-}) {
-  return (
-    <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-      <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700">
-        <Icon className="h-5 w-5" aria-hidden="true" />
-      </span>
-      <h3 className="mt-4 text-base font-bold text-slate-900">{title}</h3>
-      <p className="mt-2 text-sm leading-6 text-slate-600">{description}</p>
-    </article>
   );
 }

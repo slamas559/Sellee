@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
-import { BadgeCheck, MapPin } from "lucide-react";
+import { BadgeCheck, Check, MapPin } from "lucide-react";
 import { AiRefineButton } from "@/components/ai/ai-refine-button";
 import {
   DEFAULT_STOREFRONT_CONFIG,
@@ -71,7 +71,7 @@ function TemplateCard({
     <button
       type="button"
       onClick={onSelect}
-      className={`group relative flex-shrink-0 snap-start rounded-2xl border-2 p-4 text-left transition-all duration-200 ${
+      className={`group relative flex-shrink-0 snap-start rounded-2xl border-2 p-4 text-left transition-all duration-200 rounded-xl ${
         selected
           ? "border-emerald-500 bg-emerald-50 shadow-md"
           : "border-slate-200 bg-white hover:border-emerald-300 hover:shadow-sm"
@@ -229,7 +229,9 @@ function UploadDropzone({
           <p className="font-semibold text-slate-700">{title}</p>
           <p className="text-xs text-slate-500">{hint}</p>
           {state.fileName && !state.isUploading && (
-            <p className="mt-0.5 truncate text-[11px] font-medium text-emerald-700">{state.fileName} ✓</p>
+            <p className="mt-0.5 flex items-center gap-1 truncate text-[11px] font-medium text-emerald-700">
+              <Check className="h-3 w-3 shrink-0" /> {state.fileName}
+            </p>
           )}
         </div>
       </div>
@@ -261,7 +263,7 @@ function StepSection({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
       <div className="mb-4 flex items-start gap-3">
         <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-xs font-black text-emerald-700">{step}</span>
         <div>
@@ -713,7 +715,7 @@ export function StoreSetupForm({ initialStore, initialEmailVerifiedAt = null }: 
   }
 
   return (
-    <section className="rounded-2xl border border-slate-200 bg-slate-50 p-3 sm:p-5">
+    <section className="rounded-xl border border-slate-200 bg-slate-50 p-3 sm:p-5">
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-emerald-700">Store Setup</p>
@@ -728,7 +730,9 @@ export function StoreSetupForm({ initialStore, initialEmailVerifiedAt = null }: 
 
       <form onSubmit={handleSubmit} className="space-y-4 pb-24 sm:pb-0">
         {showVendorSuccessBanner && (
-          <div className="rounded-xl border border-emerald-300 bg-emerald-100 px-4 py-3 text-sm font-semibold text-emerald-800">🎉 You are now a vendor!</div>
+          <div className="flex items-center gap-2 rounded-xl border border-emerald-300 bg-emerald-100 px-4 py-3 text-sm font-semibold text-emerald-800">
+            <BadgeCheck className="h-4 w-4 shrink-0" /> You are now a vendor!
+          </div>
         )}
 
         {/* ── Step 1: Basics ─────────────────────────────────────── */}
@@ -1029,18 +1033,24 @@ export function StoreSetupForm({ initialStore, initialEmailVerifiedAt = null }: 
               <input value={form.longitude} onChange={(e) => updateFormField("longitude", e.target.value)} placeholder="3.351486" className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 font-mono outline-none ring-emerald-300 transition focus:ring-2" />
             </label>
           </div>
-          <p className="mt-2 text-[11px] text-slate-400">
-            {hasCoordinates ? "✅ Coordinates captured. Nearby search will use precise distance." : "Tip: Use Detect or enter coordinates for accurate nearby results."}
+          <p className="mt-2 flex items-center gap-1 text-[11px] text-slate-400">
+            {hasCoordinates ? (
+              <>
+                <Check className="h-3 w-3 shrink-0 text-emerald-600" /> Coordinates captured. Nearby search will use precise distance.
+              </>
+            ) : (
+              "Tip: Use Detect or enter coordinates for accurate nearby results."
+            )}
           </p>
         </StepSection>
 
         {/* ── Sticky save bar ───────────────────────────────────── */}
-        <div className="fixed bottom-16 left-1/2 z-30 flex w-[calc(100%-1.5rem)] max-w-2xl -translate-x-1/2 flex-wrap gap-2 rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-lg backdrop-blur sm:static sm:bottom-auto sm:left-auto sm:translate-x-0 sm:rounded-2xl sm:shadow-md">
-          <button type="submit" disabled={isSaving || isAnyUploading} className="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-emerald-700 disabled:opacity-60">
+        <div className="fixed bottom-16 left-1/2 z-30 flex w-[calc(100%-1.5rem)] max-w-2xl -translate-x-1/2 flex-wrap gap-2 rounded-xl border border-slate-200 bg-white/95 p-3 shadow-lg backdrop-blur sm:static sm:bottom-auto sm:left-auto sm:translate-x-0 sm:rounded-xl sm:shadow-md">
+          <button type="submit" disabled={isSaving || isAnyUploading} className="rounded-lg bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-emerald-700 disabled:opacity-60">
             {isSaving ? "Saving…" : isAnyUploading ? "Uploading…" : store ? "Update store" : "Create store"}
           </button>
           {shareablePath && (
-            <a href={shareablePath} target="_blank" rel="noreferrer" className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 hover:bg-slate-50">
+            <a href={shareablePath} target="_blank" rel="noreferrer" className="rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 hover:bg-slate-50">
               View store ↗
             </a>
           )}

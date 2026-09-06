@@ -323,7 +323,7 @@ export function HelpCenterClient() {
 
   return (
     <div className="flex flex-col gap-5 lg:gap-8">
-      <section className="overflow-hidden rounded-3xl border border-emerald-100 bg-white shadow-sm">
+      <section className="overflow-hidden rounded-xl border border-emerald-100 bg-white">
         <div className="grid gap-0 lg:grid-cols-[1.02fr_0.98fr]">
           <div className="p-5 sm:p-8 lg:p-10">
             <p className="inline-flex w-fit rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">
@@ -340,7 +340,7 @@ export function HelpCenterClient() {
             <div className="mt-6 grid gap-3 sm:grid-cols-3">
               <a
                 href={`tel:${SUPPORT_PHONE_DISPLAY}`}
-                className="rounded-2xl border border-slate-200 bg-slate-50 p-4 transition hover:border-emerald-200 hover:bg-emerald-50"
+                className="rounded-xl border border-slate-200 bg-slate-50 p-4 transition hover:border-emerald-200 hover:bg-emerald-50"
               >
                 <Phone className="h-5 w-5 text-emerald-700" aria-hidden="true" />
                 <p className="mt-3 text-sm font-bold text-slate-900">Call support</p>
@@ -350,7 +350,7 @@ export function HelpCenterClient() {
                 href={whatsappHref}
                 target="_blank"
                 rel="noreferrer"
-                className="rounded-2xl border border-slate-200 bg-slate-50 p-4 transition hover:border-emerald-200 hover:bg-emerald-50"
+                className="rounded-xl border border-slate-200 bg-slate-50 p-4 transition hover:border-emerald-200 hover:bg-emerald-50"
               >
                 <MessageCircle className="h-5 w-5 text-emerald-700" aria-hidden="true" />
                 <p className="mt-3 text-sm font-bold text-slate-900">WhatsApp us</p>
@@ -358,7 +358,7 @@ export function HelpCenterClient() {
               </a>
               <a
                 href={`mailto:${SUPPORT_EMAIL}`}
-                className="rounded-2xl border border-slate-200 bg-slate-50 p-4 transition hover:border-emerald-200 hover:bg-emerald-50"
+                className="rounded-xl border border-slate-200 bg-slate-50 p-4 transition hover:border-emerald-200 hover:bg-emerald-50"
               >
                 <Mail className="h-5 w-5 text-emerald-700" aria-hidden="true" />
                 <p className="mt-3 text-sm font-bold text-slate-900">Email support</p>
@@ -368,12 +368,9 @@ export function HelpCenterClient() {
           </div>
 
           <div className="bg-slate-950 p-5 text-white sm:p-8 lg:p-10">
-            <form
-              onSubmit={handleTicketSubmit}
-              className="rounded-3xl border border-white/10 bg-white/10 p-5 shadow-sm backdrop-blur"
-            >
+            <form onSubmit={handleTicketSubmit}>
               <div className="flex items-center gap-3">
-                <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-400 text-slate-950">
+                <span className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-400 text-slate-950">
                   <LifeBuoy className="h-6 w-6" aria-hidden="true" />
                 </span>
                 <div>
@@ -393,7 +390,7 @@ export function HelpCenterClient() {
                   setRequesterName(event.target.value);
                 }}
                 placeholder="Your name"
-                className="mt-2 w-full rounded-2xl border border-white/10 bg-white px-3 py-3 text-sm text-slate-900 outline-none ring-emerald-300 transition placeholder:text-slate-400 focus:ring-2"
+                className="mt-2 w-full rounded-lg border border-white/15 bg-white px-3 py-3 text-sm text-slate-900 outline-none ring-emerald-300 transition placeholder:text-slate-400 focus:ring-2"
               />
 
               <label className="mt-4 block text-sm font-semibold text-white" htmlFor="requester-email">
@@ -409,7 +406,7 @@ export function HelpCenterClient() {
                   setRequesterEmail(event.target.value);
                 }}
                 placeholder="you@example.com"
-                className="mt-2 w-full rounded-2xl border border-white/10 bg-white px-3 py-3 text-sm text-slate-900 outline-none ring-emerald-300 transition placeholder:text-slate-400 focus:ring-2"
+                className="mt-2 w-full rounded-lg border border-white/15 bg-white px-3 py-3 text-sm text-slate-900 outline-none ring-emerald-300 transition placeholder:text-slate-400 focus:ring-2"
               />
 
               <label className="mt-5 block text-sm font-semibold text-white" htmlFor="issue-type">
@@ -419,7 +416,7 @@ export function HelpCenterClient() {
                 id="issue-type"
                 value={issueType}
                 onChange={(event) => setIssueType(event.target.value)}
-                className="mt-2 w-full rounded-2xl border border-white/10 bg-white px-3 py-3 text-sm text-slate-900 outline-none ring-emerald-300 transition focus:ring-2"
+                className="mt-2 w-full rounded-lg border border-white/15 bg-white px-3 py-3 text-sm text-slate-900 outline-none ring-emerald-300 transition focus:ring-2"
               >
                 <option>Order issue</option>
                 <option>Vendor/store setup</option>
@@ -439,12 +436,12 @@ export function HelpCenterClient() {
                 required
                 rows={5}
                 placeholder="Add your account email, store/product name, order details, and what went wrong."
-                className="mt-2 w-full resize-none rounded-2xl border border-white/10 bg-white px-3 py-3 text-sm text-slate-900 outline-none ring-emerald-300 transition placeholder:text-slate-400 focus:ring-2"
+                className="mt-2 w-full resize-none rounded-lg border border-white/15 bg-white px-3 py-3 text-sm text-slate-900 outline-none ring-emerald-300 transition placeholder:text-slate-400 focus:ring-2"
               />
 
               {ticketNotice ? (
                 <div
-                  className={`mt-4 rounded-2xl border px-4 py-3 text-sm leading-6 ${
+                  className={`mt-4 rounded-lg border px-4 py-3 text-sm leading-6 ${
                     ticketNotice.tone === "success"
                       ? "border-emerald-300 bg-emerald-50 text-emerald-900"
                       : "border-red-200 bg-red-50 text-red-800"
@@ -458,7 +455,7 @@ export function HelpCenterClient() {
                 <button
                   type="submit"
                   disabled={isPending}
-                  className="inline-flex items-center gap-2 rounded-full bg-emerald-500 px-5 py-3 text-sm font-bold text-slate-950 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-70"
+                  className="inline-flex items-center gap-2 rounded-lg bg-emerald-500 px-5 py-3 text-sm font-bold text-slate-950 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-70"
                 >
                   {isPending ? "Sending request..." : "Send support request"}
                 </button>
@@ -466,7 +463,7 @@ export function HelpCenterClient() {
                   href={whatsappHref}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center gap-2 rounded-full border border-white/30 px-5 py-3 text-sm font-bold text-white transition hover:bg-white/10"
+                  className="inline-flex items-center gap-2 rounded-lg border border-white/30 px-5 py-3 text-sm font-bold text-white transition hover:bg-white/10"
                 >
                   WhatsApp instead
                 </a>
@@ -487,7 +484,7 @@ export function HelpCenterClient() {
             <Link
               key={item.title}
               href={item.href}
-              className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-emerald-200 hover:bg-emerald-50"
+              className="rounded-xl border border-slate-200 bg-white p-5 transition hover:border-emerald-200 hover:bg-emerald-50"
             >
               <Icon className="h-6 w-6 text-emerald-700" aria-hidden="true" />
               <h2 className="mt-4 text-base font-bold text-slate-900">{item.title}</h2>
@@ -497,7 +494,7 @@ export function HelpCenterClient() {
         })}
       </section>
 
-      <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+      <section className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
         <div className="grid gap-4 lg:grid-cols-[0.8fr_1.2fr] lg:items-end">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">
@@ -514,7 +511,7 @@ export function HelpCenterClient() {
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search orders, vendors, WhatsApp, account..."
-              className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-3 text-sm outline-none ring-emerald-300 transition placeholder:text-slate-400 focus:bg-white focus:ring-2"
+              className="w-full rounded-lg border border-slate-200 bg-slate-50 py-3 pl-10 pr-3 text-sm outline-none ring-emerald-300 transition placeholder:text-slate-400 focus:bg-white focus:ring-2"
             />
           </div>
         </div>
@@ -541,7 +538,7 @@ export function HelpCenterClient() {
             filteredFaqs.map((faq) => {
               const isOpen = openId === faq.id;
               return (
-                <article key={faq.id} className="rounded-2xl border border-slate-200 bg-slate-50">
+                <article key={faq.id} className="rounded-xl border border-slate-200 bg-slate-50">
                   <button
                     type="button"
                     onClick={() => setOpenId(isOpen ? "" : faq.id)}
@@ -569,7 +566,7 @@ export function HelpCenterClient() {
               );
             })
           ) : (
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 text-sm text-slate-600">
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-5 text-sm text-slate-600">
               No answers matched your search. Send the issue through WhatsApp or email and the
               support team will help.
             </div>

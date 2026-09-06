@@ -21,7 +21,7 @@ export function OutboundBotTrendsCard({ trends }: OutboundBotTrendsCardProps) {
     trends.daily.reduce((max, row) => Math.max(max, row.success + row.failed), 0) || 1;
 
   return (
-    <section className="rounded-2xl border border-emerald-100 bg-white p-5 shadow-sm sm:p-6">
+    <section className="rounded-lg border border-slate-200 bg-white p-5 sm:p-6">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">

@@ -184,7 +184,7 @@ export default async function BecomeVendorPage() {
           >
             <Link
               href="/become-vendor/setup"
-              className="group inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-500 px-6 py-3.5 text-sm font-bold text-slate-950 shadow-[0_8px_30px_rgba(16,185,129,0.35)] transition hover:bg-emerald-400"
+              className="group inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-500 px-6 py-3.5 text-sm font-bold text-slate-950 shadow-[0_8px_30px_rgba(16,185,129,0.35)] transition hover:bg-emerald-400"
             >
               Set up my store
               <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
@@ -231,28 +231,59 @@ export default async function BecomeVendorPage() {
             </p>
           </Reveal>
 
-          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {categories.map(({ label, tagline, image, icon: Icon }, i) => (
-              <Reveal key={label} delay={i * 90}>
-                <article className="group relative aspect-[4/5] w-full overflow-hidden rounded-2xl shadow-sm ring-1 ring-black/5 transition duration-300 hover:-translate-y-1 hover:shadow-xl">
-                  <Image
-                    src={image}
-                    alt={label}
-                    fill
-                    sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 300px"
-                    className="object-cover transition duration-500 group-hover:scale-110"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-black/0" />
-                  <div className="absolute inset-x-0 bottom-0 p-4">
-                    <div className="mb-2 inline-flex rounded-lg bg-emerald-500/90 p-1.5 text-slate-950">
-                      <Icon className="h-4 w-4" />
+          <div className="mt-8 grid gap-4">
+            {(() => {
+              const [featured, ...rest] = categories;
+              const FeaturedIcon = featured.icon;
+              return (
+                <>
+                  <article className="group relative aspect-[16/7] w-full overflow-hidden rounded-xl shadow-sm ring-1 ring-black/5 sm:aspect-[21/8]">
+                    <Image
+                      src={featured.image}
+                      alt={featured.label}
+                      fill
+                      sizes="100vw"
+                      className="object-cover transition duration-500 group-hover:scale-105"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/40 to-black/0" />
+                    <div className="absolute inset-y-0 left-0 flex max-w-md flex-col justify-center p-6 sm:p-10">
+                      <div className="mb-3 inline-flex w-fit rounded-lg bg-emerald-500/90 p-2 text-slate-950">
+                        <FeaturedIcon className="h-5 w-5" />
+                      </div>
+                      <h3 className="text-xl font-black leading-tight text-white sm:text-2xl">
+                        {featured.label}
+                      </h3>
+                      <p className="mt-1.5 text-sm leading-6 text-white/80">{featured.tagline}</p>
                     </div>
-                    <h3 className="text-base font-bold leading-tight text-white">{label}</h3>
-                    <p className="mt-1 text-xs leading-5 text-white/80">{tagline}</p>
+                  </article>
+
+                  <div className="grid gap-4 sm:grid-cols-3">
+                    {rest.map(({ label, tagline, image, icon: Icon }) => (
+                      <article
+                        key={label}
+                        className="group relative aspect-[4/5] w-full overflow-hidden rounded-xl shadow-sm ring-1 ring-black/5 transition duration-300 hover:-translate-y-1 hover:shadow-xl"
+                      >
+                        <Image
+                          src={image}
+                          alt={label}
+                          fill
+                          sizes="(max-width: 640px) 50vw, 33vw"
+                          className="object-cover transition duration-500 group-hover:scale-110"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-black/0" />
+                        <div className="absolute inset-x-0 bottom-0 p-4">
+                          <div className="mb-2 inline-flex rounded-lg bg-emerald-500/90 p-1.5 text-slate-950">
+                            <Icon className="h-4 w-4" />
+                          </div>
+                          <h3 className="text-base font-bold leading-tight text-white">{label}</h3>
+                          <p className="mt-1 text-xs leading-5 text-white/80">{tagline}</p>
+                        </div>
+                      </article>
+                    ))}
                   </div>
-                </article>
-              </Reveal>
-            ))}
+                </>
+              );
+            })()}
           </div>
         </section>
 
@@ -287,7 +318,7 @@ export default async function BecomeVendorPage() {
           </Reveal>
 
           <Reveal className="order-1 lg:order-2" delay={120}>
-            <div className="relative aspect-[4/3] w-full overflow-hidden rounded-3xl shadow-lg ring-1 ring-black/5">
+            <div className="relative aspect-[4/3] w-full overflow-hidden rounded-xl shadow-lg ring-1 ring-black/5">
               <Image
                 src="https://images.unsplash.com/photo-1685875018148-6ac6d41b7c4e?auto=format&fit=crop&w=1600&q=80"
                 alt="A well-organized clothing storefront ready for customers"
@@ -310,17 +341,17 @@ export default async function BecomeVendorPage() {
               More visibility, with a familiar way to sell.
             </h2>
           </Reveal>
-          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {benefits.map(({ icon: Icon, title, description }, i) => (
-              <Reveal key={title} delay={i * 70}>
-                <article className="h-full rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:border-emerald-200 hover:shadow-md">
-                  <div className="inline-flex rounded-xl bg-emerald-50 p-2.5 text-emerald-700">
-                    <Icon className="h-5 w-5" />
-                  </div>
-                  <h3 className="mt-4 text-base font-bold text-slate-900">{title}</h3>
+          <div className="mt-8 grid gap-x-10 gap-y-8 sm:grid-cols-2">
+            {benefits.map(({ title, description }, i) => (
+              <div key={title} className="flex gap-4 border-t border-slate-200 pt-5">
+                <span className="font-display shrink-0 text-3xl font-black text-emerald-600/25">
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">{title}</h3>
                   <p className="mt-1.5 text-sm leading-6 text-slate-600">{description}</p>
-                </article>
-              </Reveal>
+                </div>
+              </div>
             ))}
           </div>
         </section>
@@ -336,30 +367,47 @@ export default async function BecomeVendorPage() {
             </h2>
           </Reveal>
 
-          <div className="relative mt-10 grid gap-6 sm:grid-cols-3">
-            <div className="pointer-events-none absolute left-0 right-0 top-8 hidden h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent sm:block" />
-            {steps.map(({ icon: Icon, title, description }, i) => (
-              <Reveal key={title} delay={i * 120}>
-                <div className="relative rounded-2xl bg-white p-5">
-                  <div className="relative z-10 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-950 text-white shadow-lg">
-                    <Icon className="h-6 w-6" />
+          <div className="mt-10 grid gap-6 lg:grid-cols-3">
+            {(() => {
+              const [featured, ...rest] = steps;
+              const FeaturedIcon = featured.icon;
+              return (
+                <>
+                  <div className="rounded-xl bg-slate-950 p-8 text-white lg:col-span-2">
+                    <div className="inline-flex h-14 w-14 items-center justify-center rounded-xl bg-emerald-500 text-slate-950">
+                      <FeaturedIcon className="h-6 w-6" />
+                    </div>
+                    <span className="mt-4 block text-xs font-bold uppercase tracking-[0.14em] text-emerald-400">
+                      Step 1
+                    </span>
+                    <h3 className="mt-2 text-2xl font-black">{featured.title}</h3>
+                    <p className="mt-2 max-w-md text-sm leading-6 text-white/70">{featured.description}</p>
                   </div>
-                  <span className="mt-3 block text-xs font-bold uppercase tracking-[0.14em] text-emerald-700">
-                    Step {i + 1}
-                  </span>
-                  <h3 className="mt-1 text-lg font-bold text-slate-950">{title}</h3>
-                  <p className="mt-1.5 text-sm leading-6 text-slate-600">{description}</p>
-                </div>
-              </Reveal>
-            ))}
+                  <div className="flex flex-col gap-6">
+                    {rest.map(({ icon: Icon, title, description }, i) => (
+                      <div key={title} className="flex-1 rounded-xl border border-slate-200 bg-white p-5">
+                        <div className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700">
+                          <Icon className="h-5 w-5" />
+                        </div>
+                        <span className="mt-3 block text-xs font-bold uppercase tracking-[0.14em] text-emerald-700">
+                          Step {i + 2}
+                        </span>
+                        <h3 className="mt-1 text-base font-bold text-slate-950">{title}</h3>
+                        <p className="mt-1.5 text-sm leading-6 text-slate-600">{description}</p>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              );
+            })()}
           </div>
         </section>
       </div>
 
       {/* ---------------- FINAL CTA ---------------- */}
-      <section className="relative mx-auto mt-20 w-full max-w-6xl overflow-hidden rounded-3xl px-4 sm:mt-28 sm:px-6">
+      <section className="relative mx-auto mt-20 w-full max-w-6xl overflow-hidden rounded-xl px-4 sm:mt-28 sm:px-6">
         <Reveal>
-          <div className="relative isolate overflow-hidden rounded-3xl">
+          <div className="relative isolate overflow-hidden rounded-xl">
             <div className="absolute inset-0">
               <Image
                 src={CTA_IMAGE}
@@ -386,7 +434,7 @@ export default async function BecomeVendorPage() {
               </div>
               <Link
                 href="/become-vendor/setup"
-                className="group inline-flex shrink-0 items-center gap-2 rounded-xl bg-white px-6 py-3.5 text-sm font-bold text-slate-950 transition hover:bg-emerald-50"
+                className="group inline-flex shrink-0 items-center gap-2 rounded-lg bg-white px-6 py-3.5 text-sm font-bold text-slate-950 transition hover:bg-emerald-50"
               >
                 Set up my store
                 <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" />

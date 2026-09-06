@@ -213,7 +213,7 @@ export default async function VendorsPage({ searchParams }: VendorsPageProps) {
         </div>
       </section>
 
-      <section className="rounded-3xl border border-emerald-100 bg-white p-4 shadow-sm sm:p-6">
+      <section className="rounded-xl border border-emerald-100 bg-white p-4 shadow-sm sm:p-6">
         <div className="mb-4 flex items-center justify-between gap-2">
           <h2 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
             Vendor Results

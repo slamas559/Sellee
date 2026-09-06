@@ -90,7 +90,7 @@ export function LocationFilterButton({ radiusKm }: LocationFilterButtonProps) {
         type="button"
         onClick={handleUseMyLocation}
         disabled={isLocating}
-        className="w-full rounded-full bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-60"
+        className="w-full rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-60"
       >
         {isLocating ? "Detecting..." : "Use my location"}
       </button>
@@ -98,7 +98,7 @@ export function LocationFilterButton({ radiusKm }: LocationFilterButtonProps) {
       <button
         type="button"
         onClick={clearLocationInUrl}
-        className="w-full rounded-full border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+        className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
       >
         Clear location
       </button>

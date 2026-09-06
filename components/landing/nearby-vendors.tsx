@@ -36,7 +36,7 @@ type NearbyResponse = {
 
 function renderStars(value: number | null) {
   const count = Math.max(1, Math.round(value ?? 0));
-  return "*".repeat(count);
+  return "★".repeat(count);
 }
 
 export function NearbyVendorCard({
@@ -62,7 +62,7 @@ export function NearbyVendorCard({
       target="_blank" 
       rel="noopener noreferrer"
       prefetch
-      className={`group relative overflow-hidden rounded-2xl border border-slate-200 bg-white transition hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-md ${cardShellClass}`}
+      className={`group relative overflow-hidden rounded-xl border border-slate-200 bg-white transition hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-md ${cardShellClass}`}
     >
       {vendor.logo_url ? (
         <div
@@ -220,7 +220,7 @@ export function NearbyVendors({
   }
 
   return (
-    <section className="rounded-3xl border border-emerald-100 bg-white p-4 shadow-sm sm:p-6">
+    <section className="rounded-xl border border-emerald-100 bg-white p-4 shadow-sm sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">
@@ -232,7 +232,7 @@ export function NearbyVendors({
           {showSeeMoreLink ? (
             <Link
               href="/vendors"
-              className="inline-flex shrink-0 items-center justify-center rounded-full border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              className="inline-flex shrink-0 items-center justify-center rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
             >
               See more
             </Link>
@@ -241,7 +241,7 @@ export function NearbyVendors({
             type="button"
             onClick={handleUseMyLocation}
             disabled={isLocating}
-            className="inline-flex shrink-0 items-center justify-center rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-100 disabled:opacity-60"
+            className="inline-flex shrink-0 items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-100 disabled:opacity-60"
           >
             {isLocating ? "Detecting..." : "Use my location"}
           </button>

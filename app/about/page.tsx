@@ -66,6 +66,27 @@ const stats = [
   { value: "0", label: "heavy setup needed to begin" },
 ];
 
+const audiences = [
+  {
+    title: "For vendors",
+    description:
+      "Create a public store, showcase products, receive orders, manage stock signals, and keep customers updated from a practical dashboard.",
+    icon: Store,
+  },
+  {
+    title: "For customers",
+    description:
+      "Find products, compare nearby stores, follow favorite vendors, read ratings, and order without learning a new shopping habit.",
+    icon: ShoppingBag,
+  },
+  {
+    title: "For operations",
+    description:
+      "WhatsApp-powered workflows help with product discovery, order updates, broadcasts, and repeat engagement as stores grow.",
+    icon: Bot,
+  },
+];
+
 export default function AboutPage() {
   const aboutJsonLd = {
     "@context": "https://schema.org",
@@ -89,7 +110,7 @@ export default function AboutPage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(aboutJsonLd) }}
       />
 
-      <section className="overflow-hidden rounded-3xl border border-emerald-100 bg-white shadow-sm">
+      <section className="overflow-hidden rounded-xl border border-emerald-100 bg-white">
         <div className="grid gap-0 lg:grid-cols-[1.02fr_0.98fr]">
           <div className="flex flex-col justify-center p-5 sm:p-8 lg:p-10">
             <p className="inline-flex w-fit rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">
@@ -103,19 +124,17 @@ export default function AboutPage() {
               catalogs, get discovered by nearby customers, and keep the buying
               conversation where it already happens: WhatsApp.
             </p>
-            <div className="mt-6 flex flex-wrap gap-3">
+            <div className="mt-6 flex flex-wrap items-center gap-5">
               <Link
                 href="/marketplace"
-                className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-5 py-3 text-sm font-semibold transition hover:bg-emerald-700"
+                className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-5 py-3 text-sm font-semibold transition hover:bg-emerald-700"
               >
-                <span className="text-white">
-                  Browse marketplace
-                </span>
+                <span className="text-white">Browse marketplace</span>
                 <ArrowRight className="h-4 w-4 text-white" aria-hidden="true" />
               </Link>
               <Link
                 href="/become-vendor"
-                className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-800 transition hover:bg-slate-50"
+                className="text-sm font-semibold text-slate-800 underline decoration-slate-300 underline-offset-4 transition hover:text-emerald-700 hover:decoration-emerald-400"
               >
                 Start Selling
               </Link>
@@ -137,7 +156,7 @@ export default function AboutPage() {
               {stats.map((stat) => (
                 <div
                   key={stat.label}
-                  className="rounded-2xl border border-white/15 bg-white/92 p-4 shadow-sm backdrop-blur"
+                  className="rounded-xl border border-white/15 bg-white/92 p-4 backdrop-blur"
                 >
                   <p className="text-2xl font-black tracking-tight text-emerald-700">
                     {stat.value}
@@ -153,7 +172,7 @@ export default function AboutPage() {
       </section>
 
       <section className="grid gap-4 lg:grid-cols-[0.8fr_1.2fr] lg:items-start">
-        <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+        <div className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">
             Why we exist
           </p>
@@ -168,30 +187,23 @@ export default function AboutPage() {
           </p>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white">
           {principles.map((principle) => {
             const Icon = principle.icon;
             return (
-              <article
-                key={principle.title}
-                className="rounded-3xl border border-emerald-100 bg-white p-5 shadow-sm"
-              >
-                <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700">
-                  <Icon className="h-5 w-5" aria-hidden="true" />
-                </span>
-                <h3 className="mt-4 text-base font-bold text-slate-900">
-                  {principle.title}
-                </h3>
-                <p className="mt-2 text-sm leading-6 text-slate-600">
-                  {principle.description}
-                </p>
-              </article>
+              <div key={principle.title} className="flex gap-4 p-5">
+                <Icon className="h-5 w-5 shrink-0 text-emerald-600" aria-hidden="true" />
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">{principle.title}</h3>
+                  <p className="mt-1 text-sm leading-6 text-slate-600">{principle.description}</p>
+                </div>
+              </div>
             );
           })}
         </div>
       </section>
 
-      <section className="rounded-3xl border border-emerald-100 bg-white p-5 shadow-sm sm:p-6 lg:p-8">
+      <section className="rounded-xl border border-emerald-100 bg-white p-5 sm:p-6 lg:p-8">
         <div className="grid gap-7 lg:grid-cols-[0.95fr_1.05fr] lg:items-center">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">
@@ -211,9 +223,9 @@ export default function AboutPage() {
             {workflow.map((step, index) => (
               <div
                 key={step}
-                className="grid grid-cols-[44px_1fr] items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50/80 p-3"
+                className="grid grid-cols-[44px_1fr] items-center gap-3 rounded-xl border border-slate-200 bg-slate-50/80 p-3"
               >
-                <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-sm font-black text-emerald-700 shadow-sm">
+                <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-white text-sm font-black text-emerald-700">
                   {index + 1}
                 </span>
                 <p className="text-sm font-semibold text-slate-800">{step}</p>
@@ -223,34 +235,19 @@ export default function AboutPage() {
         </div>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-3">
-        <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-          <Store className="h-6 w-6 text-emerald-700" aria-hidden="true" />
-          <h3 className="mt-4 text-lg font-bold text-slate-900">For vendors</h3>
-          <p className="mt-2 text-sm leading-6 text-slate-600">
-            Create a public store, showcase products, receive orders, manage
-            stock signals, and keep customers updated from a practical dashboard.
-          </p>
-        </article>
-        <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-          <ShoppingBag className="h-6 w-6 text-emerald-700" aria-hidden="true" />
-          <h3 className="mt-4 text-lg font-bold text-slate-900">For customers</h3>
-          <p className="mt-2 text-sm leading-6 text-slate-600">
-            Find products, compare nearby stores, follow favorite vendors, read
-            ratings, and order without learning a new shopping habit.
-          </p>
-        </article>
-        <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-          <Bot className="h-6 w-6 text-emerald-700" aria-hidden="true" />
-          <h3 className="mt-4 text-lg font-bold text-slate-900">For operations</h3>
-          <p className="mt-2 text-sm leading-6 text-slate-600">
-            WhatsApp-powered workflows help with product discovery, order
-            updates, broadcasts, and repeat engagement as stores grow.
-          </p>
-        </article>
+      <section className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+        <div className="grid divide-y divide-slate-100 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+          {audiences.map(({ title, description, icon: Icon }) => (
+            <div key={title} className="p-5 sm:p-6">
+              <Icon className="h-6 w-6 text-emerald-700" aria-hidden="true" />
+              <h3 className="mt-4 text-lg font-bold text-slate-900">{title}</h3>
+              <p className="mt-2 text-sm leading-6 text-slate-600">{description}</p>
+            </div>
+          ))}
+        </div>
       </section>
 
-      <section className="overflow-hidden rounded-3xl border border-emerald-200 bg-emerald-600 text-white shadow-sm">
+      <section className="overflow-hidden rounded-xl border border-emerald-200 bg-emerald-600 text-white">
         <div className="grid gap-5 p-5 sm:p-6 md:grid-cols-[1fr_auto] md:items-center lg:p-8">
           <div className="max-w-2xl">
             <div className="flex items-center gap-2 text-emerald-50">
@@ -269,11 +266,9 @@ export default function AboutPage() {
           </div>
           <Link
             href="/vendors"
-            className="inline-flex w-fit items-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-semibold transition hover:bg-emerald-50"
+            className="inline-flex w-fit items-center gap-2 rounded-lg bg-white px-5 py-3 text-sm font-semibold transition hover:bg-emerald-50"
           >
-            <span className="text-emerald-700">
-              Explore vendors
-            </span>
+            <span className="text-emerald-700">Explore vendors</span>
             <ArrowRight className="h-4 w-4 text-emerald-700" aria-hidden="true" />
           </Link>
         </div>

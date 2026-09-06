@@ -1,0 +1,1311 @@
+diff --git a/app/about/page.tsx b/app/about/page.tsx
+index 1043313..f780f4f 100644
+--- a/app/about/page.tsx
++++ b/app/about/page.tsx
+@@ -66,6 +66,27 @@ const stats = [
+   { value: "0", label: "heavy setup needed to begin" },
+ ];
+ 
++const audiences = [
++  {
++    title: "For vendors",
++    description:
++      "Create a public store, showcase products, receive orders, manage stock signals, and keep customers updated from a practical dashboard.",
++    icon: Store,
++  },
++  {
++    title: "For customers",
++    description:
++      "Find products, compare nearby stores, follow favorite vendors, read ratings, and order without learning a new shopping habit.",
++    icon: ShoppingBag,
++  },
++  {
++    title: "For operations",
++    description:
++      "WhatsApp-powered workflows help with product discovery, order updates, broadcasts, and repeat engagement as stores grow.",
++    icon: Bot,
++  },
++];
++
+ export default function AboutPage() {
+   const aboutJsonLd = {
+     "@context": "https://schema.org",
+@@ -89,7 +110,7 @@ export default function AboutPage() {
+         dangerouslySetInnerHTML={{ __html: JSON.stringify(aboutJsonLd) }}
+       />
+ 
+-      <section className="overflow-hidden rounded-3xl border border-emerald-100 bg-white shadow-sm">
++      <section className="overflow-hidden rounded-xl border border-emerald-100 bg-white">
+         <div className="grid gap-0 lg:grid-cols-[1.02fr_0.98fr]">
+           <div className="flex flex-col justify-center p-5 sm:p-8 lg:p-10">
+             <p className="inline-flex w-fit rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">
+@@ -103,19 +124,17 @@ export default function AboutPage() {
+               catalogs, get discovered by nearby customers, and keep the buying
+               conversation where it already happens: WhatsApp.
+             </p>
+-            <div className="mt-6 flex flex-wrap gap-3">
++            <div className="mt-6 flex flex-wrap items-center gap-5">
+               <Link
+                 href="/marketplace"
+-                className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-5 py-3 text-sm font-semibold transition hover:bg-emerald-700"
++                className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-5 py-3 text-sm font-semibold transition hover:bg-emerald-700"
+               >
+-                <span className="text-white">
+-                  Browse marketplace
+-                </span>
++                <span className="text-white">Browse marketplace</span>
+                 <ArrowRight className="h-4 w-4 text-white" aria-hidden="true" />
+               </Link>
+               <Link
+                 href="/become-vendor"
+-                className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-800 transition hover:bg-slate-50"
++                className="text-sm font-semibold text-slate-800 underline decoration-slate-300 underline-offset-4 transition hover:text-emerald-700 hover:decoration-emerald-400"
+               >
+                 Start Selling
+               </Link>
+@@ -137,7 +156,7 @@ export default function AboutPage() {
+               {stats.map((stat) => (
+                 <div
+                   key={stat.label}
+-                  className="rounded-2xl border border-white/15 bg-white/92 p-4 shadow-sm backdrop-blur"
++                  className="rounded-xl border border-white/15 bg-white/92 p-4 backdrop-blur"
+                 >
+                   <p className="text-2xl font-black tracking-tight text-emerald-700">
+                     {stat.value}
+@@ -153,7 +172,7 @@ export default function AboutPage() {
+       </section>
+ 
+       <section className="grid gap-4 lg:grid-cols-[0.8fr_1.2fr] lg:items-start">
+-        <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
++        <div className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
+           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">
+             Why we exist
+           </p>
+@@ -168,30 +187,23 @@ export default function AboutPage() {
+           </p>
+         </div>
+ 
+-        <div className="grid gap-3 sm:grid-cols-3">
++        <div className="divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white">
+           {principles.map((principle) => {
+             const Icon = principle.icon;
+             return (
+-              <article
+-                key={principle.title}
+-                className="rounded-3xl border border-emerald-100 bg-white p-5 shadow-sm"
+-              >
+-                <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700">
+-                  <Icon className="h-5 w-5" aria-hidden="true" />
+-                </span>
+-                <h3 className="mt-4 text-base font-bold text-slate-900">
+-                  {principle.title}
+-                </h3>
+-                <p className="mt-2 text-sm leading-6 text-slate-600">
+-                  {principle.description}
+-                </p>
+-              </article>
++              <div key={principle.title} className="flex gap-4 p-5">
++                <Icon className="h-5 w-5 shrink-0 text-emerald-600" aria-hidden="true" />
++                <div>
++                  <h3 className="text-base font-bold text-slate-900">{principle.title}</h3>
++                  <p className="mt-1 text-sm leading-6 text-slate-600">{principle.description}</p>
++                </div>
++              </div>
+             );
+           })}
+         </div>
+       </section>
+ 
+-      <section className="rounded-3xl border border-emerald-100 bg-white p-5 shadow-sm sm:p-6 lg:p-8">
++      <section className="rounded-xl border border-emerald-100 bg-white p-5 sm:p-6 lg:p-8">
+         <div className="grid gap-7 lg:grid-cols-[0.95fr_1.05fr] lg:items-center">
+           <div>
+             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">
+@@ -211,9 +223,9 @@ export default function AboutPage() {
+             {workflow.map((step, index) => (
+               <div
+                 key={step}
+-                className="grid grid-cols-[44px_1fr] items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50/80 p-3"
++                className="grid grid-cols-[44px_1fr] items-center gap-3 rounded-xl border border-slate-200 bg-slate-50/80 p-3"
+               >
+-                <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-sm font-black text-emerald-700 shadow-sm">
++                <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-white text-sm font-black text-emerald-700">
+                   {index + 1}
+                 </span>
+                 <p className="text-sm font-semibold text-slate-800">{step}</p>
+@@ -223,34 +235,19 @@ export default function AboutPage() {
+         </div>
+       </section>
+ 
+-      <section className="grid gap-4 md:grid-cols-3">
+-        <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+-          <Store className="h-6 w-6 text-emerald-700" aria-hidden="true" />
+-          <h3 className="mt-4 text-lg font-bold text-slate-900">For vendors</h3>
+-          <p className="mt-2 text-sm leading-6 text-slate-600">
+-            Create a public store, showcase products, receive orders, manage
+-            stock signals, and keep customers updated from a practical dashboard.
+-          </p>
+-        </article>
+-        <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+-          <ShoppingBag className="h-6 w-6 text-emerald-700" aria-hidden="true" />
+-          <h3 className="mt-4 text-lg font-bold text-slate-900">For customers</h3>
+-          <p className="mt-2 text-sm leading-6 text-slate-600">
+-            Find products, compare nearby stores, follow favorite vendors, read
+-            ratings, and order without learning a new shopping habit.
+-          </p>
+-        </article>
+-        <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+-          <Bot className="h-6 w-6 text-emerald-700" aria-hidden="true" />
+-          <h3 className="mt-4 text-lg font-bold text-slate-900">For operations</h3>
+-          <p className="mt-2 text-sm leading-6 text-slate-600">
+-            WhatsApp-powered workflows help with product discovery, order
+-            updates, broadcasts, and repeat engagement as stores grow.
+-          </p>
+-        </article>
++      <section className="overflow-hidden rounded-xl border border-slate-200 bg-white">
++        <div className="grid divide-y divide-slate-100 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
++          {audiences.map(({ title, description, icon: Icon }) => (
++            <div key={title} className="p-5 sm:p-6">
++              <Icon className="h-6 w-6 text-emerald-700" aria-hidden="true" />
++              <h3 className="mt-4 text-lg font-bold text-slate-900">{title}</h3>
++              <p className="mt-2 text-sm leading-6 text-slate-600">{description}</p>
++            </div>
++          ))}
++        </div>
+       </section>
+ 
+-      <section className="overflow-hidden rounded-3xl border border-emerald-200 bg-emerald-600 text-white shadow-sm">
++      <section className="overflow-hidden rounded-xl border border-emerald-200 bg-emerald-600 text-white">
+         <div className="grid gap-5 p-5 sm:p-6 md:grid-cols-[1fr_auto] md:items-center lg:p-8">
+           <div className="max-w-2xl">
+             <div className="flex items-center gap-2 text-emerald-50">
+@@ -269,11 +266,9 @@ export default function AboutPage() {
+           </div>
+           <Link
+             href="/vendors"
+-            className="inline-flex w-fit items-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-semibold transition hover:bg-emerald-50"
++            className="inline-flex w-fit items-center gap-2 rounded-lg bg-white px-5 py-3 text-sm font-semibold transition hover:bg-emerald-50"
+           >
+-            <span className="text-emerald-700">
+-              Explore vendors
+-            </span>
++            <span className="text-emerald-700">Explore vendors</span>
+             <ArrowRight className="h-4 w-4 text-emerald-700" aria-hidden="true" />
+           </Link>
+         </div>
+diff --git a/app/data-deletion/page.tsx b/app/data-deletion/page.tsx
+index 73678a2..f04c36a 100644
+--- a/app/data-deletion/page.tsx
++++ b/app/data-deletion/page.tsx
+@@ -1,4 +1,5 @@
+ import Link from "next/link";
++import { LegalPage } from "@/components/legal/legal-page";
+ 
+ export const metadata = {
+   title: "Data Deletion Instructions",
+@@ -7,57 +8,77 @@ export const metadata = {
+ 
+ export default function DataDeletionPage() {
+   return (
+-    <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 px-4 py-10 sm:px-6">
+-      <header className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+-        <p className="text-sm font-medium text-sky-700">Sellee Legal</p>
+-        <h1 className="mt-1 text-3xl font-semibold text-slate-900">Data Deletion Instructions</h1>
+-        <p className="mt-2 text-sm text-slate-600">
+-          Use these steps to request deletion of your Sellee account data.
++    <LegalPage
++      kicker="Sellee Legal"
++      title="Data Deletion Instructions"
++      meta="Use these steps to request deletion of your Sellee account data."
++      sections={[
++        {
++          id: "how-to-request",
++          title: "How to Request Deletion",
++          content: (
++            <ol className="list-decimal space-y-1 pl-5">
++              <li>
++                Send an email to{" "}
++                <a href="mailto:support@sellee.store" className="font-medium text-emerald-700 hover:underline">
++                  support@sellee.store
++                </a>
++                .
++              </li>
++              <li>
++                Use subject: <span className="font-medium">Data Deletion Request</span>.
++              </li>
++              <li>Include your account email and registered phone number.</li>
++            </ol>
++          ),
++        },
++        {
++          id: "what-we-delete",
++          title: "What We Delete",
++          content: (
++            <ul className="list-disc space-y-1 pl-5">
++              <li>Account profile data linked to your identity.</li>
++              <li>Store and product records owned by your account.</li>
++              <li>Order-related data and linked operational metadata where permitted.</li>
++              <li>WhatsApp linking records associated with your vendor account.</li>
++            </ul>
++          ),
++        },
++        {
++          id: "timeline",
++          title: "Timeline",
++          content: (
++            <p>
++              Verified deletion requests are processed within 30 days, except where
++              longer retention is legally required (for example fraud prevention,
++              security investigations, or tax/legal compliance).
++            </p>
++          ),
++        },
++        {
++          id: "verification",
++          title: "Verification",
++          content: (
++            <p>
++              We may ask for additional verification to protect accounts from
++              unauthorized deletion requests.
++            </p>
++          ),
++        },
++      ]}
++      footer={
++        <p className="text-xs text-slate-500">
++          Also see{" "}
++          <Link href="/privacy" className="text-emerald-700 hover:underline">
++            Privacy Policy
++          </Link>{" "}
++          and{" "}
++          <Link href="/terms" className="text-emerald-700 hover:underline">
++            Terms of Service
++          </Link>
++          .
+         </p>
+-      </header>
+-
+-      <article className="space-y-6 rounded-xl border border-slate-200 bg-white p-6 shadow-sm text-sm leading-7 text-slate-700">
+-        <section>
+-          <h2 className="text-lg font-semibold text-slate-900">How to Request Deletion</h2>
+-          <ol className="list-decimal space-y-1 pl-5">
+-            <li>Send an email to <a href="mailto:support@sellee.store" className="font-medium text-sky-700 hover:underline">support@sellee.store</a>.</li>
+-            <li>Use subject: <span className="font-medium">Data Deletion Request</span>.</li>
+-            <li>Include your account email and registered phone number.</li>
+-          </ol>
+-        </section>
+-
+-        <section>
+-          <h2 className="text-lg font-semibold text-slate-900">What We Delete</h2>
+-          <ul className="list-disc space-y-1 pl-5">
+-            <li>Account profile data linked to your identity.</li>
+-            <li>Store and product records owned by your account.</li>
+-            <li>Order-related data and linked operational metadata where permitted.</li>
+-            <li>WhatsApp linking records associated with your vendor account.</li>
+-          </ul>
+-        </section>
+-
+-        <section>
+-          <h2 className="text-lg font-semibold text-slate-900">Timeline</h2>
+-          <p>
+-            Verified deletion requests are processed within 30 days, except where
+-            longer retention is legally required (for example fraud prevention,
+-            security investigations, or tax/legal compliance).
+-          </p>
+-        </section>
+-
+-        <section>
+-          <h2 className="text-lg font-semibold text-slate-900">Verification</h2>
+-          <p>
+-            We may ask for additional verification to protect accounts from
+-            unauthorized deletion requests.
+-          </p>
+-        </section>
+-      </article>
+-
+-      <p className="text-xs text-slate-500">
+-        Also see <Link href="/privacy" className="text-sky-700 hover:underline">Privacy Policy</Link> and <Link href="/terms" className="text-sky-700 hover:underline">Terms of Service</Link>.
+-      </p>
+-    </main>
++      }
++    />
+   );
+ }
+-
+diff --git a/app/how-it-works/page.tsx b/app/how-it-works/page.tsx
+index 9e4739b..3c1fb50 100644
+--- a/app/how-it-works/page.tsx
++++ b/app/how-it-works/page.tsx
+@@ -4,7 +4,6 @@ import Link from "next/link";
+ import {
+   ArrowRight,
+   Bot,
+-  CheckCircle2,
+   ClipboardList,
+   Heart,
+   MapPin,
+@@ -129,6 +128,24 @@ const imageStories = [
+   },
+ ];
+ 
++const smootherFeatures = [
++  {
++    icon: MapPin,
++    title: "Nearby discovery",
++    description: "Customers can find vendors around their location and shop with more confidence.",
++  },
++  {
++    icon: MessageCircle,
++    title: "Chat commerce",
++    description: "Orders continue in WhatsApp, where many customers and vendors already coordinate.",
++  },
++  {
++    icon: ShieldCheck,
++    title: "Trust signals",
++    description: "Ratings, follows, storefront details, and product photos help reduce uncertainty.",
++  },
++];
++
+ export default function HowItWorksPage() {
+   const howItWorksJsonLd = {
+     "@context": "https://schema.org",
+@@ -151,7 +168,7 @@ export default function HowItWorksPage() {
+         dangerouslySetInnerHTML={{ __html: JSON.stringify(howItWorksJsonLd) }}
+       />
+ 
+-      <section className="overflow-hidden rounded-3xl border border-emerald-100 bg-white shadow-sm">
++      <section className="overflow-hidden rounded-xl border border-emerald-100 bg-white">
+         <div className="grid gap-0 lg:grid-cols-[0.95fr_1.05fr]">
+           <div className="flex flex-col justify-center p-5 sm:p-8 lg:p-10">
+             <p className="inline-flex w-fit rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">
+@@ -165,17 +182,17 @@ export default function HowItWorksPage() {
+               faster way to discover nearby products and continue the purchase
+               through a familiar WhatsApp conversation.
+             </p>
+-            <div className="mt-6 flex flex-wrap gap-3">
++            <div className="mt-6 flex flex-wrap items-center gap-5">
+               <Link
+                 href="/become-vendor"
+-                className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-5 py-3 text-sm font-semibold transition hover:bg-emerald-700"
++                className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-5 py-3 text-sm font-semibold transition hover:bg-emerald-700"
+               >
+                 <span className="text-white">Start selling</span>
+                 <ArrowRight className="h-4 w-4 text-white" aria-hidden="true" />
+               </Link>
+               <Link
+                 href="/marketplace"
+-                className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-800 transition hover:bg-slate-50"
++                className="text-sm font-semibold text-slate-800 underline decoration-slate-300 underline-offset-4 transition hover:text-emerald-700 hover:decoration-emerald-400"
+               >
+                 Shop marketplace
+               </Link>
+@@ -193,9 +210,9 @@ export default function HowItWorksPage() {
+               unoptimized
+             />
+             <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/50 to-emerald-950/10" />
+-            <div className="absolute inset-x-4 bottom-4 rounded-3xl border border-white/15 bg-white/95 p-4 shadow-sm backdrop-blur sm:inset-x-6 sm:bottom-6 sm:p-5">
++            <div className="absolute inset-x-4 bottom-4 rounded-xl border border-white/15 bg-white/95 p-4 backdrop-blur sm:inset-x-6 sm:bottom-6 sm:p-5">
+               <div className="flex items-start gap-3">
+-                <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700">
++                <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
+                   <Bot className="h-5 w-5" aria-hidden="true" />
+                 </span>
+                 <div>
+@@ -229,7 +246,7 @@ export default function HowItWorksPage() {
+         />
+       </section>
+ 
+-      <section className="rounded-3xl border border-emerald-100 bg-white p-5 shadow-sm sm:p-6 lg:p-8">
++      <section className="rounded-xl border border-emerald-100 bg-white p-5 shadow-sm sm:p-6 lg:p-8">
+         <div className="mx-auto max-w-3xl text-center">
+           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">
+             The shared order loop
+@@ -243,23 +260,16 @@ export default function HowItWorksPage() {
+           </p>
+         </div>
+ 
+-        <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
++        <div className="relative mt-10 grid gap-8 sm:grid-cols-4">
++          <div className="pointer-events-none absolute left-0 right-0 top-5 hidden h-px bg-slate-200 sm:block" />
+           {sharedFlow.map((step, index) => (
+-            <article
+-              key={step.label}
+-              className="rounded-3xl border border-slate-200 bg-slate-50/80 p-4"
+-            >
+-              <div className="flex items-center justify-between gap-3">
+-                <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-white text-sm font-black text-emerald-700 shadow-sm">
+-                  {index + 1}
+-                </span>
+-                <CheckCircle2 className="h-5 w-5 text-emerald-600" aria-hidden="true" />
+-              </div>
+-              <h3 className="mt-4 text-lg font-bold text-slate-900">{step.label}</h3>
+-              <p className="mt-2 text-sm leading-6 text-slate-600">
+-                {step.description}
+-              </p>
+-            </article>
++            <div key={step.label} className="relative text-center">
++              <span className="relative z-10 inline-flex h-10 w-10 items-center justify-center rounded-full border-2 border-emerald-600 bg-white text-sm font-black text-emerald-700">
++                {index + 1}
++              </span>
++              <h3 className="mt-3 text-base font-bold text-slate-900">{step.label}</h3>
++              <p className="mt-1 text-sm leading-6 text-slate-600">{step.description}</p>
++            </div>
+           ))}
+         </div>
+       </section>
+@@ -268,7 +278,7 @@ export default function HowItWorksPage() {
+         {imageStories.map((story) => (
+           <article
+             key={story.title}
+-            className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm"
++            className="overflow-hidden rounded-xl border border-slate-200 bg-white"
+           >
+             <div className="relative aspect-[4/3] bg-slate-100 sm:aspect-[16/10]">
+               <Image
+@@ -293,9 +303,9 @@ export default function HowItWorksPage() {
+       </section>
+ 
+       <section className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
+-        <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
++        <div className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
+           <div className="flex items-center gap-3">
+-            <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700">
++            <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
+               <ClipboardList className="h-5 w-5" aria-hidden="true" />
+             </span>
+             <div>
+@@ -314,26 +324,20 @@ export default function HowItWorksPage() {
+           </p>
+         </div>
+ 
+-        <div className="grid gap-3 sm:grid-cols-3">
+-          <FeatureCard
+-            icon={MapPin}
+-            title="Nearby discovery"
+-            description="Customers can find vendors around their location and shop with more confidence."
+-          />
+-          <FeatureCard
+-            icon={MessageCircle}
+-            title="Chat commerce"
+-            description="Orders continue in WhatsApp, where many customers and vendors already coordinate."
+-          />
+-          <FeatureCard
+-            icon={ShieldCheck}
+-            title="Trust signals"
+-            description="Ratings, follows, storefront details, and product photos help reduce uncertainty."
+-          />
++        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
++          <div className="grid h-full divide-y divide-slate-100 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
++            {smootherFeatures.map(({ icon: Icon, title, description }) => (
++              <div key={title} className="p-5">
++                <Icon className="h-5 w-5 text-emerald-700" aria-hidden="true" />
++                <h3 className="mt-3 text-base font-bold text-slate-900">{title}</h3>
++                <p className="mt-1.5 text-sm leading-6 text-slate-600">{description}</p>
++              </div>
++            ))}
++          </div>
+         </div>
+       </section>
+ 
+-      <section className="overflow-hidden rounded-3xl border border-emerald-200 bg-emerald-600 text-white shadow-sm">
++      <section className="overflow-hidden rounded-xl border border-emerald-200 bg-emerald-600 text-white">
+         <div className="grid gap-5 p-5 sm:p-6 md:grid-cols-[1fr_auto] md:items-center lg:p-8">
+           <div className="max-w-2xl">
+             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-50">
+@@ -347,16 +351,16 @@ export default function HowItWorksPage() {
+               are easier to discover and contact.
+             </p>
+           </div>
+-          <div className="flex flex-wrap gap-3">
++          <div className="flex flex-wrap items-center gap-5">
+             <Link
+               href="/become-vendor"
+-              className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-semibold transition hover:bg-emerald-50"
++              className="inline-flex items-center gap-2 rounded-lg bg-white px-5 py-3 text-sm font-semibold transition hover:bg-emerald-50"
+             >
+               <span className="text-emerald-700">Become a vendor</span>
+             </Link>
+             <Link
+               href="/vendors"
+-              className="inline-flex items-center gap-2 rounded-full border border-white/40 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
++              className="text-sm font-semibold text-white underline decoration-white/40 underline-offset-4 transition hover:decoration-white"
+             >
+               Explore vendors
+             </Link>
+@@ -385,7 +389,7 @@ function JourneyPanel({
+   steps: JourneyStep[];
+ }) {
+   return (
+-    <section className="rounded-3xl border border-emerald-100 bg-white p-5 shadow-sm sm:p-6">
++    <section className="rounded-xl border border-emerald-100 bg-white p-5 sm:p-6">
+       <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">
+         {eyebrow}
+       </p>
+@@ -394,52 +398,36 @@ function JourneyPanel({
+       </h2>
+       <p className="mt-3 text-sm leading-7 text-slate-600">{description}</p>
+ 
+-      <div className="mt-5 grid gap-3">
++      <div className="mt-6">
+         {steps.map((step, index) => {
+           const Icon = step.icon;
++          const isLast = index === steps.length - 1;
+           return (
+-            <article
+-              key={step.title}
+-              className="grid grid-cols-[44px_1fr] gap-3 rounded-2xl border border-slate-200 bg-slate-50/80 p-3"
+-            >
+-              <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-emerald-700 shadow-sm">
+-                <Icon className="h-5 w-5" aria-hidden="true" />
++            <div key={step.title} className="relative flex gap-4 pb-6 last:pb-0">
++              {!isLast ? (
++                <span
++                  className="absolute left-5 top-10 h-[calc(100%-2rem)] w-px bg-slate-200"
++                  aria-hidden="true"
++                />
++              ) : null}
++              <span className="relative z-10 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-emerald-200 bg-white text-emerald-700">
++                <Icon className="h-4 w-4" aria-hidden="true" />
+               </span>
+-              <div>
+-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
++              <div className="pt-1">
++                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+                   Step {index + 1}
+                 </p>
+-                <h3 className="mt-1 text-base font-bold text-slate-900">
++                <h3 className="mt-0.5 text-base font-bold text-slate-900">
+                   {step.title}
+                 </h3>
+                 <p className="mt-1 text-sm leading-6 text-slate-600">
+                   {step.description}
+                 </p>
+               </div>
+-            </article>
++            </div>
+           );
+         })}
+       </div>
+     </section>
+   );
+ }
+-
+-function FeatureCard({
+-  icon: Icon,
+-  title,
+-  description,
+-}: {
+-  icon: typeof Store;
+-  title: string;
+-  description: string;
+-}) {
+-  return (
+-    <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+-      <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700">
+-        <Icon className="h-5 w-5" aria-hidden="true" />
+-      </span>
+-      <h3 className="mt-4 text-base font-bold text-slate-900">{title}</h3>
+-      <p className="mt-2 text-sm leading-6 text-slate-600">{description}</p>
+-    </article>
+-  );
+-}
+diff --git a/app/privacy/page.tsx b/app/privacy/page.tsx
+index 5b98439..570b91c 100644
+--- a/app/privacy/page.tsx
++++ b/app/privacy/page.tsx
+@@ -1,5 +1,6 @@
+ import Link from "next/link";
+ import type { Metadata } from "next";
++import { LegalPage } from "@/components/legal/legal-page";
+ 
+ export const metadata: Metadata = {
+   title: "Privacy Policy",
+@@ -36,97 +37,126 @@ export default function PrivacyPage() {
+   };
+ 
+   return (
+-    <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 px-4 py-10 sm:px-6">
++    <>
+       <script
+         type="application/ld+json"
+         dangerouslySetInnerHTML={{ __html: JSON.stringify(privacyJsonLd) }}
+       />
+-      <header className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+-        <p className="text-sm font-medium text-sky-700">Sellee Legal</p>
+-        <h1 className="mt-1 text-3xl font-semibold text-slate-900">Privacy Policy</h1>
+-        <p className="mt-2 text-sm text-slate-600">Effective date: {effectiveDate}</p>
+-      </header>
+-
+-      <article className="space-y-6 rounded-xl border border-slate-200 bg-white p-6 shadow-sm text-sm leading-7 text-slate-700">
+-        <section>
+-          <h2 className="text-lg font-semibold text-slate-900">1. Introduction</h2>
+-          <p>
+-            Sellee helps vendors create online store pages and manage orders with
+-            WhatsApp-powered messaging workflows. This policy explains what data we
+-            collect, why we collect it, and how we handle it.
+-          </p>
+-        </section>
+-
+-        <section>
+-          <h2 className="text-lg font-semibold text-slate-900">2. Information We Collect</h2>
+-          <p>We may collect and store:</p>
+-          <ul className="list-disc space-y-1 pl-5">
+-            <li>Account data (email, password hash, phone number, role).</li>
+-            <li>Store data (store name, slug, WhatsApp number, logo URL, theme settings).</li>
+-            <li>Product data (name, description, price, images, stock).</li>
+-            <li>Order data (customer name, customer WhatsApp, items, totals, status).</li>
+-            <li>Payment and receipt metadata when enabled.</li>
+-            <li>WhatsApp automation metadata needed to process commands and updates.</li>
+-            <li>Technical logs for security, debugging, and abuse prevention.</li>
+-          </ul>
+-        </section>
+-
+-        <section>
+-          <h2 className="text-lg font-semibold text-slate-900">3. How We Use Information</h2>
+-          <ul className="list-disc space-y-1 pl-5">
+-            <li>To provide and maintain Sellee services.</li>
+-            <li>To process store operations, orders, and status updates.</li>
+-            <li>To support WhatsApp command handling and notifications.</li>
+-            <li>To improve reliability, security, and performance.</li>
+-            <li>To comply with legal obligations.</li>
+-          </ul>
+-        </section>
+-
+-        <section>
+-          <h2 className="text-lg font-semibold text-slate-900">4. Data Sharing</h2>
+-          <p>
+-            We do not sell personal data. We may share data with infrastructure and
+-            service providers required to operate Sellee, such as hosting,
+-            database, storage, and messaging providers.
+-          </p>
+-        </section>
+-
+-        <section>
+-          <h2 className="text-lg font-semibold text-slate-900">5. Data Retention</h2>
+-          <p>
+-            We retain data only as long as needed for service operation, legal
+-            compliance, dispute resolution, and security monitoring.
+-          </p>
+-        </section>
+-
+-        <section>
+-          <h2 className="text-lg font-semibold text-slate-900">6. Security</h2>
+-          <p>
+-            We apply reasonable technical and organizational safeguards. No internet
+-            transmission or storage system is guaranteed to be fully secure.
+-          </p>
+-        </section>
+-
+-        <section>
+-          <h2 className="text-lg font-semibold text-slate-900">7. Your Rights</h2>
+-          <p>
+-            You may request access, correction, or deletion of your information.
+-            Please contact us using the details below.
+-          </p>
+-        </section>
+-
+-        <section>
+-          <h2 className="text-lg font-semibold text-slate-900">8. Contact</h2>
+-          <p>
+-            Contact: <a href="mailto:support@sellee.store" className="font-medium text-sky-700 hover:underline">support@sellee.store</a>
++      <LegalPage
++        kicker="Sellee Legal"
++        title="Privacy Policy"
++        meta={`Effective date: ${effectiveDate}`}
++        sections={[
++          {
++            id: "introduction",
++            title: "Introduction",
++            content: (
++              <p>
++                Sellee helps vendors create online store pages and manage orders with
++                WhatsApp-powered messaging workflows. This policy explains what data we
++                collect, why we collect it, and how we handle it.
++              </p>
++            ),
++          },
++          {
++            id: "information-we-collect",
++            title: "Information We Collect",
++            content: (
++              <>
++                <p>We may collect and store:</p>
++                <ul className="list-disc space-y-1 pl-5">
++                  <li>Account data (email, password hash, phone number, role).</li>
++                  <li>Store data (store name, slug, WhatsApp number, logo URL, theme settings).</li>
++                  <li>Product data (name, description, price, images, stock).</li>
++                  <li>Order data (customer name, customer WhatsApp, items, totals, status).</li>
++                  <li>Payment and receipt metadata when enabled.</li>
++                  <li>WhatsApp automation metadata needed to process commands and updates.</li>
++                  <li>Technical logs for security, debugging, and abuse prevention.</li>
++                </ul>
++              </>
++            ),
++          },
++          {
++            id: "how-we-use-information",
++            title: "How We Use Information",
++            content: (
++              <ul className="list-disc space-y-1 pl-5">
++                <li>To provide and maintain Sellee services.</li>
++                <li>To process store operations, orders, and status updates.</li>
++                <li>To support WhatsApp command handling and notifications.</li>
++                <li>To improve reliability, security, and performance.</li>
++                <li>To comply with legal obligations.</li>
++              </ul>
++            ),
++          },
++          {
++            id: "data-sharing",
++            title: "Data Sharing",
++            content: (
++              <p>
++                We do not sell personal data. We may share data with infrastructure and
++                service providers required to operate Sellee, such as hosting,
++                database, storage, and messaging providers.
++              </p>
++            ),
++          },
++          {
++            id: "data-retention",
++            title: "Data Retention",
++            content: (
++              <p>
++                We retain data only as long as needed for service operation, legal
++                compliance, dispute resolution, and security monitoring.
++              </p>
++            ),
++          },
++          {
++            id: "security",
++            title: "Security",
++            content: (
++              <p>
++                We apply reasonable technical and organizational safeguards. No internet
++                transmission or storage system is guaranteed to be fully secure.
++              </p>
++            ),
++          },
++          {
++            id: "your-rights",
++            title: "Your Rights",
++            content: (
++              <p>
++                You may request access, correction, or deletion of your information.
++                Please contact us using the details below.
++              </p>
++            ),
++          },
++          {
++            id: "contact",
++            title: "Contact",
++            content: (
++              <p>
++                Contact:{" "}
++                <a href="mailto:support@sellee.store" className="font-medium text-emerald-700 hover:underline">
++                  support@sellee.store
++                </a>
++              </p>
++            ),
++          },
++        ]}
++        footer={
++          <p className="text-xs text-slate-500">
++            Also see{" "}
++            <Link href="/terms" className="text-emerald-700 hover:underline">
++              Terms of Service
++            </Link>{" "}
++            and{" "}
++            <Link href="/data-deletion" className="text-emerald-700 hover:underline">
++              Data Deletion Instructions
++            </Link>
++            .
+           </p>
+-        </section>
+-      </article>
+-
+-      <p className="text-xs text-slate-500">
+-        Also see <Link href="/terms" className="text-sky-700 hover:underline">Terms of Service</Link> and <Link href="/data-deletion" className="text-sky-700 hover:underline">Data Deletion Instructions</Link>.
+-      </p>
+-    </main>
++        }
++      />
++    </>
+   );
+ }
+-
+diff --git a/app/terms/page.tsx b/app/terms/page.tsx
+index 6108486..e710043 100644
+--- a/app/terms/page.tsx
++++ b/app/terms/page.tsx
+@@ -1,5 +1,6 @@
+ import Link from "next/link";
+ import type { Metadata } from "next";
++import { LegalPage } from "@/components/legal/legal-page";
+ 
+ export const metadata: Metadata = {
+   title: "Terms of Service",
+@@ -36,98 +37,127 @@ export default function TermsPage() {
+   };
+ 
+   return (
+-    <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 px-4 py-10 sm:px-6">
++    <>
+       <script
+         type="application/ld+json"
+         dangerouslySetInnerHTML={{ __html: JSON.stringify(termsJsonLd) }}
+       />
+-      <header className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+-        <p className="text-sm font-medium text-sky-700">Sellee Legal</p>
+-        <h1 className="mt-1 text-3xl font-semibold text-slate-900">Terms of Service</h1>
+-        <p className="mt-2 text-sm text-slate-600">Effective date: {effectiveDate}</p>
+-      </header>
+-
+-      <article className="space-y-6 rounded-xl border border-slate-200 bg-white p-6 shadow-sm text-sm leading-7 text-slate-700">
+-        <section>
+-          <h2 className="text-lg font-semibold text-slate-900">1. Acceptance</h2>
+-          <p>
+-            By accessing or using Sellee, you agree to these Terms of Service.
+-            If you do not agree, do not use the platform.
+-          </p>
+-        </section>
+-
+-        <section>
+-          <h2 className="text-lg font-semibold text-slate-900">2. Service Scope</h2>
+-          <p>
+-            Sellee provides tools for storefront management, product listing,
+-            order tracking, and WhatsApp-assisted communication workflows.
+-          </p>
+-        </section>
+-
+-        <section>
+-          <h2 className="text-lg font-semibold text-slate-900">3. Account Responsibilities</h2>
+-          <ul className="list-disc space-y-1 pl-5">
+-            <li>You are responsible for account credentials and account activity.</li>
+-            <li>You must provide accurate business and contact information.</li>
+-            <li>You must comply with applicable laws and messaging platform policies.</li>
+-          </ul>
+-        </section>
+-
+-        <section>
+-          <h2 className="text-lg font-semibold text-slate-900">4. Prohibited Use</h2>
+-          <ul className="list-disc space-y-1 pl-5">
+-            <li>Spam, fraudulent activity, or deceptive communications.</li>
+-            <li>Violations of WhatsApp, payment, or hosting provider policies.</li>
+-            <li>Attempts to compromise platform security or abuse system resources.</li>
+-          </ul>
+-        </section>
+-
+-        <section>
+-          <h2 className="text-lg font-semibold text-slate-900">5. Fees and Billing</h2>
+-          <p>
+-            Paid features may be introduced over time. Any pricing, billing terms,
+-            and trial terms will be shown before purchase or renewal.
+-          </p>
+-        </section>
+-
+-        <section>
+-          <h2 className="text-lg font-semibold text-slate-900">6. Availability and Changes</h2>
+-          <p>
+-            We may update, suspend, or discontinue parts of the service, with or
+-            without notice, as needed for maintenance, legal compliance, or product
+-            changes.
++      <LegalPage
++        kicker="Sellee Legal"
++        title="Terms of Service"
++        meta={`Effective date: ${effectiveDate}`}
++        sections={[
++          {
++            id: "acceptance",
++            title: "Acceptance",
++            content: (
++              <p>
++                By accessing or using Sellee, you agree to these Terms of Service.
++                If you do not agree, do not use the platform.
++              </p>
++            ),
++          },
++          {
++            id: "service-scope",
++            title: "Service Scope",
++            content: (
++              <p>
++                Sellee provides tools for storefront management, product listing,
++                order tracking, and WhatsApp-assisted communication workflows.
++              </p>
++            ),
++          },
++          {
++            id: "account-responsibilities",
++            title: "Account Responsibilities",
++            content: (
++              <ul className="list-disc space-y-1 pl-5">
++                <li>You are responsible for account credentials and account activity.</li>
++                <li>You must provide accurate business and contact information.</li>
++                <li>You must comply with applicable laws and messaging platform policies.</li>
++              </ul>
++            ),
++          },
++          {
++            id: "prohibited-use",
++            title: "Prohibited Use",
++            content: (
++              <ul className="list-disc space-y-1 pl-5">
++                <li>Spam, fraudulent activity, or deceptive communications.</li>
++                <li>Violations of WhatsApp, payment, or hosting provider policies.</li>
++                <li>Attempts to compromise platform security or abuse system resources.</li>
++              </ul>
++            ),
++          },
++          {
++            id: "fees-and-billing",
++            title: "Fees and Billing",
++            content: (
++              <p>
++                Paid features may be introduced over time. Any pricing, billing terms,
++                and trial terms will be shown before purchase or renewal.
++              </p>
++            ),
++          },
++          {
++            id: "availability-and-changes",
++            title: "Availability and Changes",
++            content: (
++              <p>
++                We may update, suspend, or discontinue parts of the service, with or
++                without notice, as needed for maintenance, legal compliance, or product
++                changes.
++              </p>
++            ),
++          },
++          {
++            id: "limitation-of-liability",
++            title: "Limitation of Liability",
++            content: (
++              <p>
++                Sellee is provided on an &quot;as is&quot; basis. To the maximum extent
++                permitted by law, we are not liable for indirect, incidental, or
++                consequential damages arising from service use.
++              </p>
++            ),
++          },
++          {
++            id: "termination",
++            title: "Termination",
++            content: (
++              <p>
++                We may suspend or terminate access for violations of these terms,
++                platform abuse, or legal requirements.
++              </p>
++            ),
++          },
++          {
++            id: "contact",
++            title: "Contact",
++            content: (
++              <p>
++                Contact:{" "}
++                <a href="mailto:support@sellee.store" className="font-medium text-emerald-700 hover:underline">
++                  support@sellee.store
++                </a>
++              </p>
++            ),
++          },
++        ]}
++        footer={
++          <p className="text-xs text-slate-500">
++            Also see{" "}
++            <Link href="/privacy" className="text-emerald-700 hover:underline">
++              Privacy Policy
++            </Link>{" "}
++            and{" "}
++            <Link href="/data-deletion" className="text-emerald-700 hover:underline">
++              Data Deletion Instructions
++            </Link>
++            .
+           </p>
+-        </section>
+-
+-        <section>
+-          <h2 className="text-lg font-semibold text-slate-900">7. Limitation of Liability</h2>
+-          <p>
+-            Sellee is provided on an &quot;as is&quot; basis. To the maximum extent
+-            permitted by law, we are not liable for indirect, incidental, or
+-            consequential damages arising from service use.
+-          </p>
+-        </section>
+-
+-        <section>
+-          <h2 className="text-lg font-semibold text-slate-900">8. Termination</h2>
+-          <p>
+-            We may suspend or terminate access for violations of these terms,
+-            platform abuse, or legal requirements.
+-          </p>
+-        </section>
+-
+-        <section>
+-          <h2 className="text-lg font-semibold text-slate-900">9. Contact</h2>
+-          <p>
+-            Contact: <a href="mailto:support@sellee.store" className="font-medium text-sky-700 hover:underline">support@sellee.store</a>
+-          </p>
+-        </section>
+-      </article>
+-
+-      <p className="text-xs text-slate-500">
+-        Also see <Link href="/privacy" className="text-sky-700 hover:underline">Privacy Policy</Link> and <Link href="/data-deletion" className="text-sky-700 hover:underline">Data Deletion Instructions</Link>.
+-      </p>
+-    </main>
++        }
++      />
++    </>
+   );
+ }
+-
+diff --git a/components/help/help-center-client.tsx b/components/help/help-center-client.tsx
+index 594642a..7b8b5e7 100644
+--- a/components/help/help-center-client.tsx
++++ b/components/help/help-center-client.tsx
+@@ -323,7 +323,7 @@ export function HelpCenterClient() {
+ 
+   return (
+     <div className="flex flex-col gap-5 lg:gap-8">
+-      <section className="overflow-hidden rounded-3xl border border-emerald-100 bg-white shadow-sm">
++      <section className="overflow-hidden rounded-xl border border-emerald-100 bg-white">
+         <div className="grid gap-0 lg:grid-cols-[1.02fr_0.98fr]">
+           <div className="p-5 sm:p-8 lg:p-10">
+             <p className="inline-flex w-fit rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">
+@@ -340,7 +340,7 @@ export function HelpCenterClient() {
+             <div className="mt-6 grid gap-3 sm:grid-cols-3">
+               <a
+                 href={`tel:${SUPPORT_PHONE_DISPLAY}`}
+-                className="rounded-2xl border border-slate-200 bg-slate-50 p-4 transition hover:border-emerald-200 hover:bg-emerald-50"
++                className="rounded-xl border border-slate-200 bg-slate-50 p-4 transition hover:border-emerald-200 hover:bg-emerald-50"
+               >
+                 <Phone className="h-5 w-5 text-emerald-700" aria-hidden="true" />
+                 <p className="mt-3 text-sm font-bold text-slate-900">Call support</p>
+@@ -350,7 +350,7 @@ export function HelpCenterClient() {
+                 href={whatsappHref}
+                 target="_blank"
+                 rel="noreferrer"
+-                className="rounded-2xl border border-slate-200 bg-slate-50 p-4 transition hover:border-emerald-200 hover:bg-emerald-50"
++                className="rounded-xl border border-slate-200 bg-slate-50 p-4 transition hover:border-emerald-200 hover:bg-emerald-50"
+               >
+                 <MessageCircle className="h-5 w-5 text-emerald-700" aria-hidden="true" />
+                 <p className="mt-3 text-sm font-bold text-slate-900">WhatsApp us</p>
+@@ -358,7 +358,7 @@ export function HelpCenterClient() {
+               </a>
+               <a
+                 href={`mailto:${SUPPORT_EMAIL}`}
+-                className="rounded-2xl border border-slate-200 bg-slate-50 p-4 transition hover:border-emerald-200 hover:bg-emerald-50"
++                className="rounded-xl border border-slate-200 bg-slate-50 p-4 transition hover:border-emerald-200 hover:bg-emerald-50"
+               >
+                 <Mail className="h-5 w-5 text-emerald-700" aria-hidden="true" />
+                 <p className="mt-3 text-sm font-bold text-slate-900">Email support</p>
+@@ -368,12 +368,9 @@ export function HelpCenterClient() {
+           </div>
+ 
+           <div className="bg-slate-950 p-5 text-white sm:p-8 lg:p-10">
+-            <form
+-              onSubmit={handleTicketSubmit}
+-              className="rounded-3xl border border-white/10 bg-white/10 p-5 shadow-sm backdrop-blur"
+-            >
++            <form onSubmit={handleTicketSubmit}>
+               <div className="flex items-center gap-3">
+-                <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-400 text-slate-950">
++                <span className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-400 text-slate-950">
+                   <LifeBuoy className="h-6 w-6" aria-hidden="true" />
+                 </span>
+                 <div>
+@@ -393,7 +390,7 @@ export function HelpCenterClient() {
+                   setRequesterName(event.target.value);
+                 }}
+                 placeholder="Your name"
+-                className="mt-2 w-full rounded-2xl border border-white/10 bg-white px-3 py-3 text-sm text-slate-900 outline-none ring-emerald-300 transition placeholder:text-slate-400 focus:ring-2"
++                className="mt-2 w-full rounded-lg border border-white/15 bg-white px-3 py-3 text-sm text-slate-900 outline-none ring-emerald-300 transition placeholder:text-slate-400 focus:ring-2"
+               />
+ 
+               <label className="mt-4 block text-sm font-semibold text-white" htmlFor="requester-email">
+@@ -409,7 +406,7 @@ export function HelpCenterClient() {
+                   setRequesterEmail(event.target.value);
+                 }}
+                 placeholder="you@example.com"
+-                className="mt-2 w-full rounded-2xl border border-white/10 bg-white px-3 py-3 text-sm text-slate-900 outline-none ring-emerald-300 transition placeholder:text-slate-400 focus:ring-2"
++                className="mt-2 w-full rounded-lg border border-white/15 bg-white px-3 py-3 text-sm text-slate-900 outline-none ring-emerald-300 transition placeholder:text-slate-400 focus:ring-2"
+               />
+ 
+               <label className="mt-5 block text-sm font-semibold text-white" htmlFor="issue-type">
+@@ -419,7 +416,7 @@ export function HelpCenterClient() {
+                 id="issue-type"
+                 value={issueType}
+                 onChange={(event) => setIssueType(event.target.value)}
+-                className="mt-2 w-full rounded-2xl border border-white/10 bg-white px-3 py-3 text-sm text-slate-900 outline-none ring-emerald-300 transition focus:ring-2"
++                className="mt-2 w-full rounded-lg border border-white/15 bg-white px-3 py-3 text-sm text-slate-900 outline-none ring-emerald-300 transition focus:ring-2"
+               >
+                 <option>Order issue</option>
+                 <option>Vendor/store setup</option>
+@@ -439,12 +436,12 @@ export function HelpCenterClient() {
+                 required
+                 rows={5}
+                 placeholder="Add your account email, store/product name, order details, and what went wrong."
+-                className="mt-2 w-full resize-none rounded-2xl border border-white/10 bg-white px-3 py-3 text-sm text-slate-900 outline-none ring-emerald-300 transition placeholder:text-slate-400 focus:ring-2"
++                className="mt-2 w-full resize-none rounded-lg border border-white/15 bg-white px-3 py-3 text-sm text-slate-900 outline-none ring-emerald-300 transition placeholder:text-slate-400 focus:ring-2"
+               />
+ 
+               {ticketNotice ? (
+                 <div
+-                  className={`mt-4 rounded-2xl border px-4 py-3 text-sm leading-6 ${
++                  className={`mt-4 rounded-lg border px-4 py-3 text-sm leading-6 ${
+                     ticketNotice.tone === "success"
+                       ? "border-emerald-300 bg-emerald-50 text-emerald-900"
+                       : "border-red-200 bg-red-50 text-red-800"
+@@ -458,7 +455,7 @@ export function HelpCenterClient() {
+                 <button
+                   type="submit"
+                   disabled={isPending}
+-                  className="inline-flex items-center gap-2 rounded-full bg-emerald-500 px-5 py-3 text-sm font-bold text-slate-950 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-70"
++                  className="inline-flex items-center gap-2 rounded-lg bg-emerald-500 px-5 py-3 text-sm font-bold text-slate-950 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-70"
+                 >
+                   {isPending ? "Sending request..." : "Send support request"}
+                 </button>
+@@ -466,7 +463,7 @@ export function HelpCenterClient() {
+                   href={whatsappHref}
+                   target="_blank"
+                   rel="noreferrer"
+-                  className="inline-flex items-center gap-2 rounded-full border border-white/30 px-5 py-3 text-sm font-bold text-white transition hover:bg-white/10"
++                  className="inline-flex items-center gap-2 rounded-lg border border-white/30 px-5 py-3 text-sm font-bold text-white transition hover:bg-white/10"
+                 >
+                   WhatsApp instead
+                 </a>
+@@ -487,7 +484,7 @@ export function HelpCenterClient() {
+             <Link
+               key={item.title}
+               href={item.href}
+-              className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-emerald-200 hover:bg-emerald-50"
++              className="rounded-xl border border-slate-200 bg-white p-5 transition hover:border-emerald-200 hover:bg-emerald-50"
+             >
+               <Icon className="h-6 w-6 text-emerald-700" aria-hidden="true" />
+               <h2 className="mt-4 text-base font-bold text-slate-900">{item.title}</h2>
+@@ -497,7 +494,7 @@ export function HelpCenterClient() {
+         })}
+       </section>
+ 
+-      <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
++      <section className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
+         <div className="grid gap-4 lg:grid-cols-[0.8fr_1.2fr] lg:items-end">
+           <div>
+             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">
+@@ -514,7 +511,7 @@ export function HelpCenterClient() {
+               value={query}
+               onChange={(event) => setQuery(event.target.value)}
+               placeholder="Search orders, vendors, WhatsApp, account..."
+-              className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-3 text-sm outline-none ring-emerald-300 transition placeholder:text-slate-400 focus:bg-white focus:ring-2"
++              className="w-full rounded-lg border border-slate-200 bg-slate-50 py-3 pl-10 pr-3 text-sm outline-none ring-emerald-300 transition placeholder:text-slate-400 focus:bg-white focus:ring-2"
+             />
+           </div>
+         </div>
+@@ -541,7 +538,7 @@ export function HelpCenterClient() {
+             filteredFaqs.map((faq) => {
+               const isOpen = openId === faq.id;
+               return (
+-                <article key={faq.id} className="rounded-2xl border border-slate-200 bg-slate-50">
++                <article key={faq.id} className="rounded-xl border border-slate-200 bg-slate-50">
+                   <button
+                     type="button"
+                     onClick={() => setOpenId(isOpen ? "" : faq.id)}
+@@ -569,7 +566,7 @@ export function HelpCenterClient() {
+               );
+             })
+           ) : (
+-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 text-sm text-slate-600">
++            <div className="rounded-xl border border-slate-200 bg-slate-50 p-5 text-sm text-slate-600">
+               No answers matched your search. Send the issue through WhatsApp or email and the
+               support team will help.
+             </div>
+diff --git a/components/legal/legal-page.tsx b/components/legal/legal-page.tsx
+new file mode 100644
+index 0000000..cf9258d
+--- /dev/null
++++ b/components/legal/legal-page.tsx
+@@ -0,0 +1,82 @@
++import type { ReactNode } from "react";
++
++export type LegalSection = {
++  id: string;
++  title: string;
++  content: ReactNode;
++};
++
++type LegalPageProps = {
++  kicker: string;
++  title: string;
++  meta: string;
++  sections: LegalSection[];
++  footer?: ReactNode;
++};
++
++export function LegalPage({ kicker, title, meta, sections, footer }: LegalPageProps) {
++  return (
++    <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-8 px-4 py-10 sm:px-6">
++      <header className="rounded-lg border border-slate-200 bg-white p-6 sm:p-8">
++        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">{kicker}</p>
++        <h1 className="font-display mt-1 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
++          {title}
++        </h1>
++        <p className="mt-2 text-sm text-slate-500">{meta}</p>
++      </header>
++
++      <div className="grid gap-8 lg:grid-cols-[220px_1fr]">
++        {/* Desktop sticky table of contents */}
++        <nav aria-label="Table of contents" className="hidden lg:block">
++          <div className="sticky top-24 space-y-1 border-l border-slate-200 pl-4">
++            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
++              On this page
++            </p>
++            {sections.map((section, i) => (
++              <a
++                key={section.id}
++                href={`#${section.id}`}
++                className="block py-1 text-sm text-slate-600 transition hover:text-emerald-700"
++              >
++                <span className="mr-1.5 font-mono text-xs text-slate-400">
++                  {String(i + 1).padStart(2, "0")}
++                </span>
++                {section.title}
++              </a>
++            ))}
++          </div>
++        </nav>
++
++        {/* Mobile collapsible table of contents */}
++        <details className="rounded-lg border border-slate-200 bg-white p-4 lg:hidden">
++          <summary className="cursor-pointer text-sm font-semibold text-slate-900">
++            On this page
++          </summary>
++          <div className="mt-3 space-y-1 border-t border-slate-100 pt-3">
++            {sections.map((section, i) => (
++              <a key={section.id} href={`#${section.id}`} className="block py-1 text-sm text-slate-600">
++                {i + 1}. {section.title}
++              </a>
++            ))}
++          </div>
++        </details>
++
++        <article className="min-w-0 divide-y divide-slate-100 text-sm leading-7 text-slate-700">
++          {sections.map((section, i) => (
++            <section key={section.id} id={section.id} className="scroll-mt-24 py-6 first:pt-0">
++              <h2 className="flex items-baseline gap-3 text-lg font-bold text-slate-900">
++                <span className="font-mono text-sm font-semibold text-emerald-600/60">
++                  {String(i + 1).padStart(2, "0")}
++                </span>
++                {section.title}
++              </h2>
++              <div className="mt-2 space-y-3">{section.content}</div>
++            </section>
++          ))}
++        </article>
++      </div>
++
++      {footer}
++    </main>
++  );
++}

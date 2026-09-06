@@ -117,7 +117,7 @@ export default async function DashboardAnalyticsPage({
 
   return (
     <section className="space-y-4">
-      <header className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+      <header className="rounded-lg border border-slate-200 bg-white p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <p className="text-sm font-medium text-emerald-700">Analytics</p>
@@ -132,9 +132,9 @@ export default async function DashboardAnalyticsPage({
 
       {/* Core stat cards — 2-up on mobile, 4-up from xl */}
       <section className="grid grid-cols-2 gap-4 xl:grid-cols-4">
-        <article className="rounded-xl border border-emerald-100 bg-white p-5 shadow-sm">
+        <article className="rounded-lg border border-slate-200 bg-white p-5">
           <p className="text-sm text-slate-500">Revenue</p>
-          <h2 className="mt-2 text-xl font-black text-slate-900">{formatNaira(revenue)}</h2>
+          <h2 className="mt-2 font-mono text-xl font-black tabular-nums text-slate-900">{formatNaira(revenue)}</h2>
           <p className="mt-1 text-xs text-slate-500">
             {range.comparisonLabel ? `${range.comparisonLabel}: ${calcGrowth(revenue, previousRevenue)}` : "\u00A0"}
           </p>
@@ -144,9 +144,9 @@ export default async function DashboardAnalyticsPage({
           </p>
         </article>
 
-        <article className="rounded-xl border border-emerald-100 bg-white p-5 shadow-sm">
+        <article className="rounded-lg border border-slate-200 bg-white p-5">
           <p className="text-sm text-slate-500">Orders</p>
-          <h2 className="mt-2 text-xl font-black text-slate-900">{orders.length}</h2>
+          <h2 className="mt-2 font-mono text-xl font-black tabular-nums text-slate-900">{orders.length}</h2>
           <p className="mt-1 text-xs text-slate-500">
             {range.comparisonLabel
               ? `${range.comparisonLabel}: ${calcGrowth(orders.length, previousOrders.length)}`
@@ -154,15 +154,15 @@ export default async function DashboardAnalyticsPage({
           </p>
         </article>
 
-        <article className="rounded-xl border border-emerald-100 bg-white p-5 shadow-sm">
+        <article className="rounded-lg border border-slate-200 bg-white p-5">
           <p className="text-sm text-slate-500">Catalog Size</p>
-          <h2 className="mt-2 text-xl font-black text-slate-900">{products.length}</h2>
+          <h2 className="mt-2 font-mono text-xl font-black tabular-nums text-slate-900">{products.length}</h2>
           <p className="mt-1 text-xs text-slate-500">Active products in your store.</p>
         </article>
 
-        <article className="rounded-xl border border-amber-200 bg-amber-50 p-5 shadow-sm">
+        <article className="rounded-lg border border-amber-200 bg-amber-50 p-5">
           <p className="text-sm text-amber-900/80">Low Stock Alerts</p>
-          <h2 className="mt-2 text-xl font-black text-amber-950">{lowStock}</h2>
+          <h2 className="mt-2 font-mono text-xl font-black tabular-nums text-amber-950">{lowStock}</h2>
           <p className="mt-1 text-xs text-amber-900/80">Products with stock {"<="} 2.</p>
         </article>
       </section>
@@ -171,9 +171,9 @@ export default async function DashboardAnalyticsPage({
           both columns unconditionally so it doesn't sit alone with empty space
           beside it on narrow screens. */}
       <section className="grid grid-cols-2 gap-4 xl:grid-cols-4">
-        <article className="rounded-xl border border-cyan-100 bg-white p-5 shadow-sm">
+        <article className="rounded-lg border border-cyan-100 bg-white p-5">
           <p className="text-sm text-slate-500">Store Visits</p>
-          <h2 className="mt-2 text-xl font-black text-slate-900">{visits.length}</h2>
+          <h2 className="mt-2 font-mono text-xl font-black tabular-nums text-slate-900">{visits.length}</h2>
           <p className="mt-1 text-xs text-slate-500">
             {range.comparisonLabel
               ? `${range.comparisonLabel}: ${calcGrowth(visits.length, previousVisits.length)}`
@@ -181,9 +181,9 @@ export default async function DashboardAnalyticsPage({
           </p>
         </article>
 
-        <article className="rounded-xl border border-cyan-100 bg-white p-5 shadow-sm">
+        <article className="rounded-lg border border-cyan-100 bg-white p-5">
           <p className="text-sm text-slate-500">Unique Visitors</p>
-          <h2 className="mt-2 text-xl font-black text-slate-900">{uniqueVisitors}</h2>
+          <h2 className="mt-2 font-mono text-xl font-black tabular-nums text-slate-900">{uniqueVisitors}</h2>
           <p className="mt-1 text-xs text-slate-500">
             {range.comparisonLabel
               ? `${range.comparisonLabel}: ${calcGrowth(uniqueVisitors, previousUniqueVisitors)}`
@@ -191,9 +191,9 @@ export default async function DashboardAnalyticsPage({
           </p>
         </article>
 
-        <article className="col-span-2 rounded-xl border border-cyan-100 bg-white p-5 shadow-sm">
+        <article className="col-span-2 rounded-lg border border-cyan-100 bg-white p-5">
           <p className="text-sm text-slate-500">Visitor → Buyer Conversion</p>
-          <h2 className="mt-2 text-xl font-black text-slate-900">
+          <h2 className="mt-2 font-mono text-xl font-black tabular-nums text-slate-900">
             {uniqueVisitors > 0 ? `${conversionRate.toFixed(1)}%` : "—"}
           </h2>
           <p className="mt-1 text-xs text-slate-500">
@@ -209,7 +209,7 @@ export default async function DashboardAnalyticsPage({
           <div className="lg:col-span-2">
             <VisitsChart data={visitsChartData} rangeLabel={range.label} />
           </div>
-          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="rounded-lg border border-slate-200 bg-white p-5">
             <p className="text-sm font-medium text-emerald-700">Traffic Sources</p>
             {topSources.length === 0 ? (
               <p className="mt-2 text-sm text-slate-600">No visits in this period.</p>
@@ -230,7 +230,7 @@ export default async function DashboardAnalyticsPage({
       )}
 
       (
-        <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <section className="rounded-lg border border-slate-200 bg-white p-5">
           <p className="text-sm font-medium text-emerald-700">Product Interest vs Conversion</p>
           <p className="mt-1 text-xs text-slate-500">
             How many people viewed each product&apos;s page vs how many of them actually ordered. Products
@@ -274,9 +274,9 @@ export default async function DashboardAnalyticsPage({
 
       {/* Fulfillment/customer stat cards — 2-up on mobile, 4-up from xl */}
       <section className="grid grid-cols-2 gap-4 xl:grid-cols-4">
-        <article className="rounded-xl border border-emerald-100 bg-white p-5 shadow-sm">
+        <article className="rounded-lg border border-slate-200 bg-white p-5">
           <p className="text-sm text-slate-500">Avg. Order Value</p>
-          <h2 className="mt-2 text-xl font-black text-slate-900">{formatNaira(metrics.aov)}</h2>
+          <h2 className="mt-2 font-mono text-xl font-black tabular-nums text-slate-900">{formatNaira(metrics.aov)}</h2>
           <p className="mt-1 text-xs text-slate-500">
             {range.comparisonLabel
               ? `${range.comparisonLabel}: ${calcGrowth(metrics.aov, previousMetrics.aov)}`
@@ -284,9 +284,9 @@ export default async function DashboardAnalyticsPage({
           </p>
         </article>
 
-        <article className="rounded-xl border border-emerald-100 bg-white p-5 shadow-sm">
+        <article className="rounded-lg border border-slate-200 bg-white p-5">
           <p className="text-sm text-slate-500">Repeat Customer Rate</p>
-          <h2 className="mt-2 text-xl font-black text-slate-900">
+          <h2 className="mt-2 font-mono text-xl font-black tabular-nums text-slate-900">
             {metrics.uniqueCustomers > 0 ? `${(metrics.repeatRate * 100).toFixed(0)}%` : "—"}
           </h2>
           <p className="mt-1 text-xs text-slate-500">
@@ -296,9 +296,9 @@ export default async function DashboardAnalyticsPage({
           </p>
         </article>
 
-        <article className="rounded-xl border border-emerald-100 bg-white p-5 shadow-sm">
+        <article className="rounded-lg border border-slate-200 bg-white p-5">
           <p className="text-sm text-slate-500">Avg. Time to Confirm</p>
-          <h2 className="mt-2 text-xl font-black text-slate-900">
+          <h2 className="mt-2 font-mono text-xl font-black tabular-nums text-slate-900">
             {metrics.avgConfirmMs !== null ? formatDuration(metrics.avgConfirmMs) : "—"}
           </h2>
           <p className="mt-1 text-xs text-slate-500">
@@ -308,9 +308,9 @@ export default async function DashboardAnalyticsPage({
           </p>
         </article>
 
-        <article className="rounded-xl border border-emerald-100 bg-white p-5 shadow-sm">
+        <article className="rounded-lg border border-slate-200 bg-white p-5">
           <p className="text-sm text-slate-500">Avg. Time to Deliver</p>
-          <h2 className="mt-2 text-xl font-black text-slate-900">
+          <h2 className="mt-2 font-mono text-xl font-black tabular-nums text-slate-900">
             {metrics.avgDeliveryMs !== null ? formatDuration(metrics.avgDeliveryMs) : "—"}
           </h2>
           <p className="mt-1 text-xs text-slate-500">
@@ -332,7 +332,7 @@ export default async function DashboardAnalyticsPage({
         <ProductPerformanceChart data={productPerformanceData} />
       </section>
 
-      <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+      <section className="rounded-lg border border-slate-200 bg-white p-5">
         <p className="text-sm font-medium text-emerald-700">Top Recent Orders</p>
         {orders.length === 0 ? (
           <p className="mt-2 text-sm text-slate-600">No orders in this period.</p>
