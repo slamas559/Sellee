@@ -3,7 +3,6 @@ import Link from "next/link";
 import { getServerSession } from "next-auth";
 import logoText from "@/app/logos/image-text-logo.png";
 import { NearbyVendors } from "@/components/landing/nearby-vendors";
-import { WhatsAppBotAccess } from "@/components/landing/whatsapp-bot-access";
 import { UserMenu } from "@/components/layout/user-menu";
 import { CategoryScrollRow } from "@/components/marketplace/category-scroll-row";
 import { ProductShowcaseCard } from "@/components/marketplace/product-showcase-card";
@@ -242,7 +241,6 @@ export default async function Home({ searchParams }: HomeProps) {
   const showRealMarketplaceStats = totalStores >= 30 && totalProducts >= 100;
   const isLoggedIn = Boolean(session?.user?.id);
   const isVendor = session?.user?.role === "vendor";
-  const botNumber = process.env.NEXT_PUBLIC_WHATSAPP_BOT_NUMBER?.trim() ?? "";
   const heroPrimaryHref = !isLoggedIn ? "/login" : isVendor ? "/dashboard" : "/become-vendor";
   const heroPrimaryLabel = !isLoggedIn ? "Login to start" : isVendor ? "Open Dashboard" : "Start Selling";
   const websiteJsonLd = {
@@ -347,42 +345,7 @@ export default async function Home({ searchParams }: HomeProps) {
         </div>
       </section>
 
-      <div className="grid grid-cols-3 gap-2 rounded-xl border border-slate-200 bg-white p-3 sm:hidden">
-        <div className="text-center">
-          {showRealMarketplaceStats ? (
-            <>
-              <p className="font-display text-lg font-bold text-slate-900">{totalStores}+</p>
-              <p className="text-[10px] font-medium text-slate-500">Vendors</p>
-            </>
-          ) : (
-            <>
-              <p className="text-[13px] font-bold text-slate-900">Local</p>
-              <p className="text-[10px] font-medium text-slate-500">Vendors</p>
-            </>
-          )}
-        </div>
-        <div className="border-x border-slate-100 text-center">
-          {showRealMarketplaceStats ? (
-            <>
-              <p className="font-display text-lg font-bold text-slate-900">{totalProducts}+</p>
-              <p className="text-[10px] font-medium text-slate-500">Products</p>
-            </>
-          ) : (
-            <>
-              <p className="text-[13px] font-bold text-slate-900">Verified</p>
-              <p className="text-[10px] font-medium text-slate-500">Storefronts</p>
-            </>
-          )}
-        </div>
-        <div className="text-center">
-          <p className="font-display text-[15px] font-bold text-slate-900">WhatsApp</p>
-          <p className="text-[10px] font-medium text-slate-500">Powered Orders</p>
-        </div>
-      </div>
-
-      {botNumber ? <WhatsAppBotAccess botNumber={botNumber} /> : null}
-
-      <section className="border-t border-slate-200 pt-5">
+      <section className="border-t border-slate-200 pt-5 px-2 sm:px-1">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="font-display text-lg font-bold text-slate-900 sm:text-xl">Browse Categories</h2>
           {niche ? (

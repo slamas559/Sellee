@@ -170,9 +170,8 @@ export default async function NicheLocationPage({ params }: PageProps) {
       <h1 className="mt-3 text-2xl font-black tracking-tight text-slate-900 sm:text-3xl">
         {data.niche.name} vendors in {cityLabel}
       </h1>
-      <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-600">
-        Browse {data.niche.name.toLowerCase()} sellers based in {cityLabel} on Sellee. Compare stores, check
-        reviews and ratings, and message a vendor directly on WhatsApp to place your order.
+      <p className="mt-1 text-xs text-slate-500 sm:text-sm">
+        Compare stores and order directly on WhatsApp.
       </p>
 
       {data.stores.length === 0 ? (
