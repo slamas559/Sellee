@@ -148,7 +148,7 @@ export function WhatsAppBroadcastsCard({ initialBroadcasts }: WhatsAppBroadcasts
           mode: "schedule",
           message: message.trim(),
           target_scope: targetScope,
-          scheduled_at: scheduledAt,
+          scheduled_at: new Date(scheduledAt).toISOString(),
         }),
       });
       const payload = (await response.json()) as ApiCreateResponse;
@@ -157,8 +157,10 @@ export function WhatsAppBroadcastsCard({ initialBroadcasts }: WhatsAppBroadcasts
         return;
       }
 
-      setNotice(`Broadcast scheduled for ${payload.result?.scheduledAt ?? "your selected time"}.`);
-      setMessage("");
+      const scheduledLabel = payload.result?.scheduledAt
+         ? new Date(payload.result.scheduledAt).toLocaleString()
+         : "your selected time";
+      setNotice(`Broadcast scheduled for ${scheduledLabel}.`);
       setScheduledAt("");
       await refreshHistory();
     } catch {
@@ -198,7 +200,7 @@ export function WhatsAppBroadcastsCard({ initialBroadcasts }: WhatsAppBroadcasts
         </button>
       </div>
 
-      <div className="mt-4 grid gap-3 sm:grid-cols-3">
+      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
         <article className="rounded-xl border border-emerald-100 bg-emerald-50 p-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Campaigns</p>
           <p className="mt-1 text-2xl font-black text-slate-900">{broadcasts.length}</p>

@@ -31,3 +31,11 @@ jobs:
         run: |
           curl -sf -X POST "https://sellee.store/api/whatsapp/broadcasts/run?limit=20" \
             -H "Authorization: Bearer ${{ secrets.WHATSAPP_BROADCAST_CRON_SECRET }}"
+
+  subscription-renewals:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Process pending subscription renewals
+        run: |
+          curl -sf -X POST "https://sellee.store/api/subscriptions/renewals/run?limit=20" \
+            -H "Authorization: Bearer ${{ secrets.SUBSCRIPTION_RENEWAL_CRON_SECRET }}"

@@ -154,7 +154,7 @@ export function WhatsAppLinkingCard({ initialStatus }: WhatsAppLinkingCardProps)
         <span className="font-semibold">CONFIRM &lt;ORDER_REF&gt;</span>.
       </p>
 
-      <div className="mt-5 grid gap-3 md:grid-cols-3">
+      <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-3">
         <article className="rounded-xl border border-slate-200 bg-slate-50 p-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Step 1</p>
           <p className="mt-1 text-sm font-semibold text-slate-900">Generate code</p>

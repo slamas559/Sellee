@@ -309,7 +309,7 @@ export function DashboardLoadingSkeleton() {
         <PulseBlock className="mt-2 h-7 w-2/3 max-w-sm bg-white/70" />
         <PulseBlock className="mt-2 h-3 w-1/2 max-w-xs bg-white/70" />
       </div>
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
         {Array.from({ length: 4 }).map((_, index) => (
           <PulseBlock key={index} className="h-24 w-full" />
         ))}
@@ -336,7 +336,7 @@ export function DashboardProductsLoadingSkeleton() {
       <div className="flex justify-end">
         <PulseBlock className="h-10 w-36 rounded-lg" />
       </div>
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="grid grid-cols-2 gap-4 xl:grid-cols-3">
         {Array.from({ length: 6 }).map((_, index) => (
           <div key={index} className="rounded-xl border border-slate-200 bg-white p-3">
             <PulseBlock className="h-36 w-full rounded-lg" />
@@ -364,7 +364,7 @@ export function DashboardOrdersLoadingSkeleton() {
         <PulseBlock className="mt-2 h-7 w-2/3 max-w-sm" />
         <PulseBlock className="mt-2 h-3 w-full max-w-md" />
       </div>
-      <div className="grid gap-4 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         {Array.from({ length: 4 }).map((_, index) => (
           <PulseBlock key={index} className="h-20 w-full" />
         ))}
@@ -396,7 +396,7 @@ export function DashboardAnalyticsLoadingSkeleton() {
         <PulseBlock className="h-3 w-20" />
         <PulseBlock className="mt-2 h-7 w-1/2 max-w-xs" />
       </div>
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
         {Array.from({ length: 4 }).map((_, index) => (
           <PulseBlock key={index} className="h-24 w-full" />
         ))}

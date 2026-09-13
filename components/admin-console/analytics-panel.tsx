@@ -110,7 +110,7 @@ export function AnalyticsPanel() {
       ) : (
         <>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-            <StatCard label="Revenue" value={formatNaira(data.totals.revenue.value)} metric={data.totals.revenue} />
+            <StatCard label="Marketplace revenue (GMV)" value={formatNaira(data.totals.revenue.value)} metric={data.totals.revenue} />
             <StatCard label="Orders" value={String(data.totals.orders.value)} metric={data.totals.orders} />
             <StatCard label="Visits" value={String(data.totals.visits.value)} metric={data.totals.visits} />
             <div className="atlas-panel p-4">

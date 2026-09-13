@@ -1,6 +1,16 @@
 "use client";
 
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import {
+  Area,
+  CartesianGrid,
+  ComposedChart,
+  Legend,
+  Line,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 
 export type RevenueChartData = {
   date: string;
@@ -10,49 +20,42 @@ export type RevenueChartData = {
 
 export function RevenueChart({ data, rangeLabel }: { data: RevenueChartData[]; rangeLabel?: string }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+    <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
       <div className="mb-4">
-        <h3 className="text-lg font-semibold text-slate-900">Revenue & Orders</h3>
+        <h3 className="text-lg font-semibold text-slate-900">Revenue &amp; Orders</h3>
         <p className="text-sm text-slate-600">{rangeLabel ?? "Selected period"} performance</p>
       </div>
-      <ResponsiveContainer width="100%" height={300}>
-        <BarChart data={data} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-          <XAxis 
-            dataKey="date" 
-            stroke="#64748b"
-            style={{ fontSize: "12px" }}
-          />
-          <YAxis 
-            yAxisId="left"
-            stroke="#64748b" 
-            style={{ fontSize: "12px" }}
-            label={{ value: "Revenue (₦)", angle: -90, position: "insideLeft" }}
-          />
-          <YAxis 
-            yAxisId="right"
-            orientation="right"
-            stroke="#64748b"
-            style={{ fontSize: "12px" }}
-            label={{ value: "Orders", angle: 90, position: "insideRight" }}
-          />
-          <Tooltip 
-            contentStyle={{
-              backgroundColor: "#ffffff",
-              border: "1px solid #e2e8f0",
-              borderRadius: "8px",
-              boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)"
-            }}
-            formatter={(value, name) => {
-              if (name === "revenue") return `₦${(value as number).toLocaleString()}`;
-              return value;
-            }}
-          />
-          <Legend />
-          <Bar yAxisId="left" dataKey="revenue" fill="#10b981" name="Revenue (₦)" />
-          <Bar yAxisId="right" dataKey="orders" fill="#06b6d4" name="Orders" />
-        </BarChart>
-      </ResponsiveContainer>
+      <div className="h-[250px] sm:h-[300px]">
+        <ResponsiveContainer width="100%" height="100%">
+          <ComposedChart data={data} margin={{ top: 12, right: 8, left: -18, bottom: 0 }}>
+            <defs>
+              <linearGradient id="revenue-gradient" x1="0" x2="0" y1="0" y2="1">
+                <stop offset="0%" stopColor="#10b981" stopOpacity={0.35} />
+                <stop offset="100%" stopColor="#10b981" stopOpacity={0.02} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid vertical={false} stroke="#e2e8f0" strokeDasharray="3 3" />
+            <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: "#64748b", fontSize: 11 }} minTickGap={24} />
+            <YAxis
+              yAxisId="revenue"
+              axisLine={false}
+              tickLine={false}
+              tick={{ fill: "#64748b", fontSize: 11 }}
+              tickFormatter={(value) => `₦${Number(value).toLocaleString("en-NG", { notation: "compact" })}`}
+              width={52}
+            />
+            <YAxis yAxisId="orders" hide />
+            <Tooltip
+              cursor={{ stroke: "#94a3b8", strokeDasharray: "4 4" }}
+              contentStyle={{ backgroundColor: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "10px", boxShadow: "0 10px 24px rgba(15, 23, 42, 0.12)" }}
+              formatter={(value, name) => name === "Revenue" ? `₦${Number(value).toLocaleString()}` : `${value} orders`}
+            />
+            <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />
+            <Area yAxisId="revenue" type="monotone" dataKey="revenue" name="Revenue" stroke="#059669" strokeWidth={2.5} fill="url(#revenue-gradient)" />
+            <Line yAxisId="orders" type="monotone" dataKey="orders" name="Orders" stroke="#0ea5e9" strokeWidth={2.5} dot={false} activeDot={{ r: 4, strokeWidth: 2 }} />
+          </ComposedChart>
+        </ResponsiveContainer>
+      </div>
     </div>
   );
 }

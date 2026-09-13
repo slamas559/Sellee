@@ -25,12 +25,12 @@ export function CustomerBotActivityCard({ activity }: CustomerBotActivityCardPro
         Tracks customer bot commands tied to your store via follows, tracking, and cancellation actions.
       </p>
 
-      <div className="mt-4 grid gap-3 sm:grid-cols-3">
+      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
         <article className="rounded-xl border border-emerald-100 bg-emerald-50 p-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Total Events</p>
           <p className="mt-1 text-2xl font-black text-slate-900">{activity.total_last_7d}</p>
         </article>
-        <article className="rounded-xl border border-slate-200 bg-slate-50 p-4 sm:col-span-2">
+        <article className="col-span-2 rounded-xl border border-slate-200 bg-slate-50 p-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Top Commands</p>
           <div className="mt-2 flex flex-wrap gap-2">
             {topCommands.length > 0 ? (

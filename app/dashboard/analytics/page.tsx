@@ -36,6 +36,38 @@ function calcGrowth(current: number, previous: number): string {
   return `${sign}${growth.toFixed(1)}%`;
 }
 
+function TrendComparison({
+  label,
+  current,
+  previous,
+}: {
+  label?: string;
+  current: number;
+  previous: number;
+}) {
+  if (!label) return <p className="mt-2 text-xs text-slate-500">&nbsp;</p>;
+
+  if (previous <= 0) {
+    return <p className="mt-2 text-xs text-slate-500">{label}: new data</p>;
+  }
+
+  const isGrowing = current > previous;
+  const isFalling = current < previous;
+  const tone = isGrowing
+    ? "bg-emerald-50 text-emerald-700"
+    : isFalling
+      ? "bg-rose-50 text-rose-700"
+      : "bg-slate-100 text-slate-600";
+  const icon = isGrowing ? "↑" : isFalling ? "↓" : "→";
+
+  return (
+    <p className={`mt-2 inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-semibold ${tone}`}>
+      <span aria-hidden="true">{icon}</span>
+      {label}: {calcGrowth(current, previous)}
+    </p>
+  );
+}
+
 export default async function DashboardAnalyticsPage({
   searchParams,
 }: {
@@ -132,26 +164,20 @@ export default async function DashboardAnalyticsPage({
 
       {/* Core stat cards — 2-up on mobile, 4-up from xl */}
       <section className="grid grid-cols-2 gap-4 xl:grid-cols-4">
-        <article className="rounded-lg border border-slate-200 bg-white p-5">
+        <article className="rounded-lg border border-emerald-100 bg-emerald-50/30 p-5">
           <p className="text-sm text-slate-500">Revenue</p>
           <h2 className="mt-2 font-mono text-xl font-black tabular-nums text-slate-900">{formatNaira(revenue)}</h2>
-          <p className="mt-1 text-xs text-slate-500">
-            {range.comparisonLabel ? `${range.comparisonLabel}: ${calcGrowth(revenue, previousRevenue)}` : "\u00A0"}
-          </p>
+          <TrendComparison label={range.comparisonLabel} current={revenue} previous={previousRevenue} />
           <p className="mt-1 text-xs text-slate-500">
             Confirmed/delivered only ({confirmedOrders.length}
             {range.comparisonLabel ? ` vs ${confirmedPreviousOrders.length}` : ""})
           </p>
         </article>
 
-        <article className="rounded-lg border border-slate-200 bg-white p-5">
+        <article className="rounded-lg border border-sky-100 bg-sky-50/30 p-5">
           <p className="text-sm text-slate-500">Orders</p>
           <h2 className="mt-2 font-mono text-xl font-black tabular-nums text-slate-900">{orders.length}</h2>
-          <p className="mt-1 text-xs text-slate-500">
-            {range.comparisonLabel
-              ? `${range.comparisonLabel}: ${calcGrowth(orders.length, previousOrders.length)}`
-              : "\u00A0"}
-          </p>
+          <TrendComparison label={range.comparisonLabel} current={orders.length} previous={previousOrders.length} />
         </article>
 
         <article className="rounded-lg border border-slate-200 bg-white p-5">
@@ -171,24 +197,16 @@ export default async function DashboardAnalyticsPage({
           both columns unconditionally so it doesn't sit alone with empty space
           beside it on narrow screens. */}
       <section className="grid grid-cols-2 gap-4 xl:grid-cols-4">
-        <article className="rounded-lg border border-cyan-100 bg-white p-5">
+        <article className="rounded-lg border border-cyan-100 bg-cyan-50/30 p-5">
           <p className="text-sm text-slate-500">Store Visits</p>
           <h2 className="mt-2 font-mono text-xl font-black tabular-nums text-slate-900">{visits.length}</h2>
-          <p className="mt-1 text-xs text-slate-500">
-            {range.comparisonLabel
-              ? `${range.comparisonLabel}: ${calcGrowth(visits.length, previousVisits.length)}`
-              : "\u00A0"}
-          </p>
+          <TrendComparison label={range.comparisonLabel} current={visits.length} previous={previousVisits.length} />
         </article>
 
-        <article className="rounded-lg border border-cyan-100 bg-white p-5">
+        <article className="rounded-lg border border-violet-100 bg-violet-50/30 p-5">
           <p className="text-sm text-slate-500">Unique Visitors</p>
           <h2 className="mt-2 font-mono text-xl font-black tabular-nums text-slate-900">{uniqueVisitors}</h2>
-          <p className="mt-1 text-xs text-slate-500">
-            {range.comparisonLabel
-              ? `${range.comparisonLabel}: ${calcGrowth(uniqueVisitors, previousUniqueVisitors)}`
-              : "\u00A0"}
-          </p>
+          <TrendComparison label={range.comparisonLabel} current={uniqueVisitors} previous={previousUniqueVisitors} />
         </article>
 
         <article className="col-span-2 rounded-lg border border-cyan-100 bg-white p-5">
@@ -229,59 +247,55 @@ export default async function DashboardAnalyticsPage({
         </section>
       )}
 
-      (
-        <section className="rounded-lg border border-slate-200 bg-white p-5">
-          <p className="text-sm font-medium text-emerald-700">Product Interest vs Conversion</p>
-          <p className="mt-1 text-xs text-slate-500">
-            How many people viewed each product&apos;s page vs how many of them actually ordered. Products
-            flagged &quot;Needs attention&quot; have real traffic but a low conversion rate — often a sign
-            the price, photos, or description need a second look.
-          </p>
-          <div className="mt-3 overflow-x-auto">
-            <table className="w-full min-w-[560px] text-left text-sm">
-              <thead>
-                <tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
-                  <th className="py-2 pr-4 font-medium">Product</th>
-                  <th className="py-2 pr-4 font-medium">Viewers</th>
-                  <th className="py-2 pr-4 font-medium">Orders</th>
-                  <th className="py-2 pr-4 font-medium">Conversion</th>
-                  <th className="py-2 font-medium"></th>
+      
+      <section className="rounded-lg border border-slate-200 bg-white p-5">
+        <p className="text-sm font-medium text-emerald-700">Product Interest vs Conversion</p>
+        <p className="mt-1 text-xs text-slate-500">
+          How many people viewed each product&apos;s page vs how many of them actually ordered. Products
+          flagged &quot;Needs attention&quot; have real traffic but a low conversion rate — often a sign
+          the price, photos, or description need a second look.
+        </p>
+        <div className="mt-3 overflow-x-auto">
+          <table className="w-full min-w-[560px] text-left text-sm">
+            <thead>
+              <tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
+                <th className="py-2 pr-4 font-medium">Product</th>
+                <th className="py-2 pr-4 font-medium">Viewers</th>
+                <th className="py-2 pr-4 font-medium">Orders</th>
+                <th className="py-2 pr-4 font-medium">Conversion</th>
+                <th className="py-2 font-medium"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {productInsights.map((p) => (
+                <tr key={p.productId} className="border-b border-slate-100 last:border-0">
+                  <td className="py-2 pr-4 font-medium text-slate-900">{p.productName}</td>
+                  <td className="py-2 pr-4 text-slate-700">{p.uniqueViewers}</td>
+                  <td className="py-2 pr-4 text-slate-700">{p.ordersCount}</td>
+                  <td className="py-2 pr-4 text-slate-700">
+                    {p.uniqueViewers > 0 ? `${(p.conversionRate * 100).toFixed(0)}%` : "—"}
+                  </td>
+                  <td className="py-2">
+                    {p.needsAttention && (
+                      <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800">
+                        Needs attention
+                      </span>
+                    )}
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {productInsights.map((p) => (
-                  <tr key={p.productId} className="border-b border-slate-100 last:border-0">
-                    <td className="py-2 pr-4 font-medium text-slate-900">{p.productName}</td>
-                    <td className="py-2 pr-4 text-slate-700">{p.uniqueViewers}</td>
-                    <td className="py-2 pr-4 text-slate-700">{p.ordersCount}</td>
-                    <td className="py-2 pr-4 text-slate-700">
-                      {p.uniqueViewers > 0 ? `${(p.conversionRate * 100).toFixed(0)}%` : "—"}
-                    </td>
-                    <td className="py-2">
-                      {p.needsAttention && (
-                        <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800">
-                          Needs attention
-                        </span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      )
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+      
 
       {/* Fulfillment/customer stat cards — 2-up on mobile, 4-up from xl */}
       <section className="grid grid-cols-2 gap-4 xl:grid-cols-4">
-        <article className="rounded-lg border border-slate-200 bg-white p-5">
+        <article className="rounded-lg border border-emerald-100 bg-emerald-50/30 p-5">
           <p className="text-sm text-slate-500">Avg. Order Value</p>
           <h2 className="mt-2 font-mono text-xl font-black tabular-nums text-slate-900">{formatNaira(metrics.aov)}</h2>
-          <p className="mt-1 text-xs text-slate-500">
-            {range.comparisonLabel
-              ? `${range.comparisonLabel}: ${calcGrowth(metrics.aov, previousMetrics.aov)}`
-              : "\u00A0"}
-          </p>
+          <TrendComparison label={range.comparisonLabel} current={metrics.aov} previous={previousMetrics.aov} />
         </article>
 
         <article className="rounded-lg border border-slate-200 bg-white p-5">

@@ -19,6 +19,7 @@ const navItems = [
   { href: "/dashboard/products", label: "Products" },
   { href: "/dashboard/orders", label: "Orders" },
   { href: "/dashboard/integrations", label: "Integrations" },
+  { href: "/dashboard/plans", label: "Plans" },
 ];
 
 function isActivePath(pathname: string, href: string) {

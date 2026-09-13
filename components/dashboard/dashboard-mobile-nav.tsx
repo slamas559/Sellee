@@ -15,7 +15,7 @@ type DashboardMobileNavProps = {
 type NavItem = {
   href: string;
   label: string;
-  icon: "home" | "user" | "store" | "box" | "orders" | "chart" | "plug";
+  icon: "home" | "user" | "store" | "box" | "orders" | "chart" | "plug"| "tag";
 };
 
 const navItems: NavItem[] = [
@@ -25,6 +25,7 @@ const navItems: NavItem[] = [
   { href: "/dashboard/products", label: "Products", icon: "box" },
   { href: "/dashboard/orders", label: "Orders", icon: "orders" },
   { href: "/dashboard/integrations", label: "Integrations", icon: "plug" },
+  { href: "/dashboard/plans", label: "Plans", icon: "tag" },
   { href: "/dashboard/account", label: "Account", icon: "user" },
 ];
 
@@ -55,6 +56,7 @@ function NavIcon({ type, className }: { type: NavItem["icon"]; className?: strin
   if (type === "box") return <svg {...shared}><path d="m3 7 9-4 9 4-9 4-9-4Z" /><path d="M3 7v10l9 4 9-4V7" /><path d="M12 11v10" /></svg>;
   if (type === "orders") return <svg {...shared}><rect x="4" y="4" width="16" height="16" rx="2" /><path d="M8 9h8" /><path d="M8 13h8" /><path d="M8 17h5" /></svg>;
   if (type === "chart") return <svg {...shared}><path d="M4 19h16" /><path d="M7 16v-5" /><path d="M12 16V8" /><path d="M17 16v-9" /></svg>;
+  if (type === "tag") return <svg {...shared}><path d="M12 3h6a1 1 0 0 1 1 1v6l-9 9-7-7 9-9Z" /><circle cx="15.5" cy="7.5" r="1.25" /></svg>;
   return <svg {...shared}><path d="M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z" /><path d="M19.4 15a1 1 0 0 0 .2 1.1l.1.1a1 1 0 0 1 0 1.4l-1.1 1.1a1 1 0 0 1-1.4 0l-.1-.1a1 1 0 0 0-1.1-.2 1 1 0 0 0-.6.9V20a1 1 0 0 1-1 1h-1.6a1 1 0 0 1-1-1v-.2a1 1 0 0 0-.6-.9 1 1 0 0 0-1.1.2l-.1.1a1 1 0 0 1-1.4 0l-1.1-1.1a1 1 0 0 1 0-1.4l.1-.1a1 1 0 0 0 .2-1.1 1 1 0 0 0-.9-.6H4a1 1 0 0 1-1-1v-1.6a1 1 0 0 1 1-1h.2a1 1 0 0 0 .9-.6 1 1 0 0 0-.2-1.1l-.1-.1a1 1 0 0 1 0-1.4l1.1-1.1a1 1 0 0 1 1.4 0l.1.1a1 1 0 0 0 1.1.2 1 1 0 0 0 .6-.9V4a1 1 0 0 1 1-1h1.6a1 1 0 0 1 1 1v.2a1 1 0 0 0 .6.9 1 1 0 0 0 1.1-.2l.1-.1a1 1 0 0 1 1.4 0l1.1 1.1a1 1 0 0 1 0 1.4l-.1.1a1 1 0 0 0-.2 1.1 1 1 0 0 0 .9.6H20a1 1 0 0 1 1 1v1.6a1 1 0 0 1-1 1h-.2a1 1 0 0 0-.9.6Z" /></svg>;
 }
 
