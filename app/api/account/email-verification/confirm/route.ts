@@ -41,17 +41,19 @@ export async function POST(request: Request) {
     }
 
     const supabase = createAdminSupabaseClient();
-    const { error } = await supabase
+    const { data: updatedUser, error } = await supabase
       .from("users")
       .update({ email_verified_at: new Date().toISOString() })
-      .eq("id", consumed.userId);
+      .eq("id", consumed.userId)
+      .select("role")
+      .single();
 
-    if (error) {
+    if (error || !updatedUser) {
       logDevError("account.email_verification.confirm_failed", error, { userId: consumed.userId });
       return NextResponse.json({ error: "Could not verify your email. Please try again." }, { status: 500 });
     }
 
-    return NextResponse.json({ message: "Your email is verified." });
+    return NextResponse.json({ message: "Your email is verified.", role: updatedUser.role });
   } catch (error) {
     logDevError("account.email_verification.confirm_unhandled", error);
     return NextResponse.json({ error: "Could not verify your email. Please try again." }, { status: 500 });

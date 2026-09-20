@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
 type Status = "verifying" | "success" | "error";
+type Role = "vendor" | "customer" | "admin" | null;
 
 export function VerifyEmailStatus() {
   const params = useSearchParams();
@@ -14,6 +15,7 @@ export function VerifyEmailStatus() {
   const [message, setMessage] = useState<string | null>(
     token ? null : "This verification link is missing or invalid.",
   );
+  const [role, setRole] = useState<Role>(null);
 
   useEffect(() => {
     if (!token) return;
@@ -36,6 +38,7 @@ export function VerifyEmailStatus() {
           return;
         }
 
+        setRole(data?.role ?? null);
         setStatus("success");
       } catch {
         if (!cancelled) {
@@ -60,26 +63,36 @@ export function VerifyEmailStatus() {
   }
 
   if (status === "success") {
+    // Vendors land in their dashboard; customers (and anything else) go to
+    // the marketplace home, since /dashboard is vendor-only and would just
+    // redirect a customer straight back out.
+    const destination = role === "vendor" ? "/dashboard" : "/";
+    const label = role === "vendor" ? "Go to dashboard" : "Continue to Sellee";
+
     return (
       <div className="space-y-4">
         <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
           Your email is verified.
         </div>
         <Link
-          href="/dashboard"
+          href={destination}
           className="inline-block w-full rounded-xl bg-emerald-600 px-4 py-2.5 text-center text-sm font-semibold text-white transition hover:bg-emerald-700"
         >
-          Go to dashboard
+          {label}
         </Link>
       </div>
     );
   }
 
+  // Error state: an invalid/expired link carries no reliable identity (the
+  // token itself couldn't be resolved), so there's no role to route by
+  // here - sending everyone to a generic destination rather than assuming
+  // dashboard.
   return (
     <div className="space-y-4">
       <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{message}</div>
-      <Link href="/dashboard" className="text-sm font-semibold text-emerald-700 hover:underline">
-        Back to dashboard
+      <Link href="/" className="text-sm font-semibold text-emerald-700 hover:underline">
+        Back to Sellee
       </Link>
     </div>
   );

@@ -18,6 +18,7 @@ import {
   generateOrderStatusData 
 } from "@/lib/chart-utils";
 import { getAnalyticsRange } from "@/lib/date-range";
+import { BarChart3, ClipboardList, Package, Store } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Dashboard",
@@ -83,7 +84,7 @@ export default async function DashboardPage() {
       </header>
       <section className="grid grid-cols-2 gap-4 xl:grid-cols-4">
         <article className={`rounded-xl border p-5 shadow-sm ${store?.is_active ? "border-emerald-200 bg-emerald-50/50" : "border-amber-200 bg-amber-50/50"}`}>
-          <p className="text-sm text-slate-500">Store Status</p>
+          <p className="flex items-center gap-2 text-sm text-slate-500"><Store className="h-4 w-4" aria-hidden="true" />Store Status</p>
           <h2 className={`mt-2 text-2xl font-black ${store?.is_active ? "text-emerald-800" : "text-amber-800"}`}>
             {store?.is_active ? "Active" : "Draft"}
           </h2>
@@ -93,19 +94,19 @@ export default async function DashboardPage() {
         </article>
 
         <article className="rounded-xl border border-sky-100 bg-sky-50/40 p-5 shadow-sm">
-          <p className="text-sm text-slate-500">Products</p>
+          <p className="flex items-center gap-2 text-sm text-slate-500"><Package className="h-4 w-4" aria-hidden="true" />Products</p>
           <h2 className="mt-2 text-2xl font-black text-slate-900">{products.length}</h2>
           <p className="mt-1 text-sm text-slate-600">Total catalog items.</p>
         </article>
 
         <article className={`rounded-xl border p-5 shadow-sm ${pendingOrders > 0 ? "border-amber-200 bg-amber-50/50" : "border-emerald-200 bg-emerald-50/50"}`}>
-          <p className="text-sm text-slate-500">Pending Orders</p>
+          <p className="flex items-center gap-2 text-sm text-slate-500"><ClipboardList className="h-4 w-4" aria-hidden="true" />Pending Orders</p>
           <h2 className={`mt-2 text-2xl font-black ${pendingOrders > 0 ? "text-amber-800" : "text-emerald-800"}`}>{pendingOrders}</h2>
           <p className="mt-1 text-sm text-slate-600">Awaiting vendor action.</p>
         </article>
 
         <article className="rounded-xl border border-emerald-100 bg-emerald-50/40 p-5 shadow-sm">
-          <p className="text-sm text-slate-500">Revenue</p>
+          <p className="flex items-center gap-2 text-sm text-slate-500"><BarChart3 className="h-4 w-4" aria-hidden="true" />Revenue</p>
           <h2 className="mt-2 text-2xl font-black text-slate-900">
             {formatNaira(totalRevenue)}
           </h2>

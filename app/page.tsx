@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getServerSession } from "next-auth";
 import logoText from "@/app/logos/image-text-logo.png";
 import { NearbyVendors } from "@/components/landing/nearby-vendors";
+import { EmailVerificationBanner } from "@/components/dashboard/email-verification-banner";
 import { UserMenu } from "@/components/layout/user-menu";
 import { CategoryScrollRow } from "@/components/marketplace/category-scroll-row";
 import { ProductShowcaseCard } from "@/components/marketplace/product-showcase-card";
@@ -12,6 +13,7 @@ import {
   getMarketplaceStatsCached,
   getStoreNichesAndFollowersCached,
 } from "@/lib/public-cache";
+import { getUserEmailVerifiedAt } from "@/lib/dashboard-data";
 import { Search, SearchIcon } from "lucide-react";
 
 export const metadata: Metadata = {
@@ -96,15 +98,6 @@ function StoreLocation({
   const location = [store.city, store.state, store.country].filter(Boolean).join(", ");
   return <p className="line-clamp-1 text-xs text-slate-500">{location || "Location not set"}</p>;
 }
-
-const FALLBACK_CATEGORIES = [
-  "Groceries",
-  "Food",
-  "Fashion",
-  "Electronics",
-  "Beauty",
-  "Home",
-];
 
 async function getMarketplaceData(q?: string, category?: string, nicheParam?: string) {
   const { stores, products, categoryRows, niches, nicheCategories } =
@@ -212,18 +205,30 @@ async function getMarketplaceData(q?: string, category?: string, nicheParam?: st
     });
   }
 
-  const categories = [
-    ...new Set(
-      (niches ?? [])
-        .map((n) => String(n.name ?? "").trim())
-        .filter(Boolean),
-    ),
-  ].slice(0, 20);
+  // The category strip displays niches. Only include a niche when at least one
+  // of its categories has an available product, so empty catalog sections are
+  // never offered as browse options.
+  const availableCategoryNames = new Set(
+    categoryRows
+      .map((row) => row.category?.trim().toLowerCase())
+      .filter((name): name is string => Boolean(name)),
+  );
+  const categories = (niches ?? [])
+    .filter((niche) =>
+      (nicheCategories ?? []).some(
+        (row) =>
+          row.niche_id === niche.id &&
+          availableCategoryNames.has(String(row.name ?? "").trim().toLowerCase()),
+      ),
+    )
+    .map((niche) => String(niche.name ?? "").trim())
+    .filter(Boolean)
+    .slice(0, 20);
 
   return {
     stores: enrichedStores,
     products: filteredProducts.slice(0, 24),
-    categories: categories.length > 0 ? categories : FALLBACK_CATEGORIES,
+    categories,
     storesById,
     niches,
   };
@@ -241,6 +246,7 @@ export default async function Home({ searchParams }: HomeProps) {
   const showRealMarketplaceStats = totalStores >= 30 && totalProducts >= 100;
   const isLoggedIn = Boolean(session?.user?.id);
   const isVendor = session?.user?.role === "vendor";
+  const emailVerifiedAt = isLoggedIn ? await getUserEmailVerifiedAt(session!.user.id) : null;
   const heroPrimaryHref = !isLoggedIn ? "/login" : isVendor ? "/dashboard" : "/become-vendor";
   const heroPrimaryLabel = !isLoggedIn ? "Login to start" : isVendor ? "Open Dashboard" : "Start Selling";
   const websiteJsonLd = {
@@ -268,6 +274,17 @@ export default async function Home({ searchParams }: HomeProps) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }}
       />
+      {isLoggedIn && !emailVerifiedAt ? (
+        <div className="px-0.5 sm:px-3">
+          <EmailVerificationBanner
+            prompt={
+              isVendor
+                ? "Your account email isn't verified yet. Shoppers won't see a Verified badge until you do."
+                : "Your account email isn't verified yet. Verify it to receive order updates."
+            }
+          />
+        </div>
+      ) : null}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
@@ -345,23 +362,25 @@ export default async function Home({ searchParams }: HomeProps) {
         </div>
       </section>
 
-      <section className="border-t border-slate-200 pt-5 px-2 sm:px-1">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="font-display text-lg font-bold text-slate-900 sm:text-xl">Browse Categories</h2>
-          {niche ? (
-            <Link href={q ? `/search?q=${encodeURIComponent(q)}` : `/search`} className="text-sm font-medium text-emerald-700 hover:underline">
-              Clear niche
-            </Link>
-          ) : (
-            <Link href="/marketplace" className="text-sm font-medium">
-              <span className="text-emerald-700 hover:underline">Browse marketplace</span>
-            </Link>
-          )}
-        </div>
-        <div className="mt-4">
-          <CategoryScrollRow categories={categories} niches={niches ?? []} activeNiche={niche} q={q} />
-        </div>
-      </section>
+      {categories.length > 0 ? (
+        <section className="border-t border-slate-200 px-2 pt-5 sm:px-1">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="font-display text-lg font-bold text-slate-900 sm:text-xl">Browse Categories</h2>
+            {niche ? (
+              <Link href={q ? `/search?q=${encodeURIComponent(q)}` : `/search`} className="text-sm font-medium text-emerald-700 hover:underline">
+                Clear niche
+              </Link>
+            ) : (
+              <Link href="/marketplace" className="text-sm font-medium">
+                <span className="text-emerald-700 hover:underline">Browse marketplace</span>
+              </Link>
+            )}
+          </div>
+          <div className="mt-4">
+            <CategoryScrollRow categories={categories} niches={niches ?? []} activeNiche={niche} q={q} />
+          </div>
+        </section>
+      ) : null}
       <NearbyVendors
         initialVendors={stores.slice(0, 8).map((store) => ({
           ...store,

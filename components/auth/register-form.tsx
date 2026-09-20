@@ -79,7 +79,7 @@ export function RegisterForm() {
       return;
     }
     
-    router.push("/");
+    router.push("/account?verifyEmail=1");
     router.refresh();
   }
 

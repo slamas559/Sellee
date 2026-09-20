@@ -28,7 +28,7 @@ export async function GET() {
 
   const { data: user, error } = await supabase
     .from("users")
-    .select("id, full_name, email, phone, role")
+    .select("id, full_name, email, phone, role, email_verified_at")
     .eq("id", session.user.id)
     .maybeSingle();
 
@@ -43,6 +43,7 @@ export async function GET() {
       email: user.email,
       role: user.role,
       phone: user.phone,
+      email_verified_at: user.email_verified_at,
       display_name: deriveDisplayName(user.full_name, user.email),
     },
   });

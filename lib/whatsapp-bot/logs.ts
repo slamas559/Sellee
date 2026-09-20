@@ -20,6 +20,8 @@ type OutboundLogParams = {
   whatsappMessageId?: string;
   errorMessage?: string;
   providerPayload?: unknown;
+  broadcastId?: string;
+  failureReason?: "window_closed" | "undeliverable" | "error";
 };
 
 export async function logInboundMessage(params: InboundLogParams) {
@@ -56,6 +58,8 @@ export async function logOutboundMessage(params: OutboundLogParams) {
       status: params.status,
       error_message: params.errorMessage ?? null,
       provider_payload: params.providerPayload ?? null,
+      broadcast_id: params.broadcastId ?? null,
+      failure_reason: params.failureReason ?? null,
     });
   } catch (error) {
     logDevError("whatsapp.logs.outbound", error, {

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useMemo, useState } from "react";
 import { BadgeCheck } from "lucide-react";
 import { storeUrl } from "@/lib/store-url";
@@ -64,25 +65,29 @@ export function NearbyVendorCard({
       prefetch
       className={`group relative overflow-hidden rounded-xl border border-slate-200 bg-white transition hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-md ${cardShellClass}`}
     >
-      {vendor.logo_url ? (
-        <div
-          aria-hidden="true"
-          className="absolute inset-0 bg-cover bg-center bg-no-repeat transition group-hover:opacity-35"
-          style={{ backgroundImage: `url(${vendor.logo_url})` }}
-        />
-      ) : null}
-      <div
-        aria-hidden="true"
-        className="absolute inset-0 bg-gradient-to-b from-white/65 via-white/80 to-white/92"
-      />
-
       <div className={`relative z-10 ${isGrid ? "flex h-full flex-col" : ""}`}>
-        <p className="flex items-center gap-1 line-clamp-1 text-sm font-semibold text-slate-900 group-hover:text-emerald-700 sm:text-base">
-          <span className="truncate">{vendor.name}</span>
-          {vendor.is_verified ? (
-            <BadgeCheck className="h-3.5 w-3.5 shrink-0 text-emerald-600" aria-label="Verified vendor" />
-          ) : null}
-        </p>
+        <div className="flex items-center gap-2.5">
+          <div className="relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-slate-50 text-sm font-bold text-emerald-700 shadow-sm">
+            {vendor.logo_url ? (
+              <Image
+                src={vendor.logo_url}
+                alt={`${vendor.name} logo`}
+                fill
+                sizes="44px"
+                className="object-cover"
+                unoptimized
+              />
+            ) : (
+              vendor.name.trim().charAt(0).toUpperCase()
+            )}
+          </div>
+          <p className="flex min-w-0 items-center gap-1 line-clamp-1 text-sm font-semibold text-slate-900 group-hover:text-emerald-700 sm:text-base">
+            <span className="truncate">{vendor.name}</span>
+            {vendor.is_verified ? (
+              <BadgeCheck className="h-3.5 w-3.5 shrink-0 text-emerald-600" aria-label="Verified vendor" />
+            ) : null}
+          </p>
+        </div>
         <p className="mt-1.5 line-clamp-1 text-xs text-slate-600 sm:mt-2 sm:text-sm">
           {locationText}
         </p>

@@ -5,6 +5,7 @@ import { formatNaira } from "@/lib/format";
 import { authOptions } from "@/lib/auth";
 import { getVendorOrders, getVendorWhatsAppLinkStatus } from "@/lib/dashboard-data";
 import { OrderStatusActions } from "@/components/dashboard/order-status-actions";
+import { ClipboardList, CircleCheck, Clock3, PackageCheck } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Orders",
@@ -78,22 +79,22 @@ export default async function DashboardOrdersPage({ searchParams }: { searchPara
 
       <section className="grid gap-4 grid-cols-2 sm:grid-cols-4">
         <article className="rounded-lg border border-slate-200 bg-white p-4">
-          <p className="text-sm text-slate-500">Total Orders</p>
+          <p className="flex items-center gap-2 text-sm text-slate-500"><ClipboardList className="h-4 w-4" aria-hidden="true" />Total Orders</p>
           <h2 className="mt-1 font-mono text-xl font-black tabular-nums text-slate-900">{orders.length}</h2>
         </article>
         <article className="rounded-lg border border-slate-200 bg-white p-4">
-          <p className="text-sm text-slate-500">Confirmed</p>
+          <p className="flex items-center gap-2 text-sm text-slate-500"><CircleCheck className="h-4 w-4" aria-hidden="true" />Confirmed</p>
           <h2 className="mt-1 font-mono text-xl font-black tabular-nums text-slate-900">{confirmedCount}</h2>
         </article>
         <article className="rounded-lg border border-blue-100 bg-white p-4">
-          <p className="text-sm text-slate-500">Delivered</p>
+          <p className="flex items-center gap-2 text-sm text-slate-500"><PackageCheck className="h-4 w-4" aria-hidden="true" />Delivered</p>
           <h2 className="mt-1 font-mono text-xl font-black tabular-nums text-slate-900">{deliveredCount}</h2>
           <p className="mt-1 text-xs text-slate-500">
             Revenue: {formatNaira(totalRevenue)}
           </p>
         </article>
         <article className="rounded-lg border border-amber-200 bg-amber-50 p-4">
-          <p className="text-sm text-amber-900/80">Pending</p>
+          <p className="flex items-center gap-2 text-sm text-amber-900/80"><Clock3 className="h-4 w-4" aria-hidden="true" />Pending</p>
           <h2 className="mt-1 font-mono text-xl font-black tabular-nums text-amber-950">{pendingCount}</h2>
           <p className="mt-1 text-xs text-amber-900/80">
             Pending value: {formatNaira(pendingValue)}

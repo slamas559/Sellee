@@ -6,6 +6,7 @@ import { logDevError } from "@/lib/logger";
 import { requireVerifiedPhone } from "@/lib/require-verified-phone";
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
 import { executeBroadcastNow, scheduleBroadcast } from "@/lib/whatsapp-bot/broadcasts";
+import { getMonthlyBroadcastUsage } from "@/lib/broadcasts/quota";
 
 const targetScopeSchema = z.enum(["followers", "customers", "all"]);
 
@@ -137,6 +138,17 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { error: "Create your store first before sending broadcasts." },
         { status: 400 },
+      );
+    }
+
+    // Scheduling predates the quota system this route now shares with
+    // /api/vendor/broadcasts/send-now - without this check, scheduling
+    // would be a way to send unlimited broadcasts around the monthly limit.
+    const quota = await getMonthlyBroadcastUsage(session.user.id);
+    if (quota.remaining <= 0) {
+      return NextResponse.json(
+        { error: `You've used all ${quota.limit} of your broadcasts this month. Quota resets next month.` },
+        { status: 403 },
       );
     }
 

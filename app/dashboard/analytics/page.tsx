@@ -24,6 +24,7 @@ import {
   generateProductPerformanceData,
   generateVisitsChartData,
 } from "@/lib/chart-utils";
+import { BarChart3, Eye, Package, ShoppingCart, TriangleAlert, Users } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Analytics",
@@ -165,7 +166,7 @@ export default async function DashboardAnalyticsPage({
       {/* Core stat cards — 2-up on mobile, 4-up from xl */}
       <section className="grid grid-cols-2 gap-4 xl:grid-cols-4">
         <article className="rounded-lg border border-emerald-100 bg-emerald-50/30 p-5">
-          <p className="text-sm text-slate-500">Revenue</p>
+          <p className="flex items-center gap-2 text-sm text-slate-500"><BarChart3 className="h-4 w-4" aria-hidden="true" />Revenue</p>
           <h2 className="mt-2 font-mono text-xl font-black tabular-nums text-slate-900">{formatNaira(revenue)}</h2>
           <TrendComparison label={range.comparisonLabel} current={revenue} previous={previousRevenue} />
           <p className="mt-1 text-xs text-slate-500">
@@ -175,19 +176,19 @@ export default async function DashboardAnalyticsPage({
         </article>
 
         <article className="rounded-lg border border-sky-100 bg-sky-50/30 p-5">
-          <p className="text-sm text-slate-500">Orders</p>
+          <p className="flex items-center gap-2 text-sm text-slate-500"><ShoppingCart className="h-4 w-4" aria-hidden="true" />Orders</p>
           <h2 className="mt-2 font-mono text-xl font-black tabular-nums text-slate-900">{orders.length}</h2>
           <TrendComparison label={range.comparisonLabel} current={orders.length} previous={previousOrders.length} />
         </article>
 
         <article className="rounded-lg border border-slate-200 bg-white p-5">
-          <p className="text-sm text-slate-500">Catalog Size</p>
+          <p className="flex items-center gap-2 text-sm text-slate-500"><Package className="h-4 w-4" aria-hidden="true" />Catalog Size</p>
           <h2 className="mt-2 font-mono text-xl font-black tabular-nums text-slate-900">{products.length}</h2>
           <p className="mt-1 text-xs text-slate-500">Active products in your store.</p>
         </article>
 
         <article className="rounded-lg border border-amber-200 bg-amber-50 p-5">
-          <p className="text-sm text-amber-900/80">Low Stock Alerts</p>
+          <p className="flex items-center gap-2 text-sm text-amber-900/80"><TriangleAlert className="h-4 w-4" aria-hidden="true" />Low Stock Alerts</p>
           <h2 className="mt-2 font-mono text-xl font-black tabular-nums text-amber-950">{lowStock}</h2>
           <p className="mt-1 text-xs text-amber-900/80">Products with stock {"<="} 2.</p>
         </article>
@@ -198,13 +199,13 @@ export default async function DashboardAnalyticsPage({
           beside it on narrow screens. */}
       <section className="grid grid-cols-2 gap-4 xl:grid-cols-4">
         <article className="rounded-lg border border-cyan-100 bg-cyan-50/30 p-5">
-          <p className="text-sm text-slate-500">Store Visits</p>
+          <p className="flex items-center gap-2 text-sm text-slate-500"><Eye className="h-4 w-4" aria-hidden="true" />Store Visits</p>
           <h2 className="mt-2 font-mono text-xl font-black tabular-nums text-slate-900">{visits.length}</h2>
           <TrendComparison label={range.comparisonLabel} current={visits.length} previous={previousVisits.length} />
         </article>
 
         <article className="rounded-lg border border-violet-100 bg-violet-50/30 p-5">
-          <p className="text-sm text-slate-500">Unique Visitors</p>
+          <p className="flex items-center gap-2 text-sm text-slate-500"><Users className="h-4 w-4" aria-hidden="true" />Unique Visitors</p>
           <h2 className="mt-2 font-mono text-xl font-black tabular-nums text-slate-900">{uniqueVisitors}</h2>
           <TrendComparison label={range.comparisonLabel} current={uniqueVisitors} previous={previousUniqueVisitors} />
         </article>

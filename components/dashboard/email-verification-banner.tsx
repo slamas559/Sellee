@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 
-export function EmailVerificationBanner() {
+const DEFAULT_PROMPT = "Your account email isn't verified yet. Verify it to keep your account secure and receive order updates.";
+
+export function EmailVerificationBanner({ prompt = DEFAULT_PROMPT }: { prompt?: string }) {
   const [status, setStatus] = useState<"idle" | "sending" | "sent">("idle");
   const [message, setMessage] = useState<string | null>(null);
 
@@ -31,7 +33,7 @@ export function EmailVerificationBanner() {
   return (
     <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <span>Your account email isn&apos;t verified yet. Shoppers won&apos;t see a Verified badge until you do.</span>
+        <span>{prompt}</span>
         <button
           type="button"
           onClick={handleSend}

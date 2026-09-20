@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { EmailVerificationBanner } from "@/components/dashboard/email-verification-banner";
 
 type MeResponse = {
   user?: {
@@ -9,6 +10,7 @@ type MeResponse = {
     email: string;
     phone: string | null;
     role: "vendor" | "customer";
+    email_verified_at: string | null;
   };
   error?: string;
 };
@@ -36,6 +38,7 @@ export function AccountProfileForm() {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [role, setRole] = useState<"vendor" | "customer">("customer");
+  const [emailVerifiedAt, setEmailVerifiedAt] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -67,6 +70,7 @@ export function AccountProfileForm() {
           setEmail(payload.user.email);
           setPhone(payload.user.phone ?? "");
           setRole(payload.user.role);
+          setEmailVerifiedAt(payload.user.email_verified_at);
         }
       } catch {
         if (mounted) setError("Network error while loading profile.");
@@ -250,6 +254,17 @@ export function AccountProfileForm() {
         <p className="mt-4 text-sm text-slate-500">Loading profile...</p>
       ) : (
         <>
+          {!emailVerifiedAt ? (
+            <div className="mt-4">
+              <EmailVerificationBanner
+                prompt={
+                  role === "vendor"
+                    ? "Your account email isn't verified yet. Shoppers won't see a Verified badge until you do."
+                    : "Your account email isn't verified yet. Verify it to receive order updates."
+                }
+              />
+            </div>
+          ) : null}
           <form onSubmit={handleSubmit} className="mt-4 space-y-4">
             <label className="block space-y-1 text-sm">
               <span className="font-medium text-slate-700">Full name</span>
@@ -407,4 +422,3 @@ export function AccountProfileForm() {
     </section>
   );
 }
-

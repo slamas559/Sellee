@@ -1,6 +1,9 @@
 import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { sendEmailVerificationEmail } from "@/app/actions/emails";
+import { appUrl } from "@/lib/app-url";
+import { createEmailVerificationToken } from "@/lib/email-verification";
 import { logDevError } from "@/lib/logger";
 import { checkPhoneAvailability } from "@/lib/phone-verification";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -92,22 +95,41 @@ export async function POST(request: Request) {
     }
 
     const passwordHash = await bcrypt.hash(parsed.data.password, 12);
-    const { error: insertError } = await supabase.from("users").insert({
-      full_name: fullName,
-      email,
-      phone: phoneCheck.normalized,
-      role,
-      password_hash: passwordHash,
-    });
+    const { data: newUser, error: insertError } = await supabase
+      .from("users")
+      .insert({
+        full_name: fullName,
+        email,
+        phone: phoneCheck.normalized,
+        role,
+        password_hash: passwordHash,
+      })
+      .select("id")
+      .single();
 
-    if (insertError) {
-      if (insertError.message.toLowerCase().includes("email")) {
+    if (insertError || !newUser) {
+      if (insertError?.message.toLowerCase().includes("email")) {
         return NextResponse.json(
           { error: "An account with this email already exists. Please sign in or use a different email address." },
           { status: 409 },
         );
       }
-      throw new Error(insertError.message);
+      throw new Error(insertError?.message ?? "Could not create account.");
+    }
+
+    // Best-effort: a failed verification email should never block account
+    // creation, which already succeeded above. The account page's
+    // EmailVerificationBanner is the safety net for a send that fails here
+    // or an email the user simply misses.
+    try {
+      const rawToken = await createEmailVerificationToken(newUser.id);
+      const verifyUrl = appUrl(`/verify-email?token=${rawToken}`);
+      const result = await sendEmailVerificationEmail({ to: email, name: fullName, verifyUrl, role });
+      if (!result.success) {
+        logDevError("register.verification_email_failed", result.error, { userId: newUser.id });
+      }
+    } catch (verificationError) {
+      logDevError("register.verification_email_unhandled", verificationError, { userId: newUser.id });
     }
 
     return NextResponse.json({

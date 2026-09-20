@@ -45,6 +45,7 @@ export async function POST() {
       to: user.email,
       name: user.full_name,
       verifyUrl,
+      role: session.user.role,
     });
 
     if (!result.success) {

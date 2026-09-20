@@ -10,7 +10,30 @@ type SendWhatsAppTextMessageParams = {
   command?: string;
   role?: "vendor" | "customer" | "system";
   scopeStoreId?: string;
+  // When set, this send is tied to a specific broadcast row so per-recipient
+  // outcomes can later be queried by broadcast_id (see getBroadcastRecipientResults).
+  broadcastId?: string;
 };
+
+type WhatsAppFailureReason = "window_closed" | "undeliverable" | "error";
+
+// Meta's error codes for the two cases worth distinguishing from a generic
+// failure: 131047 is specifically "more than 24 hours since the customer
+// last messaged" (the re-engagement window), and 131026 is "message
+// undeliverable" (usually not a valid/reachable WhatsApp number). Everything
+// else collapses to 'error' - retrying those isn't expected to help in any
+// channel-specific way, so there's no value in enumerating every code.
+function classifyWhatsAppError(responseBody: string): WhatsAppFailureReason {
+  try {
+    const parsed = JSON.parse(responseBody) as { error?: { code?: number } };
+    const code = parsed?.error?.code;
+    if (code === 131047) return "window_closed";
+    if (code === 131026) return "undeliverable";
+  } catch {
+    // Non-JSON body - fall through to generic.
+  }
+  return "error";
+}
 
 export async function sendWhatsAppTextMessage({
   to,
@@ -19,6 +42,7 @@ export async function sendWhatsAppTextMessage({
   command = "OUTBOUND",
   role = "system",
   scopeStoreId,
+  broadcastId,
 }: SendWhatsAppTextMessageParams): Promise<{
   messageId: string;
   recipient: string;
@@ -40,6 +64,8 @@ export async function sendWhatsAppTextMessage({
       providerPayload: {
         scope_store_id: scopeStoreId ?? null,
       },
+      broadcastId,
+      failureReason: "error",
     });
     throw new Error("Invalid WhatsApp recipient number.");
   }
@@ -66,9 +92,11 @@ export async function sendWhatsAppTextMessage({
 
   if (!response.ok) {
     const body = await response.text();
+    const failureReason = classifyWhatsAppError(body);
     logServerInfo("whatsapp.send.error", {
       to: normalizedTo,
       status: response.status,
+      failureReason,
     });
     await logOutboundMessage({
       recipientPhone: normalizedTo,
@@ -82,6 +110,8 @@ export async function sendWhatsAppTextMessage({
         response_status: response.status,
         response_body: body,
       },
+      broadcastId,
+      failureReason,
     });
     throw new Error(`WhatsApp send failed (${response.status}): ${body}`);
   }
@@ -109,6 +139,7 @@ export async function sendWhatsAppTextMessage({
       scope_store_id: scopeStoreId ?? null,
       graph_response: payload,
     },
+    broadcastId,
   });
 
   return {

@@ -26,6 +26,9 @@ import AdminInviteEmail, {
 import AdminBroadcastEmail, {
   type AdminBroadcastEmailProps,
 } from "@/emails/AdminBroadcastEmail";
+import VendorBroadcastEmail, {
+  type VendorBroadcastEmailProps,
+} from "@/emails/VendorBroadcastEmail";
 
 const SYSTEM_FROM = "Sellee <hello@sellee.store>";
 const SUPPORT_FROM = "Sellee <support@sellee.store>";
@@ -71,6 +74,10 @@ export interface SendAdminInviteEmailInput extends AdminInviteEmailProps {
 }
 
 export interface SendAdminBroadcastEmailInput extends AdminBroadcastEmailProps {
+  to: string;
+}
+
+export interface SendVendorBroadcastEmailInput extends VendorBroadcastEmailProps {
   to: string;
 }
 
@@ -204,9 +211,10 @@ export async function sendPasswordResetEmail({
 
 export async function sendEmailVerificationEmail({
   to,
-  subject = "Verify your email for Sellee",
+  subject = "Confirm your email for Sellee",
   name,
   verifyUrl,
+  role,
 }: SendEmailVerificationEmailInput): Promise<EmailActionResult> {
   try {
     const resend = getResendClient();
@@ -215,7 +223,7 @@ export async function sendEmailVerificationEmail({
       to,
       replyTo: SUPPORT_REPLY_TO,
       subject,
-      react: EmailVerificationEmail({ name, verifyUrl }),
+      react: EmailVerificationEmail({ name, verifyUrl, role }),
     });
 
     if (process.env.NODE_ENV === "development") {
@@ -514,6 +522,35 @@ export async function sendAdminBroadcastEmail({
       replyTo: SUPPORT_REPLY_TO,
       subject,
       react: AdminBroadcastEmail({ subject, paragraphs, recipientName }),
+    });
+
+    if (error) {
+      return { success: false, error };
+    }
+
+    return { success: true, data };
+  } catch (error) {
+    return { success: false, error: normalizeError(error) };
+  }
+}
+
+export async function sendVendorBroadcastEmail({
+  to,
+  storeName,
+  storeLink,
+  storeLogoUrl,
+  subject,
+  message,
+  recipientName,
+}: SendVendorBroadcastEmailInput): Promise<EmailActionResult> {
+  try {
+    const resend = getResendClient();
+    const { data, error } = await resend.emails.send({
+      from: SYSTEM_FROM,
+      to,
+      replyTo: SUPPORT_REPLY_TO,
+      subject,
+      react: VendorBroadcastEmail({ storeName, storeLink, storeLogoUrl, subject, message, recipientName }),
     });
 
     if (error) {

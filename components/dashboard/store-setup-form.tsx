@@ -15,6 +15,7 @@ import {
 } from "@/lib/storefront";
 import type { StoreRecord, StoreTemplate, StorefrontSectionId } from "@/types";
 import { ChangeStoreUrlDialog } from "@/components/dashboard/change-store-url-dialog";
+import { EmailVerificationBanner } from "@/components/dashboard/email-verification-banner";
 import { storeUrl } from "@/lib/store-url";
 
 type StoreSetupFormProps = {
@@ -282,9 +283,6 @@ export function StoreSetupForm({ initialStore, initialEmailVerifiedAt = null }: 
   const initialConfig = normalizeStorefrontConfig(initialStore?.storefront_config);
   const [store, setStore] = useState<StoreRecord | null>(initialStore);
   const [emailVerifiedAt] = useState<string | null>(initialEmailVerifiedAt);
-  const [isSendingEmailVerification, setIsSendingEmailVerification] = useState(false);
-  const [emailVerifyMessage, setEmailVerifyMessage] = useState<string | null>(null);
-  const [emailVerifyError, setEmailVerifyError] = useState<string | null>(null);
   const [draggedSection, setDraggedSection] = useState<StorefrontSectionId | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [logoFile, setLogoFile] = useState<File | null>(null);
@@ -462,25 +460,6 @@ export function StoreSetupForm({ initialStore, initialEmailVerifiedAt = null }: 
       setVerifyError("Network error while checking verification status.");
     } finally {
       setIsCheckingVerification(false);
-    }
-  }
-
-  async function handleSendEmailVerification() {
-    setEmailVerifyError(null);
-    setEmailVerifyMessage(null);
-    setIsSendingEmailVerification(true);
-    try {
-      const response = await fetch("/api/account/email-verification/send", { method: "POST" });
-      const payload = (await response.json().catch(() => null)) as { error?: string; message?: string } | null;
-      if (!response.ok) {
-        setEmailVerifyError(payload?.error ?? "Could not send the verification email. Please try again.");
-        return;
-      }
-      setEmailVerifyMessage(payload?.message ?? "Verification email sent - check your inbox.");
-    } catch {
-      setEmailVerifyError("Network error while sending the verification email.");
-    } finally {
-      setIsSendingEmailVerification(false);
     }
   }
 
@@ -807,18 +786,9 @@ export function StoreSetupForm({ initialStore, initialEmailVerifiedAt = null }: 
                   <p className="text-xs text-slate-500">
                     Not verified — your store also needs a verified account email (in addition to a verified WhatsApp number) before shoppers see the Verified badge.
                   </p>
-                  <button
-                    type="button"
-                    onClick={() => void handleSendEmailVerification()}
-                    disabled={isSendingEmailVerification}
-                    className="rounded-lg border border-emerald-200 px-3 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
-                  >
-                    {isSendingEmailVerification ? "Sending..." : "Send verification email"}
-                  </button>
+                  <EmailVerificationBanner prompt="Verify your account email to unlock your store's Verified badge." />
                 </div>
               )}
-              {emailVerifyError ? <p className="text-xs text-red-700">{emailVerifyError}</p> : null}
-              {emailVerifyMessage ? <p className="text-xs text-emerald-700">{emailVerifyMessage}</p> : null}
             </div>
 
             {/* Logo */}

@@ -10,21 +10,25 @@ import { SignOutButton } from "@/components/auth/sign-out-button";
 type DashboardMobileNavProps = {
   name?: string | null;
   email?: string | null;
+  storeName?: string | null;
+  location?: string | null;
+  storeHref?: string;
 };
 
 type NavItem = {
   href: string;
   label: string;
-  icon: "home" | "user" | "store" | "box" | "orders" | "chart" | "plug"| "tag";
+  icon: "home" | "user" | "store" | "box" | "orders" | "chart" | "plug"| "megaphone" | "tag";
 };
 
 const navItems: NavItem[] = [
   { href: "/dashboard", label: "Overview", icon: "home" },
-  { href: "/dashboard/analytics", label: "Analytics", icon: "chart" },
-  { href: "/dashboard/store", label: "Storefront", icon: "store" },
   { href: "/dashboard/products", label: "Products", icon: "box" },
   { href: "/dashboard/orders", label: "Orders", icon: "orders" },
+  { href: "/dashboard/analytics", label: "Analytics", icon: "chart" },
+  { href: "/dashboard/store", label: "Storefront", icon: "store" },
   { href: "/dashboard/integrations", label: "Integrations", icon: "plug" },
+  { href: "/dashboard/broadcasts", label: "Broadcasts", icon: "megaphone" },
   { href: "/dashboard/plans", label: "Plans", icon: "tag" },
   { href: "/dashboard/account", label: "Account", icon: "user" },
 ];
@@ -56,11 +60,12 @@ function NavIcon({ type, className }: { type: NavItem["icon"]; className?: strin
   if (type === "box") return <svg {...shared}><path d="m3 7 9-4 9 4-9 4-9-4Z" /><path d="M3 7v10l9 4 9-4V7" /><path d="M12 11v10" /></svg>;
   if (type === "orders") return <svg {...shared}><rect x="4" y="4" width="16" height="16" rx="2" /><path d="M8 9h8" /><path d="M8 13h8" /><path d="M8 17h5" /></svg>;
   if (type === "chart") return <svg {...shared}><path d="M4 19h16" /><path d="M7 16v-5" /><path d="M12 16V8" /><path d="M17 16v-9" /></svg>;
+  if (type === "megaphone") return <svg {...shared}><path d="M3 11v2a2 2 0 0 0 2 2h1l3 5V4L6 9H5a2 2 0 0 0-2 2Z" /><path d="M14 8a4 4 0 0 1 0 8" /><path d="M17 5a8 8 0 0 1 0 14" /></svg>;
   if (type === "tag") return <svg {...shared}><path d="M12 3h6a1 1 0 0 1 1 1v6l-9 9-7-7 9-9Z" /><circle cx="15.5" cy="7.5" r="1.25" /></svg>;
   return <svg {...shared}><path d="M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z" /><path d="M19.4 15a1 1 0 0 0 .2 1.1l.1.1a1 1 0 0 1 0 1.4l-1.1 1.1a1 1 0 0 1-1.4 0l-.1-.1a1 1 0 0 0-1.1-.2 1 1 0 0 0-.6.9V20a1 1 0 0 1-1 1h-1.6a1 1 0 0 1-1-1v-.2a1 1 0 0 0-.6-.9 1 1 0 0 0-1.1.2l-.1.1a1 1 0 0 1-1.4 0l-1.1-1.1a1 1 0 0 1 0-1.4l.1-.1a1 1 0 0 0 .2-1.1 1 1 0 0 0-.9-.6H4a1 1 0 0 1-1-1v-1.6a1 1 0 0 1 1-1h.2a1 1 0 0 0 .9-.6 1 1 0 0 0-.2-1.1l-.1-.1a1 1 0 0 1 0-1.4l1.1-1.1a1 1 0 0 1 1.4 0l.1.1a1 1 0 0 0 1.1.2 1 1 0 0 0 .6-.9V4a1 1 0 0 1 1-1h1.6a1 1 0 0 1 1 1v.2a1 1 0 0 0 .6.9 1 1 0 0 0 1.1-.2l.1-.1a1 1 0 0 1 1.4 0l1.1 1.1a1 1 0 0 1 0 1.4l-.1.1a1 1 0 0 0-.2 1.1 1 1 0 0 0 .9.6H20a1 1 0 0 1 1 1v1.6a1 1 0 0 1-1 1h-.2a1 1 0 0 0-.9.6Z" /></svg>;
 }
 
-export function DashboardMobileNav({ name, email }: DashboardMobileNavProps) {
+export function DashboardMobileNav({ name, email, storeName, location, storeHref }: DashboardMobileNavProps) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
@@ -78,8 +83,9 @@ export function DashboardMobileNav({ name, email }: DashboardMobileNavProps) {
           <Link href="/" className="inline-flex items-center">
             <Image src={logoText} alt="Sellee" className="h-6 w-auto" />
           </Link>
-          <div>
-            <p className="text-sm font-semibold text-slate-900">{currentLabel}</p>
+          <div className="min-w-0 text-center">
+            <p className="max-w-36 truncate text-sm font-semibold text-slate-900">{storeName ?? currentLabel}</p>
+            <p className="max-w-36 truncate text-[11px] text-slate-500">{location || currentLabel}</p>
           </div>
           <button
             type="button"
@@ -125,6 +131,17 @@ export function DashboardMobileNav({ name, email }: DashboardMobileNavProps) {
                 </svg>
               </button>
             </div>
+
+            {storeHref ? (
+              <Link
+                href={storeHref}
+                target="_blank"
+                onClick={() => setOpen(false)}
+                className="mt-5 flex items-center justify-center rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm font-semibold text-emerald-700"
+              >
+                View your store
+              </Link>
+            ) : null}
 
             <nav className="mt-6 space-y-2">
               {navItems.map((item) => (

@@ -13,6 +13,7 @@ type AccountSearchParams = Promise<{
   status?: string;
   q?: string;
   onboarding?: string;
+  verifyEmail?: string;
 }>;
 
 function formatOrderStatus(status: string): string {
@@ -34,6 +35,7 @@ export default async function AccountPage({
   const selectedStatus = (params.status ?? "all").toLowerCase();
   const orderRefQuery = (params.q ?? "").trim().toUpperCase();
   const showOnboardingPrompt = params.onboarding === "google";
+  const showVerifyEmailPrompt = params.verifyEmail === "1";
 
   // follow data now moved to its own page; keep profile only on account page
 
@@ -52,6 +54,11 @@ export default async function AccountPage({
         {showOnboardingPrompt ? (
           <p className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
             Google sign-in successful. Complete your WhatsApp number verification below to finish account setup.
+          </p>
+        ) : null}
+        {showVerifyEmailPrompt ? (
+          <p className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+            Account created. Check your inbox and click the verification link we just sent to confirm your email address.
           </p>
         ) : null}
       </header>

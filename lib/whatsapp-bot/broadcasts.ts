@@ -150,6 +150,7 @@ async function executeExistingBroadcast(
         command: "BROADCAST",
         role: "vendor",
         scopeStoreId: storeId,
+        broadcastId,
       });
       sentCount += 1;
     } catch (error) {
@@ -355,4 +356,36 @@ export async function runDueScheduledBroadcasts(
     sentCount,
     failedCount,
   };
+}
+
+export type BroadcastRecipientOutcome = {
+  phone: string;
+  status: "sent" | "failed";
+  failureReason: "window_closed" | "undeliverable" | "error" | null;
+};
+
+// Per-recipient results for a completed broadcast, read from
+// whatsapp_message_logs (extended with broadcast_id/failure_reason - see
+// supabase/whatsapp-broadcast-tracking.sql). This is the data source the
+// email-fallback step needs: which recipients WhatsApp didn't reach, and
+// why, so email can cover that specific gap instead of guessing.
+export async function getBroadcastRecipientResults(
+  broadcastId: string,
+): Promise<BroadcastRecipientOutcome[]> {
+  const supabase = createAdminSupabaseClient();
+  const { data, error } = await supabase
+    .from("whatsapp_message_logs")
+    .select("recipient_phone, status, failure_reason")
+    .eq("broadcast_id", broadcastId)
+    .eq("direction", "outbound");
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data ?? []).map((row) => ({
+    phone: String(row.recipient_phone),
+    status: row.status === "ok" ? "sent" : "failed",
+    failureReason: (row.failure_reason as BroadcastRecipientOutcome["failureReason"]) ?? null,
+  }));
 }
