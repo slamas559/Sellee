@@ -213,7 +213,7 @@ export default async function NicheLocationPage({ params }: PageProps) {
               <h2 className="text-sm font-bold uppercase tracking-wide text-slate-500">
                 Products ({data.products.length})
               </h2>
-              <div className="mt-3 grid grid-cols-2 justify-items-center gap-2 sm:gap-3 xl:grid-cols-4">
+              <div className="mt-3 grid grid-cols-2 justify-items-center gap-2 sm:gap-3 md:grid-cols-3 xl:grid-cols-4">
                 {data.products.map((product) => {
                   const store = storesById.get(product.store_id);
                   if (!store) return null;

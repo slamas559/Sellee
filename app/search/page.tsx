@@ -61,7 +61,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
           {products.length === 0 ? (
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 text-sm text-slate-600">No products match your current filters.</div>
           ) : (
-            <div className="grid grid-cols-2 justify-items-center gap-2 [@media(max-width:320px)]:grid-cols-1 sm:gap-3 xl:grid-cols-3">
+            <div className="grid grid-cols-2 justify-items-center gap-2 [@media(max-width:320px)]:grid-cols-1 sm:gap-3 md:grid-cols-3">
               {products.map((product: any) => (
                 <div key={product.id} className="w-full max-w-[320px] space-y-2">
                   <ProductShowcaseCard product={product} store={product.store} variant="marketplace" />

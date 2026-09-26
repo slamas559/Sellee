@@ -249,7 +249,7 @@ function MarketTemplate({
           {products.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-slate-300 bg-white py-16 text-center text-sm text-slate-500">No products match your search.</div>
           ) : (
-            <div className="mt-4 grid grid-cols-2 justify-items-center gap-1 [@media(max-width:320px)]:grid-cols-1 sm:mt-5 sm:gap-3 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="mt-4 grid grid-cols-2 justify-items-center gap-1 [@media(max-width:320px)]:grid-cols-1 sm:mt-5 sm:gap-3 md:grid-cols-3 xl:grid-cols-4">
               {products.map((p) => (
                 <div key={p.id} className="w-full max-w-[320px] space-y-2">
                   <ProductCard product={p} template="grocery_promo" store={{ name: store.name, slug: store.slug, logo_url: store.logo_url, rating_avg: store.rating_avg, rating_count: store.rating_count, is_verified: store.is_verified, currency: store.currency }} />
@@ -391,7 +391,7 @@ function EditorialTemplate({
           {products.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-slate-200 py-16 text-center text-sm text-slate-400">No products found.</div>
           ) : (
-            <div className="mt-4 grid grid-cols-2 justify-items-center gap-1 [@media(max-width:320px)]:grid-cols-1 sm:mt-5 sm:gap-3 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="mt-4 grid grid-cols-2 justify-items-center gap-1 [@media(max-width:320px)]:grid-cols-1 sm:mt-5 sm:gap-3 md:grid-cols-3 xl:grid-cols-4">
               {(rest.length > 0 ? rest : products).map((p) => (
                 <div key={p.id} className="w-full max-w-[320px] space-y-2">
                   <ProductCard product={p} template="fashion_editorial" store={{ name: store.name, slug: store.slug, logo_url: store.logo_url, rating_avg: store.rating_avg, rating_count: store.rating_count, is_verified: store.is_verified, currency: store.currency }} />
@@ -517,7 +517,7 @@ function ShowcaseTemplate({
             {products.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-slate-300 bg-white py-16 text-center text-sm text-slate-500">No products found.</div>
             ) : (
-              <div className="mt-4 grid grid-cols-2 justify-items-center gap-1 [@media(max-width:320px)]:grid-cols-1 sm:mt-5 sm:gap-3 lg:grid-cols-3 xl:grid-cols-4">
+              <div className="mt-4 grid grid-cols-2 justify-items-center gap-1 [@media(max-width:320px)]:grid-cols-1 sm:mt-5 sm:gap-3 md:grid-cols-3 xl:grid-cols-4">
                 {products.map((p) => (
                   <div key={p.id} className="w-full max-w-[320px] space-y-2">
                   <ProductCard product={p} template="lifestyle_showcase" store={{ name: store.name, slug: store.slug, logo_url: store.logo_url, rating_avg: store.rating_avg, rating_count: store.rating_count, is_verified: store.is_verified, currency: store.currency }} />
@@ -682,7 +682,7 @@ function GridTemplate({
             {products.length === 0 ? (
               <div className="rounded-xl border border-dashed border-slate-300 bg-white py-16 text-center text-sm text-slate-400">No products match your search.</div>
             ) : (
-              <div className="mt-4 grid grid-cols-2 justify-items-center gap-1 [@media(max-width:320px)]:grid-cols-1 sm:mt-5 sm:gap-3 lg:grid-cols-3 xl:grid-cols-4">
+              <div className="mt-4 grid grid-cols-2 justify-items-center gap-1 [@media(max-width:320px)]:grid-cols-1 sm:mt-5 sm:gap-3 md:grid-cols-3 xl:grid-cols-4">
                 {products.map((p) => (
                   <div key={p.id} className="w-full max-w-[320px] space-y-2">
                     <ProductCard key={p.id} product={p} template="modern_grid" store={{ name: store.name, slug: store.slug, logo_url: store.logo_url, rating_avg: store.rating_avg, rating_count: store.rating_count, is_verified: store.is_verified, currency: store.currency }} />

@@ -1,7 +1,12 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { getServerSession } from "next-auth";
 import logoText from "@/app/logos/image-text-logo.png";
+import heroCarouselImage1 from "../images/sellee_carousel_1.png";
+import heroCarouselImage2 from "../images/sellee_carousel_2.png";
+import heroCarouselImage3 from "../images/sellee_carousel_3.png";
+import heroCarouselImage4 from "../images/sellee_carousel_4.png";
 import { NearbyVendors } from "@/components/landing/nearby-vendors";
 import { EmailVerificationBanner } from "@/components/dashboard/email-verification-banner";
 import { UserMenu } from "@/components/layout/user-menu";
@@ -15,6 +20,14 @@ import {
 } from "@/lib/public-cache";
 import { getUserEmailVerifiedAt } from "@/lib/dashboard-data";
 import { Search, SearchIcon } from "lucide-react";
+
+const heroCarouselImages = [
+  heroCarouselImage1,
+  heroCarouselImage2,
+  heroCarouselImage3,
+  heroCarouselImage4,
+];
+const heroCarouselSlides = [...heroCarouselImages, heroCarouselImage1];
 
 export const metadata: Metadata = {
   title: "Sellee | Discover Local Vendors and Products and Order via WhatsApp",
@@ -291,16 +304,37 @@ export default async function Home({ searchParams }: HomeProps) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
       />
 
-      <section className="rounded-xl border border-slate-200 bg-emerald-50 p-4 sm:p-8">
-        <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr] lg:items-center lg:gap-8">
-          <div className="space-y-4 sm:space-y-5">
-            <p className="inline-flex rounded-full bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">
+      <section className="relative isolate overflow-hidden rounded-xl p-4 sm:p-8">
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
+          <div className="home-hero-track absolute inset-y-0 left-0 flex">
+            {heroCarouselSlides.map((image, index) => (
+            <div
+              key={`${image.src}-${index}`}
+              className="relative h-full w-1/5 shrink-0"
+            >
+              <Image
+                src={image}
+                alt=""
+                fill
+                sizes="(max-width: 768px) 100vw, 1400px"
+                className="object-cover"
+                preload={index === 0}
+              />
+            </div>
+            ))}
+          </div>
+          <div className="absolute inset-0 bg-gradient-to-r from-slate-950/90 via-slate-950/70 to-slate-950/45" />
+        </div>
+
+        <div className="relative z-10 grid gap-6 lg:grid-cols-[1.1fr_0.9fr] lg:items-center lg:gap-8">
+          <div className="space-y-8 sm:space-y-10">
+            <p className="inline-flex rounded-full bg-white/95 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-emerald-800">
               Shop Nearby, Faster
             </p>
-            <h1 className="font-display max-w-xl text-3xl font-bold tracking-tight text-slate-900 sm:text-5xl">
+            <h1 className="font-display max-w-xl text-3xl font-bold tracking-tight text-white sm:text-5xl">
               Discover trusted local vendors and products in one place.
             </h1>
-            <p className="max-w-xl text-sm leading-6 text-slate-600 sm:text-base sm:leading-7">
+            <p className="max-w-xl text-sm leading-6 text-white/90 sm:text-base sm:leading-7">
               Browse categories, compare stores, and order directly through WhatsApp-powered workflows.
             </p>
             <div className="flex flex-wrap items-center gap-5">
@@ -312,7 +346,7 @@ export default async function Home({ searchParams }: HomeProps) {
               </Link>
               <Link
                 href="/marketplace"
-                className="text-sm font-semibold text-slate-800 underline decoration-slate-300 underline-offset-4 transition hover:text-emerald-700 hover:decoration-emerald-400"
+                className="text-sm font-semibold text-white underline decoration-white/60 underline-offset-4 transition hover:decoration-white"
               >
                 Browse Market →
               </Link>
@@ -320,7 +354,7 @@ export default async function Home({ searchParams }: HomeProps) {
           </div>
 
           <div className="hidden gap-3 sm:grid sm:grid-cols-2">
-            <div className="border-l-2 border-emerald-500 bg-white py-1 pl-4">
+            <div className="border-l-2 border-emerald-600 bg-white/95 py-1 pl-4 pr-3 shadow-lg shadow-black/10 backdrop-blur-sm">
               {showRealMarketplaceStats ? (
                 <>
                   <p className="font-display text-3xl font-bold text-slate-900">{totalStores}+</p>
@@ -334,7 +368,7 @@ export default async function Home({ searchParams }: HomeProps) {
               )}
             </div>
 
-            <div className="border-l-2 border-emerald-500 bg-white py-1 pl-4">
+            <div className="border-l-2 border-emerald-600 bg-white/95 py-1 pl-4 pr-3 shadow-lg shadow-black/10 backdrop-blur-sm">
               {showRealMarketplaceStats ? (
                 <>
                   <p className="font-display text-3xl font-bold text-slate-900">{totalProducts}+</p>
@@ -348,12 +382,12 @@ export default async function Home({ searchParams }: HomeProps) {
               )}
             </div>
 
-            <div className="border-l-2 border-emerald-500 bg-white py-1 pl-4">
+            <div className="border-l-2 border-emerald-600 bg-white/95 py-1 pl-4 pr-3 shadow-lg shadow-black/10 backdrop-blur-sm">
               <p className="text-sm font-bold text-slate-900">WhatsApp-Powered</p>
               <p className="mt-0.5 text-xs leading-5 text-slate-500">Order directly through chat, no app to download.</p>
             </div>
 
-            <div className="border-l-2 border-emerald-500 bg-white py-1 pl-4">
+            <div className="border-l-2 border-emerald-600 bg-white/95 py-1 pl-4 pr-3 shadow-lg shadow-black/10 backdrop-blur-sm">
               <p className="text-xs font-medium text-slate-500">Featured Search</p>
               <p className="mt-1 text-sm font-bold text-emerald-700">
                 {q ? `Results for "${q}"` : "Trending in your marketplace now"}
@@ -395,7 +429,7 @@ export default async function Home({ searchParams }: HomeProps) {
             No products match this filter yet.
           </div>
         ) : (
-          <div className="mt-2 grid grid-cols-2 justify-items-center gap-1 [@media(max-width:290px)]:grid-cols-1 sm:mt-3 sm:gap-3 lg:grid-cols-4 xl:grid-cols-5">
+          <div className="mt-2 grid grid-cols-2 justify-items-center gap-1 [@media(max-width:290px)]:grid-cols-1 sm:mt-3 sm:gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
             {products.map((product) => {
               const store = storesById.get(product.store_id);
               if (!store) return null;

@@ -77,7 +77,7 @@ export default async function FavoritesPage() {
           <Link href="/marketplace" className="mt-3 inline-block text-sm font-semibold text-emerald-700">Browse marketplace</Link>
         </div>
       ) : (
-        <div className="mt-4 grid grid-cols-2 justify-items-center gap-1 [@media(max-width:320px)]:grid-cols-1 sm:mt-5 sm:gap-3 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="mt-4 grid grid-cols-2 justify-items-center gap-1 [@media(max-width:320px)]:grid-cols-1 sm:mt-5 sm:gap-3 md:grid-cols-3 xl:grid-cols-4">
           {items.map((it) => {
             const store = storesById.get(it.store_id) ?? { name: "Store", slug: "", logo_url: null, rating_avg: it.rating_avg, rating_count: it.rating_count };
             return (

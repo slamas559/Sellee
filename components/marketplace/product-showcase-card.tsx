@@ -268,8 +268,9 @@ export function ProductShowcaseCard({
             href={productHref}
             aria-label={`Open ${product.name}`}
             title="Open product"
-            className={`inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-white transition sm:h-9 sm:w-9 ${ctaClass}`}
+            className={`inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition sm:h-9 sm:w-9 ${ctaClass}`}
           >
+          <span className="text-white">
             <svg
               viewBox="0 0 24 24"
               fill="none"
@@ -284,6 +285,7 @@ export function ProductShowcaseCard({
               <circle cx="17" cy="20" r="1.5" />
               <path d="M3 4h2l2.2 10.5a1 1 0 0 0 1 .8h8.9a1 1 0 0 0 1-.8L20 7H7" />
             </svg>
+          </span>
           </Link>
         </div>
       </div>
