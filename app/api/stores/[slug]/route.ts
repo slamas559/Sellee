@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireVendorWorkspaceApi } from "@/lib/vendor-auth";
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
 import { slugify } from "@/lib/format";
 import { logDevError } from "@/lib/logger";
@@ -9,10 +8,9 @@ import { CACHE_TAGS } from "@/lib/public-cache";
 
 /** GET /api/stores/slug?slug=my-new-name — live availability check while typing */
 export async function GET(req: Request) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
-  }
+  const ctx = await requireVendorWorkspaceApi("store_settings");
+  if (ctx instanceof NextResponse) return ctx;
+  const { vendorId } = ctx;
 
   const rawSlug = new URL(req.url).searchParams.get("slug") ?? "";
   const normalized = slugify(rawSlug);
@@ -28,7 +26,7 @@ export async function GET(req: Request) {
   const { data: existingStore } = await supabase
     .from("stores")
     .select("id, slug")
-    .eq("vendor_id", session.user.id)
+    .eq("vendor_id", vendorId)
     .maybeSingle();
 
   if (existingStore?.slug === normalized) {
@@ -37,7 +35,7 @@ export async function GET(req: Request) {
 
   const { data, error } = await supabase.from("stores").select("id").eq("slug", normalized).limit(1);
   if (error) {
-    logDevError("stores.slug.check", error, { userId: session.user.id });
+    logDevError("stores.slug.check", error, { userId: vendorId });
     return NextResponse.json({ error: "Could not check availability." }, { status: 500 });
   }
 
@@ -46,10 +44,9 @@ export async function GET(req: Request) {
 
 /** PATCH /api/stores/slug — deliberate, explicit slug change */
 export async function PATCH(req: Request) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
-  }
+  const ctx = await requireVendorWorkspaceApi("store_settings");
+  if (ctx instanceof NextResponse) return ctx;
+  const { vendorId } = ctx;
 
   const body = await req.json().catch(() => null);
   const requestedSlug = typeof body?.slug === "string" ? body.slug.trim().toLowerCase() : "";
@@ -63,7 +60,7 @@ export async function PATCH(req: Request) {
   const { data: store, error: storeError } = await supabase
     .from("stores")
     .select("id, slug")
-    .eq("vendor_id", session.user.id)
+    .eq("vendor_id", vendorId)
     .maybeSingle();
 
   if (storeError || !store) {
@@ -88,7 +85,7 @@ export async function PATCH(req: Request) {
     .single();
 
   if (updateError || !updated) {
-    logDevError("stores.slug.update", updateError, { userId: session.user.id, storeId: store.id });
+    logDevError("stores.slug.update", updateError, { userId: vendorId, storeId: store.id });
     return NextResponse.json({ error: "Could not update store URL." }, { status: 500 });
   }
 

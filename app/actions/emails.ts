@@ -433,6 +433,7 @@ export async function sendOrderNotificationEmail({
   quantity,
   unitPrice,
   totalAmount,
+  currency,
   dashboardUrl = appUrl("/dashboard/orders"),
 }: SendOrderNotificationEmailInput): Promise<EmailActionResult> {
   try {
@@ -451,6 +452,7 @@ export async function sendOrderNotificationEmail({
         quantity,
         unitPrice,
         totalAmount,
+        currency,
         dashboardUrl,
       }),
     });

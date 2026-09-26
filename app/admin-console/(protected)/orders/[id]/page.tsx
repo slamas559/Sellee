@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { formatNaira } from "@/lib/format";
+import { formatPrice } from "@/lib/currency";
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
 
 export const metadata: Metadata = { title: "Order detail" };
@@ -34,7 +34,7 @@ export default async function OrderDetailPage({
   const { data: order } = await supabase
     .from("orders")
     .select(
-      "id, store_id, customer_name, customer_whatsapp, status, total_amount, payment_method, created_at, store:store_id(id, name, slug, whatsapp_number)",
+      "id, store_id, customer_name, customer_whatsapp, status, total_amount, payment_method, created_at, store:store_id(id, name, slug, whatsapp_number, currency)",
     )
     .eq("id", id)
     .maybeSingle();
@@ -135,17 +135,17 @@ export default async function OrderDetailPage({
               <div>
                 <p className="text-[13px]">{item.product?.name ?? "Unknown product"}</p>
                 <p className="atlas-figure text-[11.5px]" style={{ color: "var(--atlas-text-muted)" }}>
-                  {item.quantity} × {formatNaira(Number(item.unit_price))}
+                  {item.quantity} × {formatPrice(Number(item.unit_price), store.currency)}
                 </p>
               </div>
               <p className="atlas-figure text-[13px]">
-                {formatNaira(Number(item.unit_price) * Number(item.quantity))}
+                {formatPrice(Number(item.unit_price) * Number(item.quantity), store.currency)}
               </p>
             </div>
           ))}
           <div className="flex items-center justify-between px-4 py-3">
             <p className="text-[13px] font-medium">Total</p>
-            <p className="atlas-figure text-[13px] font-medium">{formatNaira(Number(order.total_amount))}</p>
+            <p className="atlas-figure text-[13px] font-medium">{formatPrice(Number(order.total_amount), store.currency)}</p>
           </div>
         </div>
       </section>

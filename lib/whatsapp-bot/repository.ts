@@ -46,7 +46,7 @@ export async function resolveVendorStoreByPhone(from: string): Promise<StoreForC
 
   const { data: store, error: storeError } = await supabase
     .from("stores")
-    .select("id, name, vendor_id")
+    .select("id, name, vendor_id, currency")
     .eq("vendor_id", vendorId)
     .order("created_at", { ascending: false })
     .limit(1)

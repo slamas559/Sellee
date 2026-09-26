@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { getVendorStore, getVendorWhatsAppLinkStatus } from "@/lib/dashboard-data";
 import { getMonthlyBroadcastUsage } from "@/lib/broadcasts/quota";
 import { getUnifiedBroadcastHistory } from "@/lib/broadcasts/history";
 import { getBroadcastSendStats } from "@/lib/broadcasts/stats";
+import { getEffectiveVendorId, getStaffPermissions } from "@/lib/staff";
 import { BroadcastComposer } from "@/components/dashboard/broadcast-composer";
 import { BroadcastHistoryList } from "@/components/dashboard/broadcast-history-list";
 
@@ -14,7 +16,15 @@ export const metadata: Metadata = {
 
 export default async function DashboardBroadcastsPage() {
   const session = await getServerSession(authOptions);
-  const vendorId = session?.user?.id;
+
+  if (session?.user?.role === "staff") {
+    const permissions = await getStaffPermissions(session.user.id);
+    if (!permissions.broadcasts) {
+      redirect("/dashboard");
+    }
+  }
+
+  const vendorId = getEffectiveVendorId(session);
 
   const store = vendorId ? await getVendorStore(vendorId) : null;
 
@@ -27,7 +37,7 @@ export default async function DashboardBroadcastsPage() {
       ])
     : [
         { linked: null, pending_code: null } as Awaited<ReturnType<typeof getVendorWhatsAppLinkStatus>>,
-        { used: 0, limit: 5, remaining: 5 },
+        { used: 0, limit: 5, remaining: 5, unlimited: false },
         [],
         { last7Days: { sent: 0, failed: 0 } },
       ];

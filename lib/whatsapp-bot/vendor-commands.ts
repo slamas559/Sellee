@@ -1,4 +1,4 @@
-import { formatNaira } from "@/lib/format";
+import { formatPrice } from "@/lib/currency";
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
 import { normalizeWhatsAppNumber } from "@/lib/whatsapp";
 import { executeBroadcastNow, scheduleBroadcast } from "@/lib/whatsapp-bot/broadcasts";
@@ -332,7 +332,7 @@ export async function handleListOrders(from: string, store: StoreForCommand) {
   const lines = orders.map((order) => {
     const shortRef = String(order.id).slice(0, 8).toUpperCase();
     const product = productByOrderId.get(String(order.id)) ?? "Product";
-    return `#${shortRef} (${product}) | ${formatBotStatus(order.status)} | ${formatNaira(Number(order.total_amount))}`;
+    return `#${shortRef} (${product}) | ${formatBotStatus(order.status)} | ${formatPrice(Number(order.total_amount), store.currency)}`;
   });
 
   await sendPaginatedList({
@@ -375,7 +375,7 @@ export async function handleSalesToday(from: string, store: StoreForCommand) {
     to: from,
     message: waMessage(
       waTitle(`Sales Today - ${store.name}`),
-      `Confirmed revenue: ${formatNaira(totalRevenue)}`,
+      `Confirmed revenue: ${formatPrice(totalRevenue, store.currency)}`,
       `Confirmed orders: ${confirmedOrders.length}`,
       `Pending requests: ${pendingRequests}`,
     ),

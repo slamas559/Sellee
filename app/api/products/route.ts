@@ -1,10 +1,10 @@
 import { randomUUID } from "crypto";
 import { revalidateTag } from "next/cache";
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
 import { z } from "zod";
-import { authOptions } from "@/lib/auth";
-import { formatNaira, slugify } from "@/lib/format";
+import { requireVendorWorkspaceApi } from "@/lib/vendor-auth";
+import { slugify } from "@/lib/format";
+import { formatPrice } from "@/lib/currency";
 import { logDevError } from "@/lib/logger";
 import { CACHE_TAGS } from "@/lib/public-cache";
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
@@ -59,11 +59,11 @@ function parseProductAttributes(raw: FormDataEntryValue | null): Record<string, 
   }
 }
 
-async function getVendorStore(vendorId: string): Promise<{ id: string; slug: string } | null> {
+async function getVendorStore(vendorId: string): Promise<{ id: string; slug: string; currency: string } | null> {
   const supabase = createAdminSupabaseClient();
   const { data, error } = await supabase
     .from("stores")
-    .select("id, slug")
+    .select("id, slug, currency")
     .eq("vendor_id", vendorId)
     .maybeSingle();
 
@@ -71,7 +71,7 @@ async function getVendorStore(vendorId: string): Promise<{ id: string; slug: str
     throw new Error(error.message);
   }
 
-  return data?.id && data?.slug ? { id: data.id, slug: data.slug } : null;
+  return data?.id && data?.slug ? { id: data.id, slug: data.slug, currency: data.currency ?? "NGN" } : null;
 }
 
 function revalidatePublicCacheForStore(slug: string) {
@@ -188,17 +188,15 @@ async function buildUniqueProductSlug(
 }
 
 export async function GET() {
-  const session = await getServerSession(authOptions);
-
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const ctx = await requireVendorWorkspaceApi("products");
+  if (ctx instanceof NextResponse) return ctx;
+  const { vendorId } = ctx;
 
   try {
-    const store = await getVendorStore(session.user.id);
+    const store = await getVendorStore(vendorId);
 
     if (!store) {
-      return NextResponse.json({ products: [], allowed_categories: [] });
+      return NextResponse.json({ products: [], allowed_categories: [], currency: "NGN" });
     }
 
     const supabase = createAdminSupabaseClient();
@@ -209,7 +207,7 @@ export async function GET() {
       .order("created_at", { ascending: false });
 
     if (error) {
-      logDevError("products.get", error, { userId: session.user.id, storeId: store.id });
+      logDevError("products.get", error, { userId: vendorId, storeId: store.id });
       return NextResponse.json({ error: "Could not load products." }, { status: 500 });
     }
 
@@ -218,24 +216,26 @@ export async function GET() {
       allowedCategories = await getAllowedCategoriesForStore(store.id);
     } catch (categoryError) {
       logDevError("products.get.allowed-categories", categoryError, {
-        userId: session.user.id,
+        userId: vendorId,
         storeId: store.id,
       });
     }
 
-    return NextResponse.json({ products: data ?? [], allowed_categories: allowedCategories });
+    return NextResponse.json({
+      products: data ?? [],
+      allowed_categories: allowedCategories,
+      currency: store.currency,
+    });
   } catch (error) {
-    logDevError("products.get.unhandled", error, { userId: session.user.id });
+    logDevError("products.get.unhandled", error, { userId: vendorId });
     return NextResponse.json({ error: "Unexpected products error." }, { status: 500 });
   }
 }
 
 export async function POST(request: Request) {
-  const session = await getServerSession(authOptions);
-
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const ctx = await requireVendorWorkspaceApi("products");
+  if (ctx instanceof NextResponse) return ctx;
+  const { vendorId } = ctx;
 
   try {
     const formData = await request.formData();
@@ -260,7 +260,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid product data." }, { status: 400 });
     }
 
-    const store = await getVendorStore(session.user.id);
+    const store = await getVendorStore(vendorId);
 
     if (!store) {
       return NextResponse.json(
@@ -274,7 +274,7 @@ export async function POST(request: Request) {
       allowedCategories = await getAllowedCategoriesForStore(store.id);
     } catch (categoryError) {
       logDevError("products.create.allowed-categories", categoryError, {
-        userId: session.user.id,
+        userId: vendorId,
         storeId: store.id,
       });
     }
@@ -304,7 +304,7 @@ export async function POST(request: Request) {
     }
 
     const uploadedImageUrls =
-      imageFiles.length > 0 ? await uploadProductImages(session.user.id, imageFiles) : [];
+      imageFiles.length > 0 ? await uploadProductImages(vendorId, imageFiles) : [];
     const imageUrl = uploadedImageUrls[0] ?? null;
 
     const supabase = createAdminSupabaseClient();
@@ -334,7 +334,7 @@ export async function POST(request: Request) {
       .single();
 
     if (error || !data) {
-      logDevError("products.create", error, { userId: session.user.id, storeId: store.id });
+      logDevError("products.create", error, { userId: vendorId, storeId: store.id });
       return NextResponse.json({ error: "Could not create product." }, { status: 500 });
     }
 
@@ -342,9 +342,9 @@ export async function POST(request: Request) {
     const appUrl = process.env.NEXTAUTH_URL || "https://sellee.store";
     fetch(`${appUrl}/v/${store.slug}/opengraph-image`).catch(() => {});
 
-    return NextResponse.json({ product: data, message: `${data.name} (${formatNaira(Number(data.price))}) added.` });
+    return NextResponse.json({ product: data, message: `${data.name} (${formatPrice(Number(data.price), store.currency)}) added.` });
   } catch (error) {
-    logDevError("products.create.unhandled", error, { userId: session.user.id });
+    logDevError("products.create.unhandled", error, { userId: vendorId });
     return NextResponse.json({ error: "Unexpected create product error." }, { status: 500 });
   }
 }

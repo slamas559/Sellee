@@ -1,12 +1,11 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
 import { z } from "zod";
-import { authOptions } from "@/lib/auth";
 import { logDevError } from "@/lib/logger";
 import { requireVerifiedPhone } from "@/lib/require-verified-phone";
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
 import { executeBroadcastWithFallback } from "@/lib/broadcasts/execute-with-fallback";
 import { getMonthlyBroadcastUsage } from "@/lib/broadcasts/quota";
+import { requireVendorWorkspaceApi } from "@/lib/vendor-auth";
 
 const sendNowSchema = z
   .object({
@@ -26,10 +25,9 @@ const sendNowSchema = z
   });
 
 export async function POST(request: Request) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const ctx = await requireVendorWorkspaceApi("broadcasts");
+  if (ctx instanceof NextResponse) return ctx;
+  const { vendorId } = ctx;
 
   let payload: z.infer<typeof sendNowSchema>;
   try {
@@ -46,7 +44,7 @@ export async function POST(request: Request) {
   // scoped to when it's actually relevant rather than blocking every send.
   if (payload.channels.includes("whatsapp")) {
     const guard = await requireVerifiedPhone({
-      userId: session.user.id,
+      userId: vendorId,
       context: "vendor_whatsapp",
       requiredRole: "vendor",
     });
@@ -60,23 +58,24 @@ export async function POST(request: Request) {
     const { data: store, error: storeError } = await supabase
       .from("stores")
       .select("id, name")
-      .eq("vendor_id", session.user.id)
+      .eq("vendor_id", vendorId)
       .maybeSingle();
 
     if (storeError || !store) {
       return NextResponse.json({ error: "Create your store first before sending broadcasts." }, { status: 400 });
     }
 
-    const quota = await getMonthlyBroadcastUsage(session.user.id);
+    const quota = await getMonthlyBroadcastUsage(vendorId);
     if (quota.remaining <= 0) {
-      return NextResponse.json(
-        { error: `You've used all ${quota.limit} of your broadcasts this month. Quota resets next month.` },
-        { status: 403 },
-      );
+      const message =
+        quota.limit === 0
+          ? "Broadcasts aren't included on your current plan. Upgrade to Pro or Business to send broadcasts."
+          : `You've used all ${quota.limit} of your broadcasts this month. Quota resets next month.`;
+      return NextResponse.json({ error: message }, { status: 403 });
     }
 
     const result = await executeBroadcastWithFallback({
-      vendorId: session.user.id,
+      vendorId,
       storeId: store.id,
       targetScope: payload.target_scope,
       channels: payload.channels,
@@ -85,9 +84,9 @@ export async function POST(request: Request) {
       emailBody: payload.message,
     });
 
-    return NextResponse.json({ result, quota: await getMonthlyBroadcastUsage(session.user.id) });
+    return NextResponse.json({ result, quota: await getMonthlyBroadcastUsage(vendorId) });
   } catch (error) {
-    logDevError("vendor.broadcasts.send_now.unhandled", error, { userId: session.user.id });
+    logDevError("vendor.broadcasts.send_now.unhandled", error, { vendorId });
     return NextResponse.json({ error: "Unexpected error sending broadcast." }, { status: 500 });
   }
 }

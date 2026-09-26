@@ -1,7 +1,6 @@
 import { randomUUID } from "crypto";
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireVendorWorkspaceApi } from "@/lib/vendor-auth";
 import { logDevError } from "@/lib/logger";
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
 
@@ -29,11 +28,9 @@ async function uploadStoreAsset(vendorId: string, file: File, kind: string): Pro
 }
 
 export async function POST(request: Request) {
-  const session = await getServerSession(authOptions);
-
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const ctx = await requireVendorWorkspaceApi("store_settings");
+  if (ctx instanceof NextResponse) return ctx;
+  const { vendorId } = ctx;
 
   try {
     const formData = await request.formData();
@@ -52,10 +49,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "File too large. Max 10MB." }, { status: 400 });
     }
 
-    const url = await uploadStoreAsset(session.user.id, file, kind);
+    const url = await uploadStoreAsset(vendorId, file, kind);
     return NextResponse.json({ ok: true, url });
   } catch (error) {
-    logDevError("stores.upload", error, { userId: session.user.id });
+    logDevError("stores.upload", error, { userId: vendorId });
     return NextResponse.json({ error: "Could not upload image." }, { status: 500 });
   }
 }

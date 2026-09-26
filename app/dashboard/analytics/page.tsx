@@ -1,13 +1,17 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { getEffectiveVendorId, getStaffPermissions } from "@/lib/staff";
 import {
   getVendorOrders,
   getVendorProducts,
   getVendorCustomerFirstOrderMap,
   getVendorStoreVisits,
+  getVendorStore,
 } from "@/lib/dashboard-data";
-import { formatNaira, formatDuration } from "@/lib/format";
+import { formatDuration } from "@/lib/format";
+import { formatPrice } from "@/lib/currency";
 import { RevenueChart } from "@/components/dashboard/revenue-chart";
 import { OrderStatusChart } from "@/components/dashboard/order-status-chart";
 import { OrderTrendsChart } from "@/components/dashboard/order-trends-chart";
@@ -75,34 +79,44 @@ export default async function DashboardAnalyticsPage({
   searchParams?: Promise<{ range?: string; from?: string; to?: string }>;
 }) {
   const session = await getServerSession(authOptions);
+
+  if (session?.user?.role === "staff") {
+    const permissions = await getStaffPermissions(session.user.id);
+    if (!permissions.analytics) {
+      redirect("/dashboard");
+    }
+  }
+
+  const vendorId = getEffectiveVendorId(session);
   const params = await searchParams;
   const rangeKey = parseRangeKey(params?.range);
   const range = getAnalyticsRange(rangeKey, new Date(), { from: params?.from, to: params?.to });
 
-  const products = session?.user?.id ? await getVendorProducts(session.user.id) : [];
+  const products = vendorId ? await getVendorProducts(vendorId) : [];
+  const store = vendorId ? await getVendorStore(vendorId) : null;
 
-  const orders = session?.user?.id
-    ? await getVendorOrders(session.user.id, { from: range.from, to: range.to })
+  const orders = vendorId
+    ? await getVendorOrders(vendorId, { from: range.from, to: range.to })
     : [];
 
   const previousOrders =
-    session?.user?.id && range.previousFrom
-      ? await getVendorOrders(session.user.id, { from: range.previousFrom, to: range.previousTo })
+    vendorId && range.previousFrom
+      ? await getVendorOrders(vendorId, { from: range.previousFrom, to: range.previousTo })
       : [];
 
-  const customerFirstOrderMap = session?.user?.id
-    ? await getVendorCustomerFirstOrderMap(session.user.id)
+  const customerFirstOrderMap = vendorId
+    ? await getVendorCustomerFirstOrderMap(vendorId)
     : new Map<string, Date>();
 
   const metrics = computeVendorPeriodMetrics(orders, range, customerFirstOrderMap);
   const previousMetrics = computeVendorPeriodMetrics(previousOrders, range, customerFirstOrderMap);
 
-  const visits = session?.user?.id
-    ? await getVendorStoreVisits(session.user.id, { from: range.from, to: range.to })
+  const visits = vendorId
+    ? await getVendorStoreVisits(vendorId, { from: range.from, to: range.to })
     : [];
   const previousVisits =
-    session?.user?.id && range.previousFrom
-      ? await getVendorStoreVisits(session.user.id, { from: range.previousFrom, to: range.previousTo })
+    vendorId && range.previousFrom
+      ? await getVendorStoreVisits(vendorId, { from: range.previousFrom, to: range.previousTo })
       : [];
 
   const uniqueVisitors = new Set(visits.map((v) => v.visitor_id)).size;
@@ -167,7 +181,7 @@ export default async function DashboardAnalyticsPage({
       <section className="grid grid-cols-2 gap-4 xl:grid-cols-4">
         <article className="rounded-lg border border-emerald-100 bg-emerald-50/30 p-5">
           <p className="flex items-center gap-2 text-sm text-slate-500"><BarChart3 className="h-4 w-4" aria-hidden="true" />Revenue</p>
-          <h2 className="mt-2 font-mono text-xl font-black tabular-nums text-slate-900">{formatNaira(revenue)}</h2>
+          <h2 className="mt-2 font-mono text-xl font-black tabular-nums text-slate-900">{formatPrice(revenue, store?.currency)}</h2>
           <TrendComparison label={range.comparisonLabel} current={revenue} previous={previousRevenue} />
           <p className="mt-1 text-xs text-slate-500">
             Confirmed/delivered only ({confirmedOrders.length}
@@ -295,7 +309,7 @@ export default async function DashboardAnalyticsPage({
       <section className="grid grid-cols-2 gap-4 xl:grid-cols-4">
         <article className="rounded-lg border border-emerald-100 bg-emerald-50/30 p-5">
           <p className="text-sm text-slate-500">Avg. Order Value</p>
-          <h2 className="mt-2 font-mono text-xl font-black tabular-nums text-slate-900">{formatNaira(metrics.aov)}</h2>
+          <h2 className="mt-2 font-mono text-xl font-black tabular-nums text-slate-900">{formatPrice(metrics.aov, store?.currency)}</h2>
           <TrendComparison label={range.comparisonLabel} current={metrics.aov} previous={previousMetrics.aov} />
         </article>
 
@@ -338,13 +352,13 @@ export default async function DashboardAnalyticsPage({
 
       {/* Charts Grid */}
       <section className="grid gap-4 lg:grid-cols-2">
-        <RevenueChart data={revenueChartData} rangeLabel={range.label} />
+        <RevenueChart data={revenueChartData} rangeLabel={range.label} currency={store?.currency} />
         <OrderStatusChart data={orderStatusData} />
       </section>
 
       <section className="grid gap-4 lg:grid-cols-2">
         <OrderTrendsChart data={orderTrendsData} />
-        <ProductPerformanceChart data={productPerformanceData} />
+        <ProductPerformanceChart data={productPerformanceData} currency={store?.currency} />
       </section>
 
       <section className="rounded-lg border border-slate-200 bg-white p-5">
@@ -362,7 +376,7 @@ export default async function DashboardAnalyticsPage({
                   #{order.id.slice(0, 8).toUpperCase()} - {order.status}
                 </p>
                 <p className="text-sm font-semibold text-slate-700">
-                  {formatNaira(Number(order.total_amount))}
+                  {formatPrice(Number(order.total_amount), store?.currency)}
                 </p>
               </div>
             ))}

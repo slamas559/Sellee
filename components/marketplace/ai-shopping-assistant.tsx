@@ -4,7 +4,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { formatNaira, formatProductPathSegment } from "@/lib/format";
+import { formatProductPathSegment } from "@/lib/format";
+import { formatPrice } from "@/lib/currency";
 import { storeUrl } from "@/lib/store-url";
 import { ASSISTANT_NAME } from "@/lib/ai/assistant-config";
 import { MicButton } from "@/components/ai/mic-button";
@@ -29,6 +30,7 @@ type AssistantProductCard = {
   category: string | null;
   store_name: string;
   store_slug: string;
+  store_currency: string;
   rating_avg: number;
   stock_count: number;
 };
@@ -67,7 +69,7 @@ function ProductMiniCard({ product }: { product: AssistantProductCard }) {
       <div className="space-y-0.5 p-2">
         <p className="line-clamp-2 text-[11px] font-semibold leading-tight text-slate-900">{product.name}</p>
         <p className="text-[10px] text-slate-500">{product.store_name}</p>
-        <p className="text-xs font-bold text-emerald-700">{formatNaira(product.price)}</p>
+        <p className="text-xs font-bold text-emerald-700">{formatPrice(product.price, product.store_currency)}</p>
       </div>
     </Link>
   );

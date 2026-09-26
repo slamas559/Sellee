@@ -1,12 +1,11 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
 import { z } from "zod";
-import { authOptions } from "@/lib/auth";
 import { logDevError } from "@/lib/logger";
 import { requireVerifiedPhone } from "@/lib/require-verified-phone";
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
 import { executeBroadcastNow, scheduleBroadcast } from "@/lib/whatsapp-bot/broadcasts";
 import { getMonthlyBroadcastUsage } from "@/lib/broadcasts/quota";
+import { requireVendorWorkspaceApi } from "@/lib/vendor-auth";
 
 const targetScopeSchema = z.enum(["followers", "customers", "all"]);
 
@@ -51,12 +50,14 @@ const createBroadcastSchema = z
   });
 
 export async function GET() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const ctx = await requireVendorWorkspaceApi("broadcasts");
+  if (ctx instanceof NextResponse) return ctx;
+  const { vendorId } = ctx;
+
+  // Checks the STORE'S WhatsApp number, not the logged-in user's own phone -
+  // vendorId is always the store owner here, vendor session or staff.
   const guard = await requireVerifiedPhone({
-    userId: session.user.id,
+    userId: vendorId,
     context: "vendor_whatsapp",
     requiredRole: "vendor",
   });
@@ -69,7 +70,7 @@ export async function GET() {
     const { data: store, error: storeError } = await supabase
       .from("stores")
       .select("id")
-      .eq("vendor_id", session.user.id)
+      .eq("vendor_id", vendorId)
       .maybeSingle();
 
     if (storeError || !store) {
@@ -87,7 +88,7 @@ export async function GET() {
       .limit(20);
 
     if (error) {
-      logDevError("vendor.broadcasts.list", error, { userId: session.user.id, storeId: store.id });
+      logDevError("vendor.broadcasts.list", error, { vendorId, storeId: store.id });
       return NextResponse.json({ error: "Could not load broadcast history." }, { status: 500 });
     }
 
@@ -105,18 +106,18 @@ export async function GET() {
       })),
     });
   } catch (error) {
-    logDevError("vendor.broadcasts.list.unhandled", error, { userId: session.user.id });
+    logDevError("vendor.broadcasts.list.unhandled", error, { vendorId });
     return NextResponse.json({ error: "Unexpected broadcasts listing error." }, { status: 500 });
   }
 }
 
 export async function POST(request: Request) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const ctx = await requireVendorWorkspaceApi("broadcasts");
+  if (ctx instanceof NextResponse) return ctx;
+  const { vendorId } = ctx;
+
   const guard = await requireVerifiedPhone({
-    userId: session.user.id,
+    userId: vendorId,
     context: "vendor_whatsapp",
     requiredRole: "vendor",
   });
@@ -131,7 +132,7 @@ export async function POST(request: Request) {
     const { data: store, error: storeError } = await supabase
       .from("stores")
       .select("id")
-      .eq("vendor_id", session.user.id)
+      .eq("vendor_id", vendorId)
       .maybeSingle();
 
     if (storeError || !store) {
@@ -144,17 +145,20 @@ export async function POST(request: Request) {
     // Scheduling predates the quota system this route now shares with
     // /api/vendor/broadcasts/send-now - without this check, scheduling
     // would be a way to send unlimited broadcasts around the monthly limit.
-    const quota = await getMonthlyBroadcastUsage(session.user.id);
+    // Quota is always tracked against the vendor, not which staff member
+    // sent it - one shared monthly allowance per store.
+    const quota = await getMonthlyBroadcastUsage(vendorId);
     if (quota.remaining <= 0) {
-      return NextResponse.json(
-        { error: `You've used all ${quota.limit} of your broadcasts this month. Quota resets next month.` },
-        { status: 403 },
-      );
+      const message =
+        quota.limit === 0
+          ? "Broadcasts aren't included on your current plan. Upgrade to Pro or Business to send broadcasts."
+          : `You've used all ${quota.limit} of your broadcasts this month. Quota resets next month.`;
+      return NextResponse.json({ error: message }, { status: 403 });
     }
 
     if (payload.mode === "now") {
       const result = await executeBroadcastNow({
-        vendorId: session.user.id,
+        vendorId,
         storeId: store.id,
         message: payload.message,
         targetScope: payload.target_scope,
@@ -168,7 +172,7 @@ export async function POST(request: Request) {
 
     const scheduledAtIso = new Date(payload.scheduled_at as string).toISOString();
     const result = await scheduleBroadcast({
-      vendorId: session.user.id,
+      vendorId,
       storeId: store.id,
       message: payload.message,
       targetScope: payload.target_scope,
@@ -189,7 +193,7 @@ export async function POST(request: Request) {
       );
     }
 
-    logDevError("vendor.broadcasts.create.unhandled", error, { userId: session.user.id });
+    logDevError("vendor.broadcasts.create.unhandled", error, { vendorId });
     return NextResponse.json({ error: "Unexpected broadcast create error." }, { status: 500 });
   }
 }

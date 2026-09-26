@@ -7,6 +7,7 @@ import { EmailVerificationBanner } from "@/components/dashboard/email-verificati
 import { authOptions } from "@/lib/auth";
 import { AiVendorAssistant } from "@/components/dashboard/ai-vendor-assistant";
 import { getUserEmailVerifiedAt, getVendorStore } from "@/lib/dashboard-data";
+import { getEffectiveVendorId, getStaffPermissions } from "@/lib/staff";
 
 type DashboardLayoutProps = {
   children: React.ReactNode;
@@ -19,18 +20,34 @@ export default async function DashboardLayout({ children }: DashboardLayoutProps
     redirect("/login");
   }
 
-  if (session.user.role !== "vendor") {
+  if (session.user.role !== "vendor" && session.user.role !== "staff") {
     redirect("/");
   }
 
-  const [store, emailVerifiedAt] = await Promise.all([
-    getVendorStore(session.user.id),
-    getUserEmailVerifiedAt(session.user.id),
+  const vendorId = getEffectiveVendorId(session);
+  if (!vendorId) {
+    // Staff row with no resolvable parent vendor (shouldn't happen given
+    // the DB constraint, but fail safe rather than crash the dashboard).
+    redirect("/");
+  }
+
+  const isStaff = session.user.role === "staff";
+  const [store, emailVerifiedAt, staffPermissions] = await Promise.all([
+    getVendorStore(vendorId),
+    // Staff accounts don't need their own email-verification banner nagging
+    // them about the vendor's email - only relevant for the vendor session.
+    isStaff ? Promise.resolve(new Date().toISOString()) : getUserEmailVerifiedAt(session.user.id),
+    isStaff ? getStaffPermissions(session.user.id) : Promise.resolve(null),
   ]);
 
   return (
     <main className="min-h-screen bg-[#f7faf8]">
-      <DashboardSidebar name={session.user.name} email={session.user.email} />
+      <DashboardSidebar
+        name={session.user.name}
+        email={session.user.email}
+        role={session.user.role}
+        permissions={staffPermissions}
+      />
       <div className="min-w-0 lg:pl-72">
         <DashboardTopbar name={session.user.name} store={store} />
         <DashboardMobileNav
@@ -39,6 +56,8 @@ export default async function DashboardLayout({ children }: DashboardLayoutProps
           storeName={store?.name}
           location={[store?.city, store?.state].filter(Boolean).join(", ")}
           storeHref={store?.slug ? `/v/${store.slug}` : undefined}
+          role={session.user.role as "vendor" | "staff"}
+          permissions={staffPermissions}
         />
         <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-6 px-4 pb-24 pt-20 sm:px-6 lg:px-8 lg:py-8 xl:px-10">
           <section className="min-w-0 flex-1 space-y-6">
@@ -53,7 +72,7 @@ export default async function DashboardLayout({ children }: DashboardLayoutProps
           </section>
         </div>
       </div>
-      <AiVendorAssistant />
+      {!isStaff ? <AiVendorAssistant /> : null}
     </main>
   );
 }

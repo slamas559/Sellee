@@ -7,6 +7,7 @@ import { createAdminSupabaseClient } from "@/lib/supabase-admin";
 import { sendWhatsAppTextMessage } from "@/lib/whatsapp-cloud";
 import { waMessage, waTitle } from "@/lib/whatsapp-bot/message-format";
 import { sendOrderNotificationEmail } from "@/app/actions/emails";
+import { formatPrice } from "@/lib/currency";
 
 const createOrderSchema = z.object({
   store_id: z.string().uuid(),
@@ -55,7 +56,7 @@ export async function POST(request: Request) {
 
     const { data: store, error: storeError } = await supabase
       .from("stores")
-      .select("id, name, whatsapp_number, vendor_id, is_active")
+      .select("id, name, whatsapp_number, vendor_id, is_active, currency")
       .eq("id", parsed.data.store_id)
       .eq("is_active", true)
       .maybeSingle();
@@ -139,7 +140,7 @@ export async function POST(request: Request) {
             `Ref: #${orderRef}`,
             `Product: ${product.name}`,
             `Qty: ${quantity}`,
-            `Total: ${totalAmount.toLocaleString("en-NG", { style: "currency", currency: "NGN", maximumFractionDigits: 0 })}`,
+            `Total: ${formatPrice(totalAmount, store.currency)}`,
             `Customer: ${customerName}`,
             `Customer WhatsApp: ${customerWhatsapp}`,
             "Reply with CONFIRM <ORDER_REF> or REJECT <ORDER_REF>.",
@@ -171,6 +172,7 @@ export async function POST(request: Request) {
             quantity,
             unitPrice: Number(product.price),
             totalAmount,
+            currency: store.currency,
             dashboardUrl: "https://sellee.store/dashboard/orders",
           });
         }

@@ -6,7 +6,7 @@ export async function getVendorStore(vendorId: string): Promise<StoreRecord | nu
 
   const { data } = await supabase
     .from("stores")
-    .select("id, vendor_id, name, slug, logo_url, whatsapp_number, address_line1, city, state, country, latitude, longitude, location_source, store_template, store_theme_preset, storefront_config, rating_avg, rating_count, theme_color, is_active, created_at, whatsapp_verified_at, is_verified")
+    .select("id, vendor_id, name, slug, logo_url, whatsapp_number, address_line1, city, state, country, latitude, longitude, location_source, store_template, store_theme_preset, storefront_config, rating_avg, rating_count, theme_color, is_active, created_at, whatsapp_verified_at, is_verified, currency")
     .eq("vendor_id", vendorId)
     .order("created_at", { ascending: false })
     .limit(1)
@@ -80,6 +80,7 @@ export type CustomerOrderView = {
     id: string;
     name: string;
     slug: string;
+    currency?: string | null;
   } | null;
   items: Array<{
     product_id?: string;
@@ -428,7 +429,7 @@ export async function getCustomerOrders(
   const [{ data: storesData }, { data: orderItemsData }] = await Promise.all([
     supabase
       .from("stores")
-      .select("id, name, slug")
+      .select("id, name, slug, currency")
       .in("id", storeIds),
     supabase
       .from("order_items")
@@ -437,7 +438,7 @@ export async function getCustomerOrders(
   ]);
 
   const storesById = new Map(
-    ((storesData ?? []) as Array<{ id: string; name: string; slug: string }>).map((store) => [
+    ((storesData ?? []) as Array<{ id: string; name: string; slug: string; currency?: string | null }>).map((store) => [
       store.id,
       store,
     ]),

@@ -1,9 +1,8 @@
 import { randomUUID } from "crypto";
 import { revalidateTag } from "next/cache";
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
 import { z } from "zod";
-import { authOptions } from "@/lib/auth";
+import { requireVendorWorkspaceApi } from "@/lib/vendor-auth";
 import { slugify } from "@/lib/format";
 import { logDevError } from "@/lib/logger";
 import { deleteProductImagesFromStorage } from "@/lib/product-images";
@@ -210,11 +209,9 @@ export async function PATCH(
   request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
-  const session = await getServerSession(authOptions);
-
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const ctx = await requireVendorWorkspaceApi("products");
+  if (ctx instanceof NextResponse) return ctx;
+  const { vendorId } = ctx;
 
   try {
     const { id } = await context.params;
@@ -241,7 +238,7 @@ export async function PATCH(
       return NextResponse.json({ error: "Invalid product update data." }, { status: 400 });
     }
 
-    const store = await getVendorStore(session.user.id);
+    const store = await getVendorStore(vendorId);
 
     if (!store) {
       return NextResponse.json({ error: "Store not found for this vendor." }, { status: 400 });
@@ -252,7 +249,7 @@ export async function PATCH(
       allowedCategories = await getAllowedCategoriesForStore(store.id);
     } catch (categoryError) {
       logDevError("products.update.allowed-categories", categoryError, {
-        userId: session.user.id,
+        userId: vendorId,
         storeId: store.id,
       });
     }
@@ -326,7 +323,7 @@ export async function PATCH(
     }
 
     if (imageFiles.length > 0) {
-      const uploadedImageUrls = await uploadProductImages(session.user.id, imageFiles);
+      const uploadedImageUrls = await uploadProductImages(vendorId, imageFiles);
       imageUrls = [...imageUrls, ...uploadedImageUrls];
     }
     imageUrl = imageUrls[0] ?? null;
@@ -399,7 +396,7 @@ export async function PATCH(
 
     return NextResponse.json({ product: data, message: "Product updated successfully." });
   } catch (error) {
-    logDevError("products.update.unhandled", error, { userId: session.user.id });
+    logDevError("products.update.unhandled", error, { userId: vendorId });
     return NextResponse.json({ error: "Unexpected product update error." }, { status: 500 });
   }
 }
@@ -408,15 +405,13 @@ export async function DELETE(
   _request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
-  const session = await getServerSession(authOptions);
-
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const ctx = await requireVendorWorkspaceApi("products");
+  if (ctx instanceof NextResponse) return ctx;
+  const { vendorId } = ctx;
 
   try {
     const { id } = await context.params;
-    const store = await getVendorStore(session.user.id);
+    const store = await getVendorStore(vendorId);
 
     if (!store) {
       return NextResponse.json({ error: "Store not found for this vendor." }, { status: 400 });
@@ -459,7 +454,7 @@ export async function DELETE(
 
     return NextResponse.json({ ok: true, message: "Product deleted." });
   } catch (error) {
-    logDevError("products.delete.unhandled", error, { userId: session.user.id });
+    logDevError("products.delete.unhandled", error, { userId: vendorId });
     return NextResponse.json({ error: "Unexpected delete product error." }, { status: 500 });
   }
 }

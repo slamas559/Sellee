@@ -12,6 +12,7 @@ type ProductCardProps = {
     rating_avg: number | null;
     rating_count: number;
     is_verified?: boolean | null;
+    currency?: string | null;
   };
 };
 

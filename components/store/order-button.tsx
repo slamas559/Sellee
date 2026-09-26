@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useEffect, useMemo, useState } from "react";
 import { MessageCircle } from "lucide-react";
-import { formatNaira } from "@/lib/format";
+import { useConvertedPrice } from "@/components/marketplace/currency-switcher";
 import { buildOrderMessage, buildWaMeLink } from "@/lib/whatsapp";
 import { buildLoginUrl } from "@/lib/store-url";
 
@@ -14,6 +14,7 @@ type OrderButtonProps = {
   productId: string;
   productName: string;
   productPrice: number;
+  currency?: string | null;
   storeName: string;
   whatsappNumber: string;
 };
@@ -47,6 +48,7 @@ export function OrderButton({
   productId,
   productName,
   productPrice,
+  currency,
   storeName,
   whatsappNumber,
 }: OrderButtonProps) {
@@ -60,6 +62,9 @@ export function OrderButton({
   const [error, setError] = useState<string | null>(null);
 
   const total = useMemo(() => productPrice * quantity, [productPrice, quantity]);
+  // Display only - the real, payable total (used in the WhatsApp message
+  // below) always stays in `currency`, the store's authorized currency.
+  const totalDisplay = useConvertedPrice(total, currency ?? "NGN");
 
   const chatLink = useMemo(() => {
     const greeting = `Hi! I have a question about "${productName}" on your Sellee store.`;
@@ -134,6 +139,7 @@ export function OrderButton({
         productName,
         quantity,
         total,
+        currency,
         storeName,
         orderReference: shortOrderRef(payload.order.id),
         customerName: profile?.display_name ?? "",
@@ -206,7 +212,10 @@ export function OrderButton({
       </div>
 
       <p className="text-sm text-slate-700">
-        Total: <span className="font-semibold">{formatNaira(total)}</span>
+        Total: <span className="font-semibold">
+          {totalDisplay.formatted}
+          {totalDisplay.isEstimate ? <span className="ml-1 text-xs font-normal opacity-75">est.</span> : null}
+        </span>
       </p>
 
       {error ? (

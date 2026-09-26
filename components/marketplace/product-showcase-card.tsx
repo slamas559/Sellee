@@ -6,7 +6,8 @@ import { useRouter } from "next/navigation";
 import type { KeyboardEvent, MouseEvent } from "react";
 import { useMemo, useRef, useState } from "react";
 import { StarRating } from "@/components/store/star-rating";
-import { formatNaira, formatProductPathSegment } from "@/lib/format";
+import { formatProductPathSegment } from "@/lib/format";
+import { useConvertedPrice } from "@/components/marketplace/currency-switcher";
 import { storeUrl, storeProductUrl } from "@/lib/store-url";
 import type { StoreTemplate } from "@/types";
 import { BadgeCheck, ChevronLeft, ChevronRight } from "lucide-react";
@@ -32,6 +33,7 @@ type ProductShowcaseCardProps = {
     rating_avg?: number | null;
     rating_count?: number;
     is_verified?: boolean | null;
+    currency?: string | null;
   };
   variant?: "home" | "marketplace" | "store";
   template?: StoreTemplate;
@@ -55,6 +57,12 @@ export function ProductShowcaseCard({
     if (normalized.length > 0) return normalized;
     return product.image_url ? [product.image_url] : [];
   }, [product.image_url, product.image_urls]);
+
+  const priceDisplay = useConvertedPrice(Number(product.price), store.currency ?? "NGN");
+  const comparePriceDisplay = useConvertedPrice(
+    Number(product.compare_at_price ?? 0),
+    store.currency ?? "NGN",
+  );
 
   const [index, setIndex] = useState(0);
   const hasManyImages = images.length > 1;
@@ -248,11 +256,12 @@ export function ProductShowcaseCard({
           <span
             className={`inline-flex whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-bold tabular-nums sm:px-3 sm:py-1.5 sm:text-sm ${priceChipClass}`}
           >
-            {formatNaira(Number(product.price))}
+            {priceDisplay.formatted}
+            {priceDisplay.isEstimate ? <span className="ml-1 font-normal opacity-75">est.</span> : null}
           </span>
           {hasPromo ? (
               <span className={`pl-1 text-[10px] line-through tabular-nums sm:text-xs ${metaClass}`}>
-                {formatNaira(Number(product.compare_at_price))}
+                {comparePriceDisplay.formatted}
               </span>
             ) : null}
           <Link

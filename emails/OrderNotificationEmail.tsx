@@ -8,6 +8,7 @@ import {
   Text,
 } from "@react-email/components";
 import { EmailShell } from "./components/EmailShell";
+import { formatPrice } from "@/lib/currency";
 
 export interface OrderNotificationEmailProps {
   storeName: string;
@@ -18,6 +19,7 @@ export interface OrderNotificationEmailProps {
   quantity: number;
   unitPrice: number;
   totalAmount: number;
+  currency?: string;
   dashboardUrl: string;
 }
 
@@ -71,13 +73,10 @@ export default function OrderNotificationEmail({
   quantity,
   unitPrice,
   totalAmount,
+  currency = "NGN",
   dashboardUrl = "https://sellee.store/dashboard/orders",
 }: OrderNotificationEmailProps) {
-  const formattedTotal = totalAmount.toLocaleString("en-NG", {
-    style: "currency",
-    currency: "NGN",
-    maximumFractionDigits: 0,
-  });
+  const formattedTotal = formatPrice(totalAmount, currency);
 
   return (
     <EmailShell previewText={`New order received at ${storeName}`} width={500} radius={10}>
@@ -123,7 +122,7 @@ export default function OrderNotificationEmail({
             <Row>
               <Column style={{ height: 10 }} />
             </Row>
-            <DetailRow label="Unit Price" value={`₦${unitPrice.toLocaleString("en-NG")}`} />
+            <DetailRow label="Unit Price" value={formatPrice(unitPrice, currency)} />
 
             <Hr className="my-3 border-emerald-200" />
 

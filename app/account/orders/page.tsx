@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { getCustomerOrders } from "@/lib/dashboard-data";
-import { formatNaira } from "@/lib/format";
+import { formatPrice } from "@/lib/currency";
 import { storeUrl } from "@/lib/store-url";
 
 export const metadata: Metadata = {
@@ -69,7 +69,7 @@ export default async function MyOrdersPage({ searchParams }: { searchParams?: Pr
                   ) : (
                     <span className="font-medium text-slate-700">Unknown store</span>
                   )}</p>
-                  <p className="mt-1 text-sm">Total: <span className="font-semibold text-slate-900">{formatNaira(Number(entry.order.total_amount ?? 0))}</span></p>
+                  <p className="mt-1 text-sm">Total: <span className="font-semibold text-slate-900">{formatPrice(Number(entry.order.total_amount ?? 0), entry.store?.currency)}</span></p>
 
                   {entry.items.length > 0 ? (
                     <ul className="mt-3 space-y-2 text-sm">
@@ -82,7 +82,7 @@ export default async function MyOrdersPage({ searchParams }: { searchParams?: Pr
                           )}
                           <div className="min-w-0">
                             <p className="line-clamp-1 font-medium">{item.product_name} x{item.quantity}</p>
-                            <p className="text-xs text-slate-500">{formatNaira(item.unit_price * item.quantity)}</p>
+                            <p className="text-xs text-slate-500">{formatPrice(item.unit_price * item.quantity, entry.store?.currency)}</p>
                           </div>
                         </li>
                       ))}

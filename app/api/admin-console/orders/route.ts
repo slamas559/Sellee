@@ -33,7 +33,7 @@ export async function GET(request: Request) {
   let query = supabase
     .from("orders")
     .select(
-      "id, store_id, customer_name, customer_whatsapp, status, total_amount, payment_method, created_at, store:store_id!inner(name, slug)",
+      "id, store_id, customer_name, customer_whatsapp, status, total_amount, payment_method, created_at, store:store_id!inner(name, slug, currency)",
       { count: "exact" },
     )
     .order("created_at", { ascending: false })

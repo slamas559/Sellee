@@ -74,19 +74,28 @@ export async function getVendorPlan(vendorId: string): Promise<VendorPlan | null
   };
 }
 
+// While monetization is off, every vendor gets full access regardless of
+// plan - that's the whole point of the admin toggle ("everything free while
+// we're starting out"). Both gating helpers below check this first so no
+// caller has to remember to check it separately.
 export async function hasFeature(vendorId: string, featureKey: string): Promise<boolean> {
+  if (!(await isMonetizationEnabled())) return true;
+
   const plan = await getVendorPlan(vendorId);
   if (!plan) return false; // fail closed on unexpected missing plan
   return plan.features[featureKey] === true;
 }
 
 // currentCount = how many of the resource the vendor already has/used.
-// Returns true if they're still within their plan's limit (or it's unlimited).
+// Returns true if they're still within their plan's limit (or it's unlimited,
+// or monetization is off entirely).
 export async function withinLimit(
   vendorId: string,
   limitKey: string,
   currentCount: number
 ): Promise<boolean> {
+  if (!(await isMonetizationEnabled())) return true;
+
   const plan = await getVendorPlan(vendorId);
   if (!plan) return false;
 

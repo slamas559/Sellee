@@ -1,4 +1,4 @@
-import { formatNaira } from "@/lib/format";
+import { formatPrice } from "@/lib/currency";
 import { ASSISTANT_NAME } from "@/lib/ai/assistant-config";
 import { logDevError, logServerInfo } from "@/lib/logger";
 import {
@@ -44,6 +44,7 @@ export type AssistantProductCard = {
   category: string | null;
   store_name: string;
   store_slug: string;
+  store_currency: string;
   rating_avg: number;
   stock_count: number;
 };
@@ -101,7 +102,7 @@ Behavior:
 - If nothing matches, say so plainly and suggest a broader search rather than inventing results.
 - Comparing items: if the user asks you to compare products or stores you already described earlier in this same conversation, reason from what you already said (name, price, category, rating) - you don't need to search again unless they introduce something new.
 - For questions about Sellee itself (how it works, becoming a vendor, contacting support, order tracking), answer directly and briefly from the facts above - no need to call a tool, and don't invent anything not stated there.
-- Prices are in Nigerian Naira. Keep replies short - this is a chat widget, not an essay.
+- Each product includes its store's currency and a formatted_price already in that currency - use formatted_price when telling the shopper a price, don't reformat the raw number yourself. Different stores may use different currencies (Naira, Cedi, Dollar, Pound) - never convert between them or assume they're all the same currency. Keep replies short - this is a chat widget, not an essay.
 - Never claim a product/store exists, is in stock, or has a specific price/rating unless it came from a tool result in this conversation.`;
 
 const SEARCH_PRODUCTS_TOOL: ToolDefinition = {
@@ -120,8 +121,8 @@ const SEARCH_PRODUCTS_TOOL: ToolDefinition = {
           type: "string",
           description: "Optional exact category filter, only use if the user named a specific category.",
         },
-        min_price: { type: "number", description: "Optional minimum price in Naira." },
-        max_price: { type: "number", description: "Optional maximum price in Naira." },
+        min_price: { type: "number", description: "Optional minimum price. Compared directly against each store's own listed price - no currency conversion is applied, so this only reliably filters within a single currency." },
+        max_price: { type: "number", description: "Optional maximum price. Compared directly against each store's own listed price - no currency conversion is applied, so this only reliably filters within a single currency." },
         sort: {
           type: "string",
           enum: ["latest", "price_asc", "price_desc"],
@@ -171,6 +172,7 @@ function toProductCard(product: ProductSearchResult): AssistantProductCard {
     category: product.category,
     store_name: product.store.name,
     store_slug: product.store.slug,
+    store_currency: product.store.currency,
     rating_avg: Number(product.rating_avg ?? 0),
     stock_count: product.stock_count,
   };
@@ -180,8 +182,9 @@ function toProductModelSummary(product: ProductSearchResult) {
   return {
     id: product.id,
     name: product.name,
-    price_naira: Number(product.price),
-    formatted_price: formatNaira(Number(product.price)),
+    price: Number(product.price),
+    currency: product.store.currency,
+    formatted_price: formatPrice(Number(product.price), product.store.currency),
     category: product.category,
     store: product.store.name,
     rating_avg: product.rating_avg,

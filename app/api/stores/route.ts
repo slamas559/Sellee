@@ -1,9 +1,8 @@
 import { randomUUID } from "crypto";
 import { revalidateTag } from "next/cache";
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
 import { z } from "zod";
-import { authOptions } from "@/lib/auth";
+import { requireVendorWorkspaceApi } from "@/lib/vendor-auth";
 import { slugify } from "@/lib/format";
 import { logDevError } from "@/lib/logger";
 import { CACHE_TAGS } from "@/lib/public-cache";
@@ -38,6 +37,8 @@ const storeSchema = z.object({
     })
     .optional(),
   theme_color: z.string().regex(/^#([A-Fa-f0-9]{6})$/),
+  currency: z.enum(["NGN", "GHS", "USD", "GBP"]).default("NGN"),
+  activated_currencies: z.array(z.enum(["NGN", "GHS", "USD", "GBP"])).default([]),
   logo_url: z.string().url().optional().or(z.literal("")),
   niche_ids: z.array(z.string().uuid()).max(8).optional().default([]),
   custom_niches: z.array(z.string().min(2).max(80)).max(8).optional().default([]),
@@ -129,6 +130,17 @@ async function parseStoreRequest(request: Request): Promise<{
       store_theme_preset: toOptionalString(formData.get("store_theme_preset")),
       storefront_config: storefrontConfig,
       theme_color: toOptionalString(formData.get("theme_color")),
+      currency: toOptionalString(formData.get("currency")) ?? "NGN",
+      activated_currencies: (() => {
+        const raw = toOptionalString(formData.get("activated_currencies"));
+        if (!raw) return [];
+        try {
+          const parsed = JSON.parse(raw);
+          return Array.isArray(parsed) ? parsed : [];
+        } catch {
+          return [];
+        }
+      })(),
       logo_url: toOptionalString(formData.get("logo_url")) ?? "",
       niche_ids: (() => {
         const raw = toOptionalString(formData.get("niche_ids"));
@@ -223,6 +235,7 @@ type StoreRow = {
   rating_avg: number;
   rating_count: number;
   theme_color: string | null;
+  currency: string;
   is_active: boolean;
   created_at: string;
   whatsapp_verified_at: string | null;
@@ -344,22 +357,20 @@ async function attachNichesToStores(stores: StoreRow[]) {
 }
 
 export async function GET() {
-  const session = await getServerSession(authOptions);
-
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const ctx = await requireVendorWorkspaceApi("store_settings");
+  if (ctx instanceof NextResponse) return ctx;
+  const { vendorId } = ctx;
 
   const supabase = createAdminSupabaseClient();
 
   const { data, error } = await supabase
     .from("stores")
-    .select("id, vendor_id, name, slug, logo_url, whatsapp_number, address_line1, city, state, country, latitude, longitude, location_source, store_template, store_theme_preset, storefront_config, rating_avg, rating_count, theme_color, is_active, created_at, whatsapp_verified_at, is_verified")
-    .eq("vendor_id", session.user.id)
+    .select("id, vendor_id, name, slug, logo_url, whatsapp_number, address_line1, city, state, country, latitude, longitude, location_source, store_template, store_theme_preset, storefront_config, rating_avg, rating_count, theme_color, is_active, created_at, whatsapp_verified_at, is_verified, currency, activated_currencies")
+    .eq("vendor_id", vendorId)
     .order("created_at", { ascending: false });
 
   if (error) {
-    logDevError("stores.get", error, { userId: session.user.id });
+    logDevError("stores.get", error, { userId: vendorId });
     return NextResponse.json({ error: "Could not load stores." }, { status: 500 });
   }
 
@@ -367,17 +378,15 @@ export async function GET() {
     const storesWithNiches = await attachNichesToStores((data ?? []) as StoreRow[]);
     return NextResponse.json({ stores: storesWithNiches });
   } catch (error) {
-    logDevError("stores.get.attach-niches", error, { userId: session.user.id });
+    logDevError("stores.get.attach-niches", error, { userId: vendorId });
     return NextResponse.json({ stores: data ?? [] });
   }
 }
 
 export async function POST(request: Request) {
-  const session = await getServerSession(authOptions);
-
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const ctx = await requireVendorWorkspaceApi("store_settings");
+  if (ctx instanceof NextResponse) return ctx;
+  const { vendorId } = ctx;
 
   try {
     const { parsed, files } = await parseStoreRequest(request);
@@ -398,11 +407,11 @@ export async function POST(request: Request) {
     const { data: existingStore, error: existingStoreError } = await supabase
       .from("stores")
       .select("id, slug, logo_url, storefront_config, whatsapp_number, whatsapp_verified_at, is_verified")
-      .eq("vendor_id", session.user.id)
+      .eq("vendor_id", vendorId)
       .maybeSingle();
 
     if (existingStoreError) {
-      logDevError("stores.lookup", existingStoreError, { userId: session.user.id });
+      logDevError("stores.lookup", existingStoreError, { userId: vendorId });
       return NextResponse.json({ error: "Could not load existing store." }, { status: 500 });
     }
 
@@ -431,18 +440,18 @@ export async function POST(request: Request) {
         : parsedData.logo_url || existingStore?.logo_url || null;
 
     if (files.logoFile) {
-      logoUrl = await uploadStoreAsset(session.user.id, files.logoFile, "logo");
+      logoUrl = await uploadStoreAsset(vendorId, files.logoFile, "logo");
     }
     if (files.heroImageFile) {
       storefrontConfig.hero_image_url = await uploadStoreAsset(
-        session.user.id,
+        vendorId,
         files.heroImageFile,
         "hero",
       );
     }
     if (files.secondaryBannerFile) {
       const uploadedBannerUrl = await uploadStoreAsset(
-        session.user.id,
+        vendorId,
         files.secondaryBannerFile,
         "banner",
       );
@@ -471,22 +480,24 @@ export async function POST(request: Request) {
           store_theme_preset: storeThemePreset,
           storefront_config: storefrontConfig,
           theme_color: parsedData.theme_color,
+          currency: parsedData.currency,
+          activated_currencies: parsedData.activated_currencies,
           logo_url: logoUrl,
           is_active: parsedData.is_active,
         })
         .eq("id", existingStore.id)
-        .select("id, vendor_id, name, slug, logo_url, whatsapp_number, address_line1, city, state, country, latitude, longitude, location_source, store_template, store_theme_preset, storefront_config, rating_avg, rating_count, theme_color, is_active, created_at, whatsapp_verified_at, is_verified")
+        .select("id, vendor_id, name, slug, logo_url, whatsapp_number, address_line1, city, state, country, latitude, longitude, location_source, store_template, store_theme_preset, storefront_config, rating_avg, rating_count, theme_color, is_active, created_at, whatsapp_verified_at, is_verified, currency, activated_currencies")
         .single();
 
       if (error || !data) {
-        logDevError("stores.update", error, { userId: session.user.id, storeId: existingStore.id });
+        logDevError("stores.update", error, { userId: vendorId, storeId: existingStore.id });
         return NextResponse.json({ error: "Could not update store." }, { status: 500 });
       }
 
       try {
         await saveStoreNiches(data.id, parsedData.niche_ids ?? [], parsedData.custom_niches ?? []);
       } catch (nicheError) {
-        logDevError("stores.update.niches", nicheError, { storeId: data.id, userId: session.user.id });
+        logDevError("stores.update.niches", nicheError, { storeId: data.id, userId: vendorId });
         return NextResponse.json({ error: "Store updated, but niches could not be saved." }, { status: 500 });
       }
 
@@ -500,12 +511,12 @@ export async function POST(request: Request) {
       const { data: promotedRows, error: roleError } = await supabase
         .from("users")
         .update({ role: "vendor" })
-        .eq("id", session.user.id)
+        .eq("id", vendorId)
         .neq("role", "vendor")
         .select("id");
 
       if (roleError) {
-        logDevError("stores.promote-vendor.update", roleError, { userId: session.user.id });
+        logDevError("stores.promote-vendor.update", roleError, { userId: vendorId });
       }
 
       return NextResponse.json({
@@ -518,7 +529,7 @@ export async function POST(request: Request) {
     const { data, error } = await supabase
       .from("stores")
       .insert({
-        vendor_id: session.user.id,
+        vendor_id: vendorId,
         name: parsedData.name,
         slug: slug,
         whatsapp_number: whatsappCheck.normalized,
@@ -533,21 +544,23 @@ export async function POST(request: Request) {
         store_theme_preset: storeThemePreset,
         storefront_config: storefrontConfig,
         theme_color: parsedData.theme_color,
+        currency: parsedData.currency,
+        activated_currencies: parsedData.activated_currencies,
         logo_url: logoUrl,
         is_active: parsedData.is_active,
       })
-      .select("id, vendor_id, name, slug, logo_url, whatsapp_number, address_line1, city, state, country, latitude, longitude, location_source, store_template, store_theme_preset, storefront_config, rating_avg, rating_count, theme_color, is_active, created_at, whatsapp_verified_at, is_verified")
+      .select("id, vendor_id, name, slug, logo_url, whatsapp_number, address_line1, city, state, country, latitude, longitude, location_source, store_template, store_theme_preset, storefront_config, rating_avg, rating_count, theme_color, is_active, created_at, whatsapp_verified_at, is_verified, currency, activated_currencies")
       .single();
 
     if (error || !data) {
-      logDevError("stores.create", error, { userId: session.user.id });
+      logDevError("stores.create", error, { userId: vendorId });
       return NextResponse.json({ error: "Could not create store." }, { status: 500 });
     }
 
     try {
       await saveStoreNiches(data.id, parsedData.niche_ids ?? [], parsedData.custom_niches ?? []);
     } catch (nicheError) {
-      logDevError("stores.create.niches", nicheError, { storeId: data.id, userId: session.user.id });
+      logDevError("stores.create.niches", nicheError, { storeId: data.id, userId: vendorId });
       return NextResponse.json({ error: "Store created, but niches could not be saved." }, { status: 500 });
     }
 
@@ -560,12 +573,12 @@ export async function POST(request: Request) {
     const { data: promotedRows, error: roleError } = await supabase
       .from("users")
       .update({ role: "vendor" })
-      .eq("id", session.user.id)
+      .eq("id", vendorId)
       .neq("role", "vendor")
       .select("id");
 
     if (roleError) {
-      logDevError("stores.promote-vendor.create", roleError, { userId: session.user.id });
+      logDevError("stores.promote-vendor.create", roleError, { userId: vendorId });
     }
 
     return NextResponse.json({
@@ -574,7 +587,7 @@ export async function POST(request: Request) {
       became_vendor: Boolean(promotedRows?.length),
     });
   } catch (error) {
-    logDevError("stores.unhandled", error, { userId: session.user.id });
+    logDevError("stores.unhandled", error, { userId: vendorId });
     return NextResponse.json({ error: "Unexpected store setup error." }, { status: 500 });
   }
 }

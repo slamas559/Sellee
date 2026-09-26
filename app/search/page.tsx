@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ProductShowcaseCard } from "@/components/marketplace/product-showcase-card";
 import { LocationFilterButton } from "@/components/marketplace/location-filter-button";
-import { formatNaira } from "@/lib/format";
 import { haversineDistanceKm } from "@/lib/geo";
 import MarketplaceFilterForm from "@/components/marketplace/marketplace-filter-form";
 import { parseSearchState, getMarketplaceResults } from "@/app/marketplace/page";

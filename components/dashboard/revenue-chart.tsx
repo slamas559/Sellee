@@ -1,5 +1,7 @@
 "use client";
 
+import { getCurrencySymbol } from "@/lib/currency";
+
 import {
   Area,
   CartesianGrid,
@@ -18,7 +20,7 @@ export type RevenueChartData = {
   orders: number;
 };
 
-export function RevenueChart({ data, rangeLabel }: { data: RevenueChartData[]; rangeLabel?: string }) {
+export function RevenueChart({ data, rangeLabel, currency }: { data: RevenueChartData[]; rangeLabel?: string; currency?: string | null }) {
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
       <div className="mb-4">
@@ -41,14 +43,14 @@ export function RevenueChart({ data, rangeLabel }: { data: RevenueChartData[]; r
               axisLine={false}
               tickLine={false}
               tick={{ fill: "#64748b", fontSize: 11 }}
-              tickFormatter={(value) => `₦${Number(value).toLocaleString("en-NG", { notation: "compact" })}`}
+              tickFormatter={(value) => `${getCurrencySymbol(currency)}${Number(value).toLocaleString("en-NG", { notation: "compact" })}`}
               width={52}
             />
             <YAxis yAxisId="orders" hide />
             <Tooltip
               cursor={{ stroke: "#94a3b8", strokeDasharray: "4 4" }}
               contentStyle={{ backgroundColor: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "10px", boxShadow: "0 10px 24px rgba(15, 23, 42, 0.12)" }}
-              formatter={(value, name) => name === "Revenue" ? `₦${Number(value).toLocaleString()}` : `${value} orders`}
+              formatter={(value, name) => name === "Revenue" ? `${getCurrencySymbol(currency)}${Number(value).toLocaleString()}` : `${value} orders`}
             />
             <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />
             <Area yAxisId="revenue" type="monotone" dataKey="revenue" name="Revenue" stroke="#059669" strokeWidth={2.5} fill="url(#revenue-gradient)" />

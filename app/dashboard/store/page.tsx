@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { StoreSetupForm } from "@/components/dashboard/store-setup-form";
 import { authOptions } from "@/lib/auth";
 import { getUserEmailVerifiedAt, getVendorStore } from "@/lib/dashboard-data";
+import { getEffectiveVendorId, getStaffPermissions } from "@/lib/staff";
 
 export const metadata: Metadata = {
   title: "Storefront",
@@ -10,8 +12,19 @@ export const metadata: Metadata = {
 
 export default async function DashboardStorePage() {
   const session = await getServerSession(authOptions);
-  const [store, emailVerifiedAt] = session?.user?.id
-    ? await Promise.all([getVendorStore(session.user.id), getUserEmailVerifiedAt(session.user.id)])
+
+  if (session?.user?.role === "staff") {
+    const permissions = await getStaffPermissions(session.user.id);
+    if (!permissions.store_settings) {
+      redirect("/dashboard");
+    }
+  }
+
+  const vendorId = getEffectiveVendorId(session);
+  // Email verification is checked against the vendor's own account, not the
+  // logged-in staff member's - it's a signal about the store, not the login.
+  const [store, emailVerifiedAt] = vendorId
+    ? await Promise.all([getVendorStore(vendorId), getUserEmailVerifiedAt(vendorId)])
     : [null, null];
 
   return (

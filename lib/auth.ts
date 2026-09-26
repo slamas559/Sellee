@@ -92,7 +92,7 @@ export const authOptions: NextAuthOptions = {
 
         const { data: user, error } = await supabase
           .from("users")
-          .select("id, email, full_name, password_hash, role, status")
+          .select("id, email, full_name, password_hash, role, status, parent_vendor_id")
           .eq("email", email)
           .single();
 
@@ -126,6 +126,7 @@ export const authOptions: NextAuthOptions = {
           email: user.email,
           name: user.full_name ?? undefined,
           role: user.role,
+          parentVendorId: user.parent_vendor_id ?? null,
         };
       },
     }),
@@ -135,6 +136,7 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.sub = user.id;
         token.role = user.role ?? "customer";
+        token.parentVendorId = user.parentVendorId ?? null;
         token.name = user.name ?? token.name;
         token.isDeleted = false;
       }
@@ -143,7 +145,7 @@ export const authOptions: NextAuthOptions = {
         const supabase = createAdminSupabaseClient();
         const { data: profile } = await supabase
           .from("users")
-          .select("email, role, full_name, status")
+          .select("email, role, full_name, status, parent_vendor_id")
           .eq("id", token.sub)
           .maybeSingle();
 
@@ -157,9 +159,10 @@ export const authOptions: NextAuthOptions = {
         token.isDeleted = false;
         token.isSuspended = profile.status === "suspended";
         token.email = profile.email ?? token.email;
-        if (profile?.role === "vendor" || profile?.role === "customer" || profile?.role === "admin") {
+        if (profile?.role === "vendor" || profile?.role === "customer" || profile?.role === "admin" || profile?.role === "staff") {
           token.role = profile.role;
         }
+        token.parentVendorId = profile?.parent_vendor_id ?? null;
         if (profile?.full_name) {
           token.name = profile.full_name;
         }
@@ -178,7 +181,7 @@ export const authOptions: NextAuthOptions = {
         }
 
         // Admin accounts are never suspended (they're revoked outright),
-        // so this only ever fires for vendor/customer sessions.
+        // so this only ever fires for vendor/customer/staff sessions.
         if (token.isSuspended) {
           session.user.id = "";
           session.user.role = "customer";
@@ -188,7 +191,8 @@ export const authOptions: NextAuthOptions = {
         }
 
         session.user.id = token.sub ?? "";
-        session.user.role = (token.role as "vendor" | "customer" | "admin") ?? "customer";
+        session.user.role = (token.role as "vendor" | "customer" | "admin" | "staff") ?? "customer";
+        session.user.parentVendorId = token.parentVendorId ?? null;
         session.user.name = token.name ?? session.user.name;
       }
 

@@ -1,3 +1,5 @@
+import { formatPrice } from "@/lib/currency";
+
 export function slugify(value: string): string {
   return value
     .trim()
@@ -8,12 +10,12 @@ export function slugify(value: string): string {
     .replace(/^-|-$/g, "");
 }
 
+// Platform billing (subscriptions, admin revenue) is always charged in NGN
+// regardless of what currency a vendor lists their products in - keep using
+// this for those call sites. For anything showing a VENDOR'S product price,
+// use formatPrice(value, store.currency) from lib/currency instead.
 export function formatNaira(value: number): string {
-  return new Intl.NumberFormat("en-NG", {
-    style: "currency",
-    currency: "NGN",
-    maximumFractionDigits: 0,
-  }).format(value);
+  return formatPrice(value, "NGN");
 }
 
 /** Formats a duration given in milliseconds as a short human string, e.g. "2h 15m" or "3d 4h". */

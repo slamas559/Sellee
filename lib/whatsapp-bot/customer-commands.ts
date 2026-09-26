@@ -1,4 +1,5 @@
-import { formatNaira, formatProductPathSegment, slugify } from "@/lib/format";
+import { formatProductPathSegment, slugify } from "@/lib/format";
+import { formatPrice } from "@/lib/currency";
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
 import { normalizeWhatsAppNumber } from "@/lib/whatsapp";
 import { sendWhatsAppTextMessage } from "@/lib/whatsapp-cloud";
@@ -18,6 +19,7 @@ type StoreLite = {
   slug: string;
   whatsapp_number?: string | null;
   is_active?: boolean;
+  currency?: string | null;
 };
 
 type OrderLite = {
@@ -101,7 +103,7 @@ async function getStoresMap(storeIds: string[]): Promise<Map<string, StoreLite>>
 
   const { data, error } = await supabase
     .from("stores")
-    .select("id, name, slug, whatsapp_number, is_active")
+    .select("id, name, slug, whatsapp_number, is_active, currency")
     .in("id", storeIds);
 
   if (error) {
@@ -169,7 +171,7 @@ async function resolveStoreByInput(rawInput: string): Promise<StoreResolution> {
   if (slug) {
     const { data: bySlug, error: bySlugError } = await supabase
       .from("stores")
-      .select("id, name, slug, whatsapp_number, is_active")
+      .select("id, name, slug, whatsapp_number, is_active, currency")
       .eq("slug", slug)
       .eq("is_active", true)
       .limit(1)
@@ -184,7 +186,7 @@ async function resolveStoreByInput(rawInput: string): Promise<StoreResolution> {
 
   const { data: byName, error: byNameError } = await supabase
     .from("stores")
-    .select("id, name, slug, whatsapp_number, is_active")
+    .select("id, name, slug, whatsapp_number, is_active, currency")
     .ilike("name", `%${escapeIlikeValue(trimmed)}%`)
     .eq("is_active", true)
     .order("created_at", { ascending: false })
@@ -264,9 +266,10 @@ async function handleMyOrders(from: string, normalizedFrom: string, statusFilter
   const storesMap = await getStoresMap(Array.from(new Set(orders.map((order) => order.store_id))));
   const productByOrderId = await getProductByOrderId(orders.map((order) => order.id));
   const lines = orders.map((order) => {
-    const storeName = storesMap.get(order.store_id)?.name ?? "Store";
+    const store = storesMap.get(order.store_id);
+    const storeName = store?.name ?? "Store";
     const product = productByOrderId.get(order.id) ?? "Product";
-    return `#${shortRef(order.id)} (${product}) | ${formatBotStatus(order.status)} | ${formatNaira(Number(order.total_amount))} | ${storeName}`;
+    return `#${shortRef(order.id)} (${product}) | ${formatBotStatus(order.status)} | ${formatPrice(Number(order.total_amount), store?.currency)} | ${storeName}`;
   });
 
   await sendPaginatedList({
@@ -300,6 +303,7 @@ async function handleMyStatus(from: string, normalizedFrom: string) {
   const active = orders.filter((order) => activeStatuses.has(String(order.status)));
   const latest = orders.slice(0, 5);
   const productByOrderId = await getProductByOrderId(latest.map((order) => order.id));
+  const storesMap = await getStoresMap(Array.from(new Set(latest.map((order) => order.store_id))));
 
   const statusCounter = new Map<string, number>();
   for (const order of latest) {
@@ -312,7 +316,8 @@ async function handleMyStatus(from: string, normalizedFrom: string) {
     .join(" | ");
 
   const latestLines = latest.map(
-    (order) => `#${shortRef(order.id)} (${productByOrderId.get(order.id) ?? "Product"}) - ${formatBotStatus(order.status)} - ${formatNaira(Number(order.total_amount))}`,
+    (order) =>
+      `#${shortRef(order.id)} (${productByOrderId.get(order.id) ?? "Product"}) - ${formatBotStatus(order.status)} - ${formatPrice(Number(order.total_amount), storesMap.get(order.store_id)?.currency)}`,
   );
 
   await sendWhatsAppTextMessage({
@@ -366,7 +371,7 @@ async function handleTrack(from: string, normalizedFrom: string, body: string): 
       `Product: ${productName}`,
       `Store: ${storeName}`,
       `Status: ${formatBotStatus(order.status)}`,
-      `Total: ${formatNaira(Number(order.total_amount))}`,
+      `Total: ${formatPrice(Number(order.total_amount), storesMap.get(order.store_id)?.currency)}`,
     ),
   });
   return order.store_id;
@@ -611,13 +616,18 @@ async function handleMyFollows(from: string, normalizedFrom: string) {
   });
 }
 
+// Echoes back the customer's own typed price filter ("under 50k"), which
+// search-text.ts only ever parses as a Naira amount today - a search can
+// span stores in different currencies, so this label intentionally stays
+// NGN to match what's actually being filtered, not the currency of any one
+// result.
 function formatPriceLabel(bounds: { minPrice: number | null; maxPrice: number | null }): string {
   const { minPrice, maxPrice } = bounds;
   if (minPrice !== null && maxPrice !== null) {
-    return ` (${formatNaira(minPrice)} - ${formatNaira(maxPrice)})`;
+    return ` (${formatPrice(minPrice, "NGN")} - ${formatPrice(maxPrice, "NGN")})`;
   }
-  if (maxPrice !== null) return ` (under ${formatNaira(maxPrice)})`;
-  if (minPrice !== null) return ` (over ${formatNaira(minPrice)})`;
+  if (maxPrice !== null) return ` (under ${formatPrice(maxPrice, "NGN")})`;
+  if (minPrice !== null) return ` (over ${formatPrice(minPrice, "NGN")})`;
   return "";
 }
 
@@ -718,7 +728,7 @@ async function handleSearchProducts(
           name: product.name,
         })}`
       : `${baseUrl}/marketplace`;
-    return `${index + 1}. ${product.name} - ${formatNaira(Number(product.price))} - ${storeName}\n${productUrl}`;
+    return `${index + 1}. ${product.name} - ${formatPrice(Number(product.price), store?.currency)} - ${storeName}\n${productUrl}`;
   });
 
   await sendPaginatedList({

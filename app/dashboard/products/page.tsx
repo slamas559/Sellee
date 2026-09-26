@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { ProductsManager } from "@/components/dashboard/products-manager";
 import { authOptions } from "@/lib/auth";
-import { getVendorProducts } from "@/lib/dashboard-data";
+import { getVendorProducts, getVendorStore } from "@/lib/dashboard-data";
+import { getEffectiveVendorId, getStaffPermissions } from "@/lib/staff";
 
 export const metadata: Metadata = {
   title: "Products",
@@ -10,7 +12,18 @@ export const metadata: Metadata = {
 
 export default async function DashboardProductsPage() {
   const session = await getServerSession(authOptions);
-  const products = session?.user?.id ? await getVendorProducts(session.user.id) : [];
+
+  if (session?.user?.role === "staff") {
+    const permissions = await getStaffPermissions(session.user.id);
+    if (!permissions.products) {
+      redirect("/dashboard");
+    }
+  }
+
+  const vendorId = getEffectiveVendorId(session);
+  const [products, store] = vendorId
+    ? await Promise.all([getVendorProducts(vendorId), getVendorStore(vendorId)])
+    : [[], null];
 
   return (
     <section className="space-y-4">
@@ -21,7 +34,7 @@ export default async function DashboardProductsPage() {
           Add, edit, and organize product listings for your storefront.
         </p>
       </header>
-      <ProductsManager initialProducts={products} />
+      <ProductsManager initialProducts={products} currency={store?.currency} />
     </section>
   );
 }

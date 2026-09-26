@@ -17,6 +17,7 @@ import type { StoreRecord, StoreTemplate, StorefrontSectionId } from "@/types";
 import { ChangeStoreUrlDialog } from "@/components/dashboard/change-store-url-dialog";
 import { EmailVerificationBanner } from "@/components/dashboard/email-verification-banner";
 import { storeUrl } from "@/lib/store-url";
+import { SUPPORTED_CURRENCIES } from "@/lib/currency";
 
 type StoreSetupFormProps = {
   initialStore: StoreRecord | null;
@@ -321,6 +322,8 @@ export function StoreSetupForm({ initialStore, initialEmailVerifiedAt = null }: 
     store_template: normalizeStoreTemplate(initialStore?.store_template),
     store_theme_preset: normalizeThemePreset(initialStore?.store_theme_preset),
     theme_color: initialStore?.theme_color ?? "#059669",
+    currency: initialStore?.currency ?? "NGN",
+    activated_currencies: initialStore?.activated_currencies ?? [],
     logo_url: initialStore?.logo_url ?? "",
     is_active: initialStore?.is_active ?? true,
     hero_title: initialConfig.hero_title,
@@ -644,6 +647,8 @@ export function StoreSetupForm({ initialStore, initialEmailVerifiedAt = null }: 
       body.append("store_template", form.store_template);
       body.append("store_theme_preset", form.store_theme_preset);
       body.append("theme_color", form.theme_color);
+      body.append("currency", form.currency);
+      body.append("activated_currencies", JSON.stringify(form.activated_currencies));
       body.append("logo_url", form.logo_url);
       body.append("is_active", String(form.is_active));
       body.append("storefront_config", JSON.stringify(storefrontConfig));
@@ -673,7 +678,7 @@ export function StoreSetupForm({ initialStore, initialEmailVerifiedAt = null }: 
         theme_color: nextStore.theme_color ?? "#059669",
         logo_url: nextStore.logo_url ?? "",
         is_active: nextStore.is_active,
-        hero_title: nextConfig.hero_title,
+        hero_title: nextConfig.hero_title,  
         hero_subtitle: nextConfig.hero_subtitle,
         hero_cta_text: nextConfig.hero_cta_text,
         hero_image_url: nextConfig.hero_image_url,
@@ -683,6 +688,8 @@ export function StoreSetupForm({ initialStore, initialEmailVerifiedAt = null }: 
         sections_order: nextConfig.sections_order ?? DEFAULT_STOREFRONT_SECTIONS_ORDER,
         niche_ids: nextStore.niche_ids ?? [],
         custom_niches: nextStore.custom_niches ?? form.custom_niches,
+        currency: nextStore.currency ?? "USD",
+        activated_currencies: nextStore.activated_currencies ?? [],
       });
       setMessage(payload.action === "created" ? "Store created!" : "Store updated successfully.");
       setShowVendorSuccessBanner(Boolean(payload.became_vendor));
@@ -721,6 +728,59 @@ export function StoreSetupForm({ initialStore, initialEmailVerifiedAt = null }: 
               <span className="font-medium text-slate-700">Store name <span className="text-red-500">*</span></span>
               <input required value={form.name} onChange={(e) => updateFormField("name", e.target.value)} placeholder="e.g. Moores Furniture" className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none ring-emerald-300 transition focus:ring-2" />
             </label>
+
+            <label className="space-y-1.5 text-sm">
+              <span className="font-medium text-slate-700">Currency</span>
+              <select
+                value={form.currency}
+                onChange={(e) => updateFormField("currency", e.target.value)}
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none ring-emerald-300 transition focus:ring-2"
+              >
+                {SUPPORTED_CURRENCIES.map((c) => (
+                  <option key={c.code} value={c.code}>
+                    {c.symbol} {c.label} ({c.code})
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-slate-500">
+                This is what you're actually paid in - it's on every order, WhatsApp message and receipt, and never changes based on what a customer was browsing in.
+              </p>
+            </label>
+
+            <div className="space-y-1.5 text-sm">
+              <span className="font-medium text-slate-700">Let customers view prices in other currencies</span>
+              <div className="flex flex-wrap gap-2">
+                {SUPPORTED_CURRENCIES.filter((c) => c.code !== form.currency).map((c) => {
+                  const checked = form.activated_currencies.includes(c.code);
+                  return (
+                    <label
+                      key={c.code}
+                      className={`flex cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition ${
+                        checked ? "border-emerald-500 bg-emerald-50 text-emerald-700" : "border-slate-200 text-slate-600"
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={(e) =>
+                          updateFormField(
+                            "activated_currencies",
+                            e.target.checked
+                              ? [...form.activated_currencies, c.code]
+                              : form.activated_currencies.filter((code) => code !== c.code),
+                          )
+                        }
+                        className="h-3.5 w-3.5 rounded border-slate-300 text-emerald-600"
+                      />
+                      {c.symbol} {c.code}
+                    </label>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-slate-500">
+                Customers on your store page can switch to see an estimated price in these currencies for comparison. This is an estimate only - what they actually pay is still in {form.currency}.
+              </p>
+            </div>
 
             <div className="space-y-2 text-sm">
               <span className="font-medium text-slate-700">WhatsApp number</span>

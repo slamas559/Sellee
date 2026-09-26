@@ -30,6 +30,8 @@ export type PublicStoreLite = {
   longitude?: number | null;
   whatsapp_verified_at?: string | null;
   is_verified?: boolean | null;
+  currency?: string | null;
+  activated_currencies?: string[];
 };
 
 export type PublicProductLite = {
@@ -167,7 +169,7 @@ const getMarketplaceBaseDataInternal = async () => {
       supabase
         .from("stores")
         .select(
-          "id, name, slug, city, state, country, logo_url, rating_avg, rating_count, latitude, longitude, whatsapp_verified_at, is_verified",
+          "id, name, slug, city, state, country, logo_url, rating_avg, rating_count, latitude, longitude, whatsapp_verified_at, is_verified, currency",
         )
         .eq("is_active", true)
         .limit(500),
@@ -244,7 +246,7 @@ const getStorefrontPublicDataInternal = async (slug: string) => {
 
   const { data: store } = await supabase
     .from("stores")
-    .select("id, vendor_id, name, slug, logo_url, whatsapp_number, store_template, store_theme_preset, storefront_config, rating_avg, rating_count, theme_color, is_active, created_at, whatsapp_verified_at, is_verified")
+    .select("id, vendor_id, name, slug, logo_url, whatsapp_number, store_template, store_theme_preset, storefront_config, rating_avg, rating_count, theme_color, is_active, created_at, whatsapp_verified_at, is_verified, currency, activated_currencies")
     .eq("slug", slug)
     .eq("is_active", true)
     .maybeSingle();
@@ -336,7 +338,7 @@ const getNicheLocationPageDataInternal = async (
   const { data: storesRaw } = await supabase
     .from("stores")
     .select(
-      "id, vendor_id, name, slug, city, state, country, logo_url, rating_avg, rating_count, theme_color, whatsapp_verified_at, is_verified",
+      "id, vendor_id, name, slug, city, state, country, logo_url, rating_avg, rating_count, theme_color, whatsapp_verified_at, is_verified, currency",
     )
     .in("id", candidateStoreIds)
     .eq("is_active", true);

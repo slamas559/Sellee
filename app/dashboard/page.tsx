@@ -9,7 +9,7 @@ import {
   getVendorStore,
   getVendorWhatsAppLinkStatus,
 } from "@/lib/dashboard-data";
-import { formatNaira } from "@/lib/format";
+import { formatPrice } from "@/lib/currency";
 import { normalizeStoreTemplate } from "@/lib/storefront";
 import { RevenueChart } from "@/components/dashboard/revenue-chart";
 import { OrderStatusChart } from "@/components/dashboard/order-status-chart";
@@ -18,6 +18,7 @@ import {
   generateOrderStatusData 
 } from "@/lib/chart-utils";
 import { getAnalyticsRange } from "@/lib/date-range";
+import { getEffectiveVendorId } from "@/lib/staff";
 import { BarChart3, ClipboardList, Package, Store } from "lucide-react";
 
 export const metadata: Metadata = {
@@ -26,21 +27,37 @@ export const metadata: Metadata = {
 
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
-  const store = session?.user?.id ? await getVendorStore(session.user.id) : null;
-  const products = session?.user?.id ? await getVendorProducts(session.user.id) : [];
+
+  if (!session?.user) {
+    redirect("/login");
+  }
+
+  // This is the only page every dashboard session (vendor or staff) lands
+  // on regardless of individual permissions, so it's gated on role alone -
+  // layout.tsx already enforces this too, but keeping it here as well
+  // means this page fails safe even if it's ever rendered outside that
+  // layout.
+  if (session.user.role !== "vendor" && session.user.role !== "staff") {
+    redirect("/");
+  }
+
+  const vendorId = getEffectiveVendorId(session);
+
+  const store = vendorId ? await getVendorStore(vendorId) : null;
+  const products = vendorId ? await getVendorProducts(vendorId) : [];
   // Broad recent-orders fetch (not date-bound) - used only for the Pending
   // Orders count, so an order awaiting action doesn't disappear from that
   // count just because it's more than 7 days old.
-  const orders = session?.user?.id ? await getVendorOrders(session.user.id, { limit: 100, offset: 0 }) : [];
-  const whatsappLinkStatus = session?.user?.id
-    ? await getVendorWhatsAppLinkStatus(session.user.id)
+  const orders = vendorId ? await getVendorOrders(vendorId, { limit: 100, offset: 0 }) : [];
+  const whatsappLinkStatus = vendorId
+    ? await getVendorWhatsAppLinkStatus(vendorId)
     : { linked: null, pending_code: null };
 
   // The "little analytics" on this page (revenue figure + charts) are scoped
   // to the last 7 days, matching the analytics page's default range.
   const overviewRange = getAnalyticsRange("7d");
-  const recentOrders = session?.user?.id
-    ? await getVendorOrders(session.user.id, { from: overviewRange.from, to: overviewRange.to })
+  const recentOrders = vendorId
+    ? await getVendorOrders(vendorId, { from: overviewRange.from, to: overviewRange.to })
     : [];
 
   const confirmedRecentOrders = recentOrders.filter(
@@ -60,14 +77,6 @@ export default async function DashboardPage() {
   // Generate chart data
   const revenueChartData = generateRevenueChartData(recentOrders, overviewRange);
   const orderStatusData = generateOrderStatusData(recentOrders);
-
-  if (!session?.user) {
-    redirect("/login");
-  }
-
-  if (session.user.role !== "vendor") {
-    redirect("/");
-  }
 
   return (
     <>
@@ -108,7 +117,7 @@ export default async function DashboardPage() {
         <article className="rounded-xl border border-emerald-100 bg-emerald-50/40 p-5 shadow-sm">
           <p className="flex items-center gap-2 text-sm text-slate-500"><BarChart3 className="h-4 w-4" aria-hidden="true" />Revenue</p>
           <h2 className="mt-2 text-2xl font-black text-slate-900">
-            {formatNaira(totalRevenue)}
+            {formatPrice(totalRevenue, store?.currency)}
           </h2>
           <p className="mt-1 text-sm text-slate-600">Confirmed/delivered orders, last 7 days.</p>
         </article>
@@ -116,7 +125,7 @@ export default async function DashboardPage() {
 
       {/* Charts Section */}
       <section className="grid gap-4 lg:grid-cols-2">
-        <RevenueChart data={revenueChartData} rangeLabel={overviewRange.label} />
+        <RevenueChart data={revenueChartData} rangeLabel={overviewRange.label} currency={store?.currency} />
         <OrderStatusChart data={orderStatusData} />
       </section>
 

@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
-import { formatNaira } from "@/lib/format";
+import { formatPrice } from "@/lib/currency";
 import { authOptions } from "@/lib/auth";
-import { getVendorOrders, getVendorWhatsAppLinkStatus } from "@/lib/dashboard-data";
+import { getVendorOrders, getVendorStore, getVendorWhatsAppLinkStatus } from "@/lib/dashboard-data";
+import { getEffectiveVendorId, getStaffPermissions } from "@/lib/staff";
 import { OrderStatusActions } from "@/components/dashboard/order-status-actions";
 import { ClipboardList, CircleCheck, Clock3, PackageCheck } from "lucide-react";
 
@@ -29,14 +31,24 @@ function statusClass(status: string): string {
 
 export default async function DashboardOrdersPage({ searchParams }: { searchParams?: Promise<{ page?: string }> }) {
   const session = await getServerSession(authOptions);
+
+  if (session?.user?.role === "staff") {
+    const permissions = await getStaffPermissions(session.user.id);
+    if (!permissions.orders) {
+      redirect("/dashboard");
+    }
+  }
+
+  const vendorId = getEffectiveVendorId(session);
   const params = await searchParams;
   const page = Number(params?.page ?? "1") || 1;
   const limit = 10;
   const offset = (page - 1) * limit;
 
-  const orders = session?.user?.id ? await getVendorOrders(session.user.id, { limit, offset }) : [];
-  const linkStatus = session?.user?.id
-    ? await getVendorWhatsAppLinkStatus(session.user.id)
+  const orders = vendorId ? await getVendorOrders(vendorId, { limit, offset }) : [];
+  const store = vendorId ? await getVendorStore(vendorId) : null;
+  const linkStatus = vendorId
+    ? await getVendorWhatsAppLinkStatus(vendorId)
     : { linked: null, pending_code: null };
   const isLinked = Boolean(linkStatus.linked?.is_active);
   const confirmedCount = orders.filter((item) => item.order.status === "confirmed").length;
@@ -90,14 +102,14 @@ export default async function DashboardOrdersPage({ searchParams }: { searchPara
           <p className="flex items-center gap-2 text-sm text-slate-500"><PackageCheck className="h-4 w-4" aria-hidden="true" />Delivered</p>
           <h2 className="mt-1 font-mono text-xl font-black tabular-nums text-slate-900">{deliveredCount}</h2>
           <p className="mt-1 text-xs text-slate-500">
-            Revenue: {formatNaira(totalRevenue)}
+            Revenue: {formatPrice(totalRevenue, store?.currency)}
           </p>
         </article>
         <article className="rounded-lg border border-amber-200 bg-amber-50 p-4">
           <p className="flex items-center gap-2 text-sm text-amber-900/80"><Clock3 className="h-4 w-4" aria-hidden="true" />Pending</p>
           <h2 className="mt-1 font-mono text-xl font-black tabular-nums text-amber-950">{pendingCount}</h2>
           <p className="mt-1 text-xs text-amber-900/80">
-            Pending value: {formatNaira(pendingValue)}
+            Pending value: {formatPrice(pendingValue, store?.currency)}
           </p>
         </article>
       </section>
@@ -142,7 +154,7 @@ export default async function DashboardOrdersPage({ searchParams }: { searchPara
                     WhatsApp: <span className="font-medium">{order.customer_whatsapp}</span>
                   </p>
                   <p>
-                    Total: <span className="font-semibold">{formatNaira(Number(order.total_amount))}</span>
+                    Total: <span className="font-semibold">{formatPrice(Number(order.total_amount), store?.currency)}</span>
                   </p>
                 </div>
 
@@ -160,7 +172,7 @@ export default async function DashboardOrdersPage({ searchParams }: { searchPara
                         )}
                         <div className="min-w-0">
                           <p className="line-clamp-1 text-sm font-medium text-slate-900">{item.product_name} x{item.quantity}</p>
-                          <p className="text-xs text-slate-500">{formatNaira(item.unit_price * item.quantity)}</p>
+                          <p className="text-xs text-slate-500">{formatPrice(item.unit_price * item.quantity, store?.currency)}</p>
                         </div>
                       </li>
                     ))}

@@ -58,6 +58,8 @@ export type StoreRecord = {
   whatsapp_verified_at: string | null;
   vendor_email_verified_at?: string | null;
   is_verified?: boolean | null;
+  currency: string; // CurrencyCode from lib/currency - the authorized/real currency, one per store
+  activated_currencies?: string[]; // additional CurrencyCodes customers may switch display to (estimate only)
 };
 
 export type ProductRecord = {

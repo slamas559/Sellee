@@ -22,6 +22,7 @@ import { storeUrl as buildStoreUrl } from "@/lib/store-url";
 import { BadgeCheck } from "lucide-react";
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
 import type { ProductRecord, StoreRecord } from "@/types";
+import { DisplayCurrencyProvider, CurrencySwitcher } from "@/components/marketplace/currency-switcher";
 
 type StorePageProps = {
   params: Promise<{ slug: string }>;
@@ -79,14 +80,21 @@ function StoreSearchBar({
   query,
   selectedCategory,
   categories,
+  activatedCurrencies,
 }: {
   homeHref: string;
   query: string;
   selectedCategory: string;
   categories: string[];
+  activatedCurrencies: string[];
 }) {
   return (
     <div className="space-y-2">
+      {activatedCurrencies.length > 0 ? (
+        <div className="flex justify-end">
+          <CurrencySwitcher activatedCurrencies={activatedCurrencies} />
+        </div>
+      ) : null}
       <form className="flex flex-nowrap items-center gap-2" action={homeHref}>
         <input
           name="q"
@@ -236,7 +244,7 @@ function MarketTemplate({
         {/* Products */}
         <div className="mx-auto max-w-7xl px-2 py-3 sm:px-4">
           <div className="mb-4">
-            <StoreSearchBar homeHref={storeHomeHref} query={query} selectedCategory={selectedCategory} categories={categories} />
+            <StoreSearchBar homeHref={storeHomeHref} query={query} selectedCategory={selectedCategory} categories={categories} activatedCurrencies={store.activated_currencies ?? []} />
           </div>
           {products.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-slate-300 bg-white py-16 text-center text-sm text-slate-500">No products match your search.</div>
@@ -244,7 +252,7 @@ function MarketTemplate({
             <div className="mt-4 grid grid-cols-2 justify-items-center gap-1 [@media(max-width:320px)]:grid-cols-1 sm:mt-5 sm:gap-3 lg:grid-cols-3 xl:grid-cols-4">
               {products.map((p) => (
                 <div key={p.id} className="w-full max-w-[320px] space-y-2">
-                  <ProductCard product={p} template="grocery_promo" store={{ name: store.name, slug: store.slug, logo_url: store.logo_url, rating_avg: store.rating_avg, rating_count: store.rating_count, is_verified: store.is_verified }} />
+                  <ProductCard product={p} template="grocery_promo" store={{ name: store.name, slug: store.slug, logo_url: store.logo_url, rating_avg: store.rating_avg, rating_count: store.rating_count, is_verified: store.is_verified, currency: store.currency }} />
                 </div>
               ))}
             </div>
@@ -358,7 +366,7 @@ function EditorialTemplate({
             <div className="flex gap-4 overflow-x-auto pb-2 [scrollbar-width:none]">
               {featured.map((p) => (
                 <div key={p.id} className="w-[56vw] max-w-[280px] shrink-0 sm:max-w-[280px]">
-                  <ProductCard product={p} template="fashion_editorial" store={{ name: store.name, slug: store.slug, logo_url: store.logo_url, rating_avg: store.rating_avg, rating_count: store.rating_count, is_verified: store.is_verified }} />
+                  <ProductCard product={p} template="fashion_editorial" store={{ name: store.name, slug: store.slug, logo_url: store.logo_url, rating_avg: store.rating_avg, rating_count: store.rating_count, is_verified: store.is_verified, currency: store.currency }} />
                 </div>
               ))}
             </div>
@@ -377,7 +385,7 @@ function EditorialTemplate({
           <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">{rest.length > 0 ? "All products" : "Products"}</p>
             <div className="w-full max-w-md">
-              <StoreSearchBar homeHref={storeHomeHref} query={query} selectedCategory={selectedCategory} categories={categories} />
+              <StoreSearchBar homeHref={storeHomeHref} query={query} selectedCategory={selectedCategory} categories={categories} activatedCurrencies={store.activated_currencies ?? []} />
             </div>
           </div>
           {products.length === 0 ? (
@@ -386,7 +394,7 @@ function EditorialTemplate({
             <div className="mt-4 grid grid-cols-2 justify-items-center gap-1 [@media(max-width:320px)]:grid-cols-1 sm:mt-5 sm:gap-3 lg:grid-cols-3 xl:grid-cols-4">
               {(rest.length > 0 ? rest : products).map((p) => (
                 <div key={p.id} className="w-full max-w-[320px] space-y-2">
-                  <ProductCard product={p} template="fashion_editorial" store={{ name: store.name, slug: store.slug, logo_url: store.logo_url, rating_avg: store.rating_avg, rating_count: store.rating_count, is_verified: store.is_verified }} />
+                  <ProductCard product={p} template="fashion_editorial" store={{ name: store.name, slug: store.slug, logo_url: store.logo_url, rating_avg: store.rating_avg, rating_count: store.rating_count, is_verified: store.is_verified, currency: store.currency }} />
                 </div>
               ))}
             </div>
@@ -504,7 +512,7 @@ function ShowcaseTemplate({
             </div>
             {/* Filters */}
             <div className="mb-4">
-              <StoreSearchBar homeHref={storeHomeHref} query={query} selectedCategory={selectedCategory} categories={categories} />
+              <StoreSearchBar homeHref={storeHomeHref} query={query} selectedCategory={selectedCategory} categories={categories} activatedCurrencies={store.activated_currencies ?? []} />
             </div>
             {products.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-slate-300 bg-white py-16 text-center text-sm text-slate-500">No products found.</div>
@@ -512,7 +520,7 @@ function ShowcaseTemplate({
               <div className="mt-4 grid grid-cols-2 justify-items-center gap-1 [@media(max-width:320px)]:grid-cols-1 sm:mt-5 sm:gap-3 lg:grid-cols-3 xl:grid-cols-4">
                 {products.map((p) => (
                   <div key={p.id} className="w-full max-w-[320px] space-y-2">
-                  <ProductCard product={p} template="lifestyle_showcase" store={{ name: store.name, slug: store.slug, logo_url: store.logo_url, rating_avg: store.rating_avg, rating_count: store.rating_count, is_verified: store.is_verified }} />
+                  <ProductCard product={p} template="lifestyle_showcase" store={{ name: store.name, slug: store.slug, logo_url: store.logo_url, rating_avg: store.rating_avg, rating_count: store.rating_count, is_verified: store.is_verified, currency: store.currency }} />
                   </div>
                 ))}
               </div>
@@ -643,7 +651,7 @@ function GridTemplate({
           <div>
             {/* Mobile search */}
             <div className="mb-4 lg:hidden">
-              <StoreSearchBar homeHref={storeHomeHref} query={query} selectedCategory={selectedCategory} categories={categories} />
+              <StoreSearchBar homeHref={storeHomeHref} query={query} selectedCategory={selectedCategory} categories={categories} activatedCurrencies={store.activated_currencies ?? []} />
             </div>
             {/* Desktop search bar */}
             <div className="mb-4 hidden lg:block">
@@ -677,7 +685,7 @@ function GridTemplate({
               <div className="mt-4 grid grid-cols-2 justify-items-center gap-1 [@media(max-width:320px)]:grid-cols-1 sm:mt-5 sm:gap-3 lg:grid-cols-3 xl:grid-cols-4">
                 {products.map((p) => (
                   <div key={p.id} className="w-full max-w-[320px] space-y-2">
-                    <ProductCard key={p.id} product={p} template="modern_grid" store={{ name: store.name, slug: store.slug, logo_url: store.logo_url, rating_avg: store.rating_avg, rating_count: store.rating_count, is_verified: store.is_verified }} />
+                    <ProductCard key={p.id} product={p} template="modern_grid" store={{ name: store.name, slug: store.slug, logo_url: store.logo_url, rating_avg: store.rating_avg, rating_count: store.rating_count, is_verified: store.is_verified, currency: store.currency }} />
                   </div>
                 ))}
               </div>
@@ -800,29 +808,29 @@ export default async function StorePage({ params, searchParams }: StorePageProps
 
   if (template === "fashion_editorial")
     return (
-      <>
+      <DisplayCurrencyProvider authorizedCurrency={store.currency} activatedCurrencies={store.activated_currencies ?? []}>
         <StoreVisitTracker storeId={store.id} isOwnerViewing={isOwnerViewing} />
         <EditorialTemplate {...props} />
-      </>
+      </DisplayCurrencyProvider>
     );
   if (template === "lifestyle_showcase")
     return (
-      <>
+      <DisplayCurrencyProvider authorizedCurrency={store.currency} activatedCurrencies={store.activated_currencies ?? []}>
         <StoreVisitTracker storeId={store.id} isOwnerViewing={isOwnerViewing} />
         <ShowcaseTemplate {...props} />
-      </>
+      </DisplayCurrencyProvider>
     );
   if (template === "modern_grid")
     return (
-      <>
+      <DisplayCurrencyProvider authorizedCurrency={store.currency} activatedCurrencies={store.activated_currencies ?? []}>
         <StoreVisitTracker storeId={store.id} isOwnerViewing={isOwnerViewing} />
         <GridTemplate {...props} />
-      </>
+      </DisplayCurrencyProvider>
     );
   return (
-    <>
+    <DisplayCurrencyProvider authorizedCurrency={store.currency} activatedCurrencies={store.activated_currencies ?? []}>
       <StoreVisitTracker storeId={store.id} isOwnerViewing={isOwnerViewing} />
       <MarketTemplate {...props} />
-    </>
+    </DisplayCurrencyProvider>
   );
 }

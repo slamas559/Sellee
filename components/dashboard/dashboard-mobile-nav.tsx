@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useMemo, useState } from "react";
 import logoText from "@/app/logos/image-text-logo.png";
 import { SignOutButton } from "@/components/auth/sign-out-button";
+import type { StaffPermissionKey, StaffPermissionMap } from "@/lib/staff";
 
 type DashboardMobileNavProps = {
   name?: string | null;
@@ -13,27 +14,39 @@ type DashboardMobileNavProps = {
   storeName?: string | null;
   location?: string | null;
   storeHref?: string;
+  role?: "vendor" | "staff";
+  permissions?: StaffPermissionMap | null;
 };
 
 type NavItem = {
   href: string;
   label: string;
-  icon: "home" | "user" | "store" | "box" | "orders" | "chart" | "plug"| "megaphone" | "tag";
+  icon: "home" | "user" | "store" | "box" | "orders" | "chart" | "plug"| "megaphone" | "tag" | "users";
+  staffPermission?: StaffPermissionKey;
+  vendorOnly?: boolean;
 };
 
 const navItems: NavItem[] = [
   { href: "/dashboard", label: "Overview", icon: "home" },
-  { href: "/dashboard/products", label: "Products", icon: "box" },
-  { href: "/dashboard/orders", label: "Orders", icon: "orders" },
-  { href: "/dashboard/analytics", label: "Analytics", icon: "chart" },
-  { href: "/dashboard/store", label: "Storefront", icon: "store" },
-  { href: "/dashboard/integrations", label: "Integrations", icon: "plug" },
-  { href: "/dashboard/broadcasts", label: "Broadcasts", icon: "megaphone" },
-  { href: "/dashboard/plans", label: "Plans", icon: "tag" },
+  { href: "/dashboard/products", label: "Products", icon: "box", staffPermission: "products" },
+  { href: "/dashboard/orders", label: "Orders", icon: "orders", staffPermission: "orders" },
+  { href: "/dashboard/analytics", label: "Analytics", icon: "chart", staffPermission: "analytics" },
+  { href: "/dashboard/store", label: "Storefront", icon: "store", staffPermission: "store_settings" },
+  { href: "/dashboard/integrations", label: "Integrations", icon: "plug", vendorOnly: true },
+  { href: "/dashboard/broadcasts", label: "Broadcasts", icon: "megaphone", staffPermission: "broadcasts" },
+  { href: "/dashboard/plans", label: "Plans", icon: "tag", vendorOnly: true },
+  { href: "/dashboard/staff", label: "Staff", icon: "users", vendorOnly: true },
   { href: "/dashboard/account", label: "Account", icon: "user" },
 ];
 
 const bottomTabs = ["/dashboard", "/dashboard/products", "/dashboard/orders", "/dashboard/analytics", "/dashboard/account"];
+
+function isVisible(item: NavItem, role: "vendor" | "staff", permissions?: StaffPermissionMap | null): boolean {
+  if (role === "vendor") return true;
+  if (item.vendorOnly) return false;
+  if (item.staffPermission) return permissions?.[item.staffPermission] === true;
+  return true;
+}
 
 function isActivePath(pathname: string, href: string) {
   if (href === "/dashboard") {
@@ -62,19 +75,30 @@ function NavIcon({ type, className }: { type: NavItem["icon"]; className?: strin
   if (type === "chart") return <svg {...shared}><path d="M4 19h16" /><path d="M7 16v-5" /><path d="M12 16V8" /><path d="M17 16v-9" /></svg>;
   if (type === "megaphone") return <svg {...shared}><path d="M3 11v2a2 2 0 0 0 2 2h1l3 5V4L6 9H5a2 2 0 0 0-2 2Z" /><path d="M14 8a4 4 0 0 1 0 8" /><path d="M17 5a8 8 0 0 1 0 14" /></svg>;
   if (type === "tag") return <svg {...shared}><path d="M12 3h6a1 1 0 0 1 1 1v6l-9 9-7-7 9-9Z" /><circle cx="15.5" cy="7.5" r="1.25" /></svg>;
+  if (type === "users") return <svg {...shared}><circle cx="9" cy="8" r="3.5" /><path d="M2.5 20a6.5 6.5 0 0 1 13 0" /><path d="M16 8.5a3 3 0 1 1 0-6" /><path d="M15 14.5c2.8.4 5 2.6 5 5.5" /></svg>;
   return <svg {...shared}><path d="M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z" /><path d="M19.4 15a1 1 0 0 0 .2 1.1l.1.1a1 1 0 0 1 0 1.4l-1.1 1.1a1 1 0 0 1-1.4 0l-.1-.1a1 1 0 0 0-1.1-.2 1 1 0 0 0-.6.9V20a1 1 0 0 1-1 1h-1.6a1 1 0 0 1-1-1v-.2a1 1 0 0 0-.6-.9 1 1 0 0 0-1.1.2l-.1.1a1 1 0 0 1-1.4 0l-1.1-1.1a1 1 0 0 1 0-1.4l.1-.1a1 1 0 0 0 .2-1.1 1 1 0 0 0-.9-.6H4a1 1 0 0 1-1-1v-1.6a1 1 0 0 1 1-1h.2a1 1 0 0 0 .9-.6 1 1 0 0 0-.2-1.1l-.1-.1a1 1 0 0 1 0-1.4l1.1-1.1a1 1 0 0 1 1.4 0l.1.1a1 1 0 0 0 1.1.2 1 1 0 0 0 .6-.9V4a1 1 0 0 1 1-1h1.6a1 1 0 0 1 1 1v.2a1 1 0 0 0 .6.9 1 1 0 0 0 1.1-.2l.1-.1a1 1 0 0 1 1.4 0l1.1 1.1a1 1 0 0 1 0 1.4l-.1.1a1 1 0 0 0-.2 1.1 1 1 0 0 0 .9.6H20a1 1 0 0 1 1 1v1.6a1 1 0 0 1-1 1h-.2a1 1 0 0 0-.9.6Z" /></svg>;
 }
 
-export function DashboardMobileNav({ name, email, storeName, location, storeHref }: DashboardMobileNavProps) {
+export function DashboardMobileNav({
+  name,
+  email,
+  storeName,
+  location,
+  storeHref,
+  role = "vendor",
+  permissions,
+}: DashboardMobileNavProps) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
-  const currentLabel = useMemo(() => {
-    const active = navItems.find((item) => isActivePath(pathname, item.href));
-    return active?.label ?? "Dashboard";
-  }, [pathname]);
+  const visibleNavItems = navItems.filter((item) => isVisible(item, role, permissions));
 
-  const bottomNavItems = navItems.filter((item) => bottomTabs.includes(item.href));
+  const currentLabel = useMemo(() => {
+    const active = visibleNavItems.find((item) => isActivePath(pathname, item.href));
+    return active?.label ?? "Dashboard";
+  }, [pathname, visibleNavItems]);
+
+  const bottomNavItems = visibleNavItems.filter((item) => bottomTabs.includes(item.href));
 
   return (
     <>
@@ -116,7 +140,9 @@ export function DashboardMobileNav({ name, email, storeName, location, storeHref
                 <Link href="/" onClick={() => setOpen(false)} className="inline-flex items-center">
                   <Image src={logoText} alt="Sellee" className="h-6 w-auto" />
                 </Link>
-                <h2 className="mt-1 text-lg font-semibold text-slate-900">Vendor Console</h2>
+                <h2 className="mt-1 text-lg font-semibold text-slate-900">
+                  {role === "staff" ? "Staff Console" : "Vendor Console"}
+                </h2>
                 <p className="mt-1 text-sm font-medium text-slate-700">{name ?? "Vendor"}</p>
               </div>
               <button
@@ -144,7 +170,7 @@ export function DashboardMobileNav({ name, email, storeName, location, storeHref
             ) : null}
 
             <nav className="mt-6 space-y-2">
-              {navItems.map((item) => (
+              {visibleNavItems.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}

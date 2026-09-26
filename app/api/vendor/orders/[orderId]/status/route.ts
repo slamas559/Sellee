@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
 import { z } from "zod";
-import { authOptions } from "@/lib/auth";
+import { requireVendorWorkspaceApi } from "@/lib/vendor-auth";
 import { requireVerifiedPhone } from "@/lib/require-verified-phone";
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
 import { sendWhatsAppTextMessage } from "@/lib/whatsapp-cloud";
@@ -16,12 +15,12 @@ export async function PATCH(
   request: Request,
   context: { params: Promise<{ orderId: string }> },
 ) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const ctx = await requireVendorWorkspaceApi("orders");
+  if (ctx instanceof NextResponse) return ctx;
+  const { vendorId } = ctx;
+
   const guard = await requireVerifiedPhone({
-    userId: session.user.id,
+    userId: vendorId,
     context: "vendor_whatsapp",
     requiredRole: "vendor",
   });
@@ -44,7 +43,7 @@ export async function PATCH(
   const { data: store } = await supabase
     .from("stores")
     .select("id,vendor_id,name")
-    .eq("vendor_id", session.user.id)
+    .eq("vendor_id", vendorId)
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();

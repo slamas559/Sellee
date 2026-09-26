@@ -10,7 +10,7 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@/components/ui/sheet";
-import { formatNaira } from "@/lib/format";
+import { formatPrice, getCurrencySymbol } from "@/lib/currency";
 import type { ProductRecord } from "@/types";
 
 type ProductsResponse = {
@@ -57,9 +57,10 @@ const initialForm: ProductFormState = {
 
 type ProductsManagerProps = {
   initialProducts: ProductRecord[];
+  currency?: string | null;
 };
 
-export function ProductsManager({ initialProducts }: ProductsManagerProps) {
+export function ProductsManager({ initialProducts, currency }: ProductsManagerProps) {
   const [products, setProducts] = useState<ProductRecord[]>(initialProducts);
   const [allowedCategories, setAllowedCategories] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -375,7 +376,7 @@ export function ProductsManager({ initialProducts }: ProductsManagerProps) {
           </label>
 
           <label className="space-y-2 text-sm">
-            <span className="font-medium text-slate-700">Price (NGN)</span>
+            <span className="font-medium text-slate-700">Price ({getCurrencySymbol(currency)})</span>
             <input
               type="number"
               min="0"
@@ -812,10 +813,10 @@ export function ProductsManager({ initialProducts }: ProductsManagerProps) {
 
                   <h3 className="text-base font-semibold text-slate-900">{product.name}</h3>
                   <p className="mt-1 flex items-center gap-2 text-sm font-medium text-slate-700">
-                    <span>{formatNaira(Number(product.price))}</span>
+                    <span>{formatPrice(Number(product.price), currency)}</span>
                     {product.compare_at_price && product.compare_at_price > product.price ? (
                       <span className="text-xs font-normal text-slate-400 line-through">
-                        {formatNaira(Number(product.compare_at_price))}
+                        {formatPrice(Number(product.compare_at_price), currency)}
                       </span>
                     ) : null}
                   </p>

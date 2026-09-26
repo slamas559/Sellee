@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { X } from "lucide-react";
 import { ProductShowcaseCard } from "@/components/marketplace/product-showcase-card";
 import { LocationFilterButton } from "@/components/marketplace/location-filter-button";
-import { formatNaira } from "@/lib/format";
+import { formatPrice } from "@/lib/currency";
 import { haversineDistanceKm } from "@/lib/geo";
 import {
   getMarketplaceBaseDataCached,
@@ -394,8 +394,14 @@ export default async function MarketplacePage({ searchParams }: MarketplacePageP
     });
   }
   if (state.min_price !== null || state.max_price !== null) {
-    const min = state.min_price !== null ? formatNaira(state.min_price) : "Any";
-    const max = state.max_price !== null ? formatNaira(state.max_price) : "Any";
+    // This filter is a raw number compared directly against each store's own
+    // listed price, with no currency conversion (the marketplace spans
+    // stores in different currencies) - same reasoning as the WhatsApp bot's
+    // price-filter echo in lib/whatsapp-bot/customer-commands.ts. Labeling
+    // it NGN keeps the label honest about the one currency it actually
+    // filters correctly within.
+    const min = state.min_price !== null ? formatPrice(state.min_price, "NGN") : "Any";
+    const max = state.max_price !== null ? formatPrice(state.max_price, "NGN") : "Any";
     activeFilters.push({
       label: `Price: ${min} - ${max}`,
       clearHref: buildMarketplaceHref(state, { min_price: null, max_price: null }),

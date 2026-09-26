@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
-import { formatNaira } from "@/lib/format";
+import { formatPrice } from "@/lib/currency";
 
 interface OrderRow {
   id: string;
@@ -14,7 +14,7 @@ interface OrderRow {
   total_amount: number;
   payment_method: string | null;
   created_at: string;
-  store: { name: string; slug: string } | null;
+  store: { name: string; slug: string; currency?: string | null } | null;
 }
 
 const STATUS_OPTIONS = [
@@ -150,7 +150,7 @@ export function OrdersPanel() {
                     {row.status.replace("_", " ")}
                   </span>
                 </td>
-                <td className="atlas-figure">{formatNaira(Number(row.total_amount))}</td>
+                <td className="atlas-figure">{formatPrice(Number(row.total_amount), row.store?.currency)}</td>
                 <td className="atlas-figure">{formatDate(row.created_at)}</td>
                 <td className="text-right">
                   <Link href={`/admin-console/orders/${row.id}`} className="atlas-btn" data-variant="outline">

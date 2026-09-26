@@ -1,9 +1,10 @@
-import { formatNaira } from "@/lib/format";
+import { formatPrice } from "@/lib/currency";
 
 type BuildOrderMessageParams = {
   productName: string;
   quantity: number;
   total: number;
+  currency?: string | null;
   storeName: string;
   orderReference?: string;
   customerName?: string;
@@ -53,6 +54,7 @@ export function buildOrderMessage({
   productName,
   quantity,
   total,
+  currency,
   storeName,
   orderReference,
   customerName,
@@ -63,7 +65,7 @@ export function buildOrderMessage({
 
   const ref = orderReference ? ` [Order Ref: ${orderReference}]` : "";
 
-  return `${intro} I want to order: ${productName} x${quantity} - Total: ${formatNaira(total)}. Please confirm my order. [Store: ${storeName}]${ref}`;
+  return `${intro} I want to order: ${productName} x${quantity} - Total: ${formatPrice(total, currency)}. Please confirm my order. [Store: ${storeName}]${ref}`;
 }
 
 export function buildWaMeLink(whatsappNumber: string, message: string): string {

@@ -1,5 +1,7 @@
 "use client";
 
+import { getCurrencySymbol } from "@/lib/currency";
+
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
 export type ProductPerformanceData = {
@@ -12,7 +14,7 @@ function compactName(value: string) {
   return value.length > 16 ? `${value.slice(0, 15)}…` : value;
 }
 
-export function ProductPerformanceChart({ data }: { data: ProductPerformanceData[] }) {
+export function ProductPerformanceChart({ data, currency }: { data: ProductPerformanceData[]; currency?: string | null }) {
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
       <div className="mb-4">
@@ -28,7 +30,7 @@ export function ProductPerformanceChart({ data }: { data: ProductPerformanceData
               axisLine={false}
               tickLine={false}
               tick={{ fill: "#64748b", fontSize: 11 }}
-              tickFormatter={(value) => `₦${Number(value).toLocaleString("en-NG", { notation: "compact" })}`}
+              tickFormatter={(value) => `${getCurrencySymbol(currency)}${Number(value).toLocaleString("en-NG", { notation: "compact" })}`}
             />
             <YAxis
               dataKey="name"
@@ -42,7 +44,7 @@ export function ProductPerformanceChart({ data }: { data: ProductPerformanceData
             <Tooltip
               cursor={{ fill: "#f1f5f9" }}
               contentStyle={{ backgroundColor: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "10px", boxShadow: "0 10px 24px rgba(15, 23, 42, 0.12)" }}
-              formatter={(value, name) => name === "Revenue" ? `₦${Number(value).toLocaleString()}` : `${value} sold`}
+              formatter={(value, name) => name === "Revenue" ? `${getCurrencySymbol(currency)}${Number(value).toLocaleString()}` : `${value} sold`}
             />
             <Bar dataKey="revenue" name="Revenue" fill="#8b5cf6" radius={[0, 6, 6, 0]} maxBarSize={26} />
           </BarChart>

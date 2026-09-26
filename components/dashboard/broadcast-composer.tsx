@@ -143,7 +143,7 @@ export function BroadcastComposer({ initialQuota, whatsappLinked, lastMessage }:
         </div>
         <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5">
           <span className="text-xs font-semibold text-slate-600">
-            {quota.remaining} of {quota.limit} left this month
+            {quota.unlimited ? "Unlimited this month" : `${quota.remaining} of ${quota.limit} left this month`}
           </span>
         </div>
       </div>

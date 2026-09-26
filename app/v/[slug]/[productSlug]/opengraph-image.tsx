@@ -14,10 +14,15 @@ type Props = {
   params: Promise<{ slug: string; productSlug: string }>;
 };
 
-function formatNairaSimple(value: number): string {
+// OG images render through satori (edge), where currency glyphs like NGN
+// or GHS aren't guaranteed to be in the font - the 3-letter ISO code reads
+// fine in any font, so we keep that format here rather than using the
+// symbol-based formatPrice() used elsewhere.
+function formatPriceSimple(value: number, currencyCode: string): string {
   return (
-    "NGN " +
-    new Intl.NumberFormat("en-NG", {
+    currencyCode +
+    " " +
+    new Intl.NumberFormat("en-US", {
       maximumFractionDigits: 0,
     }).format(value)
   );
@@ -30,6 +35,7 @@ export default async function ProductOGImage({ params }: Props) {
   let productImage: string | null = null;
   let productCategory: string | null = null;
   let storeName = "Store";
+  let storeCurrency = "NGN";
   let storeLogo: string | null = null;
   let themeColor = "#059669";
   let inStock = true;
@@ -41,7 +47,7 @@ export default async function ProductOGImage({ params }: Props) {
         (async () => {
           const { data: store } = await supabase
             .from("stores")
-            .select("id, name, logo_url, theme_color, is_active")
+            .select("id, name, logo_url, theme_color, is_active, currency")
             .eq("slug", slug)
             .eq("is_active", true)
             .maybeSingle();
@@ -54,6 +60,7 @@ export default async function ProductOGImage({ params }: Props) {
       storeName = result.name ?? "Store";
       storeLogo = result.logo_url ?? null;
       themeColor = result.theme_color ?? "#059669";
+      storeCurrency = result.currency ?? "NGN";
 
       const parsedPath = parseProductPathSegment(productSlug);
 
@@ -274,7 +281,7 @@ export default async function ProductOGImage({ params }: Props) {
                     letterSpacing: "-1px",
                   }}
                 >
-                  {formatNairaSimple(productPrice)}
+                  {formatPriceSimple(productPrice, storeCurrency)}
                 </span>
                 <span
                   style={{

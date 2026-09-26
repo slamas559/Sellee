@@ -14,7 +14,8 @@ import { storeUrl as buildStoreUrl, storeProductUrl } from "@/lib/store-url";
 import { ProductReviewsSection } from "@/components/reviews/product-reviews-section";
 import { StarRating } from "@/components/store/star-rating";
 import { ReportProductButton } from "@/components/store/report-product-button";
-import { formatNaira, formatProductPathSegment, parseProductPathSegment } from "@/lib/format";
+import { formatProductPathSegment, parseProductPathSegment } from "@/lib/format";
+import { DisplayCurrencyProvider, CurrencySwitcher, ProductPriceDisplay } from "@/components/marketplace/currency-switcher";
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
 import type { ProductRecord, StoreRecord } from "@/types";
 import { ArrowLeftIcon, PackageCheck, Share2, Store } from "lucide-react";
@@ -31,6 +32,7 @@ type ProductWithStore = ProductRecord & {
     logo_url: string | null;
     rating_avg: number | null;
     rating_count: number;
+    currency?: string | null;
   };
 };
 
@@ -122,7 +124,7 @@ export default async function StoreProductPage({ params, searchParams }: Product
 
   const { data: store } = await supabase
     .from("stores")
-    .select("id, vendor_id, name, slug, logo_url, whatsapp_number, store_template, store_theme_preset, storefront_config, rating_avg, rating_count, theme_color, is_active, created_at")
+    .select("id, vendor_id, name, slug, logo_url, whatsapp_number, store_template, store_theme_preset, storefront_config, rating_avg, rating_count, theme_color, is_active, created_at, currency, activated_currencies")
     .eq("slug", slug)
     .eq("is_active", true)
     .maybeSingle<StoreRecord>();
@@ -202,13 +204,13 @@ export default async function StoreProductPage({ params, searchParams }: Product
   const { data: relatedStoresData } = relatedStoreIds.length
     ? await supabase
         .from("stores")
-        .select("id, name, slug, logo_url, rating_avg, rating_count")
+        .select("id, name, slug, logo_url, rating_avg, rating_count, currency")
         .in("id", relatedStoreIds)
         .eq("is_active", true)
-    : { data: [] as Array<Pick<StoreRecord, "id" | "name" | "slug" | "logo_url" | "rating_avg" | "rating_count">> };
+    : { data: [] as Array<Pick<StoreRecord, "id" | "name" | "slug" | "logo_url" | "rating_avg" | "rating_count" | "currency">> };
 
   const relatedStoresById = new Map(
-    ((relatedStoresData ?? []) as Array<Pick<StoreRecord, "id" | "name" | "slug" | "logo_url" | "rating_avg" | "rating_count">>)
+    ((relatedStoresData ?? []) as Array<Pick<StoreRecord, "id" | "name" | "slug" | "logo_url" | "rating_avg" | "rating_count" | "currency">>)
       .map((item) => [item.id, item]),
   );
 
@@ -224,6 +226,7 @@ export default async function StoreProductPage({ params, searchParams }: Product
           logo_url: relatedStore.logo_url,
           rating_avg: relatedStore.rating_avg,
           rating_count: relatedStore.rating_count,
+          currency: relatedStore.currency,
         },
       };
     })
@@ -281,7 +284,8 @@ export default async function StoreProductPage({ params, searchParams }: Product
   const isOwnerViewing = session?.user?.id === store.vendor_id;
 
   return (
-    <main className="min-h-screen bg-[#f8f7f5]">
+    <DisplayCurrencyProvider authorizedCurrency={store.currency} activatedCurrencies={store.activated_currencies ?? []}>
+      <main className="min-h-screen bg-[#f8f7f5]">
       <StoreVisitTracker storeId={store.id} productId={product.id} isOwnerViewing={isOwnerViewing} />
       <script
         type="application/ld+json"
@@ -371,9 +375,11 @@ export default async function StoreProductPage({ params, searchParams }: Product
 
               {/* Price + stock */}
               <div className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-2">
-                <span className="text-4xl font-black tracking-tight text-stone-900">
-                  {formatNaira(Number(product.price))}
-                </span>
+                <ProductPriceDisplay
+                  amount={Number(product.price)}
+                  currency={store.currency}
+                  className="text-4xl font-black tracking-tight text-stone-900"
+                />
                 <span
                   className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold ${
                     isInStock
@@ -385,6 +391,11 @@ export default async function StoreProductPage({ params, searchParams }: Product
                   {isInStock ? `${product.stock_count} in stock` : "Out of stock"}
                 </span>
               </div>
+              {(store.activated_currencies?.length ?? 0) > 0 ? (
+                <div className="mt-2">
+                  <CurrencySwitcher activatedCurrencies={store.activated_currencies ?? []} />
+                </div>
+              ) : null}
 
               {/* Divider */}
               <div className="my-5 h-px bg-gradient-to-r from-stone-200 via-stone-100 to-transparent" />
@@ -449,6 +460,7 @@ export default async function StoreProductPage({ params, searchParams }: Product
                 productId={product.id}
                 productName={product.name}
                 productPrice={Number(product.price)}
+                currency={store.currency}
                 storeName={store.name}
                 whatsappNumber={store.whatsapp_number}
               />
@@ -513,6 +525,7 @@ export default async function StoreProductPage({ params, searchParams }: Product
                         logo_url: store.logo_url,
                         rating_avg: store.rating_avg,
                         rating_count: store.rating_count,
+                        currency: store.currency,
                       }}
                       variant="store"
                     />
@@ -567,5 +580,6 @@ export default async function StoreProductPage({ params, searchParams }: Product
         </div>
       </div>
     </main>
+    </DisplayCurrencyProvider>
   );
 }

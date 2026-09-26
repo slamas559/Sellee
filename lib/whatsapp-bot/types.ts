@@ -35,6 +35,7 @@ export type StoreForCommand = {
   id: string;
   name: string;
   vendor_id: string;
+  currency?: string | null;
 };
 
 export type WebhookDebugResult = {

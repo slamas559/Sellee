@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { formatNaira } from "@/lib/format";
+import { formatPrice } from "@/lib/currency";
 import { VENDOR_ASSISTANT_NAME } from "@/lib/ai/vendor-assistant-config";
 import { MicButton } from "@/components/ai/mic-button";
 import { SpeakButton } from "@/components/ai/speak-button";
@@ -89,7 +89,7 @@ const PERIOD_LABEL: Record<SalesSummary["period"], string> = {
 
 const SUGGESTIONS = ["How's my store doing today?", "What's low on stock?", "Draft a restock announcement"];
 
-function SalesSummaryCard({ summary }: { summary: SalesSummary }) {
+function SalesSummaryCard({ summary, currency }: { summary: SalesSummary; currency?: string | null }) {
   return (
     <div className="mt-2 rounded-2xl border border-emerald-200 bg-emerald-50/60 p-3">
       <p className="flex items-center gap-1.5 text-xs font-bold text-emerald-800">
@@ -97,7 +97,7 @@ function SalesSummaryCard({ summary }: { summary: SalesSummary }) {
       </p>
       <div className="mt-1.5 grid grid-cols-3 gap-2 text-center">
         <div>
-          <p className="text-sm font-black text-slate-900">{formatNaira(summary.confirmed_revenue)}</p>
+          <p className="text-sm font-black text-slate-900">{formatPrice(summary.confirmed_revenue, currency)}</p>
           <p className="text-[10px] text-slate-500">Revenue</p>
         </div>
         <div>
@@ -135,7 +135,7 @@ function LowStockCard({ items }: { items: LowStockItem[] }) {
   );
 }
 
-function ProductsListCard({ products }: { products: VendorProduct[] }) {
+function ProductsListCard({ products, currency }: { products: VendorProduct[]; currency?: string | null }) {
   if (products.length === 0) {
     return (
       <div className="mt-2 rounded-2xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
@@ -151,14 +151,14 @@ function ProductsListCard({ products }: { products: VendorProduct[] }) {
       {products.slice(0, 8).map((product) => (
         <div key={product.id} className="flex items-center justify-between text-xs">
           <span className="line-clamp-1 text-slate-700">{product.name}</span>
-          <span className="shrink-0 font-semibold text-slate-900">{formatNaira(product.price)}</span>
+          <span className="shrink-0 font-semibold text-slate-900">{formatPrice(product.price, currency)}</span>
         </div>
       ))}
     </div>
   );
 }
 
-function OrdersListCard({ orders }: { orders: VendorOrder[] }) {
+function OrdersListCard({ orders, currency }: { orders: VendorOrder[]; currency?: string | null }) {
   if (orders.length === 0) {
     return (
       <div className="mt-2 rounded-2xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
@@ -176,7 +176,7 @@ function OrdersListCard({ orders }: { orders: VendorOrder[] }) {
           <span className="line-clamp-1 text-slate-700">
             {order.customer_name ?? "Customer"} · {order.item_count} item{order.item_count === 1 ? "" : "s"}
           </span>
-          <span className="shrink-0 font-semibold text-slate-900">{formatNaira(order.total_amount)}</span>
+          <span className="shrink-0 font-semibold text-slate-900">{formatPrice(order.total_amount, currency)}</span>
         </div>
       ))}
     </div>
@@ -335,6 +335,7 @@ export function AiVendorAssistant() {
   const [broadcastState, setBroadcastState] = useState<Record<number, BroadcastCardState>>({});
   const [productState, setProductState] = useState<Record<number, ProductCardState>>({});
   const [allowedCategories, setAllowedCategories] = useState<string[]>([]);
+  const [currency, setCurrency] = useState<string | null>(null);
   const [input, setInput] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -349,8 +350,9 @@ export function AiVendorAssistant() {
     if (!isOpen || allowedCategories.length > 0) return;
     fetch("/api/products")
       .then((res) => (res.ok ? res.json() : null))
-      .then((data: { allowed_categories?: string[] } | null) => {
+      .then((data: { allowed_categories?: string[]; currency?: string } | null) => {
         if (data?.allowed_categories?.length) setAllowedCategories(data.allowed_categories);
+        if (data?.currency) setCurrency(data.currency);
       })
       .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -538,10 +540,10 @@ export function AiVendorAssistant() {
                       {message.role === "assistant" ? <SpeakButton text={message.content} /> : null}
                     </div>
 
-                    {extras?.salesSummary ? <SalesSummaryCard summary={extras.salesSummary} /> : null}
+                    {extras?.salesSummary ? <SalesSummaryCard summary={extras.salesSummary} currency={currency} /> : null}
                     {extras?.lowStock && extras.lowStock.length > 0 ? <LowStockCard items={extras.lowStock} /> : null}
-                    {extras?.products && extras.products.length > 0 ? <ProductsListCard products={extras.products} /> : null}
-                    {extras?.orders && extras.orders.length > 0 ? <OrdersListCard orders={extras.orders} /> : null}
+                    {extras?.products && extras.products.length > 0 ? <ProductsListCard products={extras.products} currency={currency} /> : null}
+                    {extras?.orders && extras.orders.length > 0 ? <OrdersListCard orders={extras.orders} currency={currency} /> : null}
 
                     {broadcastState[index] ? (
                       <BroadcastProposalCard

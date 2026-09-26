@@ -1,21 +1,21 @@
 // lib/broadcasts/quota.ts
 //
-// Interim rule while monetization is disabled: every vendor gets 5
-// broadcasts/month across BOTH channels combined, regardless of plan.
-// This is deliberately hardcoded rather than read from plan_limits - the
-// real Pro/Business quota split (7 WhatsApp / 10 combined, from the pricing
-// plan discussion) is still open pending the channel-reliability question,
-// and seeding plan_limits with numbers that might change again is worse
-// than one clearly-marked constant to update in one place later.
+// Broadcast quota is now plan-aware:
+// - If monetization is OFF (app_config.monetization_enabled = false), every
+//   vendor gets unlimited broadcasts, full stop - "everything free while
+//   we're starting out" applies here same as any other gated feature.
+// - If monetization is ON, the quota comes from the vendor's actual plan
+//   (plan_limits.broadcast_per_month for their current plan): Free = 0,
+//   Pro = 1, Business = 3.
 
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
-
-const INTERIM_MONTHLY_BROADCAST_LIMIT = 10;
+import { getVendorPlan, isMonetizationEnabled } from "@/lib/plans";
 
 export interface BroadcastQuota {
   used: number;
-  limit: number;
+  limit: number; // Infinity when unlimited - see `unlimited` before formatting for display
   remaining: number;
+  unlimited: boolean;
 }
 
 function startOfCurrentMonthIso(): string {
@@ -46,7 +46,21 @@ export async function getMonthlyBroadcastUsage(vendorId: string): Promise<Broadc
   ]);
 
   const used = (whatsappCount ?? 0) + (emailCount ?? 0);
-  const limit = INTERIM_MONTHLY_BROADCAST_LIMIT;
 
-  return { used, limit, remaining: Math.max(0, limit - used) };
+  const monetizationEnabled = await isMonetizationEnabled();
+  if (!monetizationEnabled) {
+    return { used, limit: Infinity, remaining: Infinity, unlimited: true };
+  }
+
+  const plan = await getVendorPlan(vendorId);
+  // No plan row found (shouldn't happen post-backfill) - fail closed at 0
+  // remaining rather than throwing, matching withinLimit's fail-closed intent.
+  const rawLimit = plan?.limits.broadcast_per_month;
+  if (rawLimit === null) {
+    // null in plan_limits means unlimited for that plan
+    return { used, limit: Infinity, remaining: Infinity, unlimited: true };
+  }
+  const limit = rawLimit ?? 0;
+
+  return { used, limit, remaining: Math.max(0, limit - used), unlimited: false };
 }
