@@ -214,7 +214,7 @@ export default async function StoreProductPage({ params, searchParams }: Product
       .map((item) => [item.id, item]),
   );
 
-  const relatedProducts: ProductWithStore[] = relatedProductsRaw
+  const relatedProducts = relatedProductsRaw
     .map((item) => {
       const relatedStore = relatedStoresById.get(item.store_id);
       if (!relatedStore) return null;
@@ -230,7 +230,7 @@ export default async function StoreProductPage({ params, searchParams }: Product
         },
       };
     })
-    .filter((item): item is ProductWithStore => item !== null)
+    .filter((item): item is NonNullable<typeof item> => item !== null)
     .slice(0, 8);
 
   const storeShareUrl = buildStoreUrl(store.slug);
