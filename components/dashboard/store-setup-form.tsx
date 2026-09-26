@@ -324,6 +324,10 @@ export function StoreSetupForm({ initialStore, initialEmailVerifiedAt = null }: 
     theme_color: initialStore?.theme_color ?? "#059669",
     currency: initialStore?.currency ?? "NGN",
     activated_currencies: initialStore?.activated_currencies ?? [],
+    // Note: filter below still assumes an array - this line is the actual
+    // fix for the crash (a missing DB column/select silently returns
+    // undefined, not null, so ?? alone doesn't always save you if a caller
+    // spreads a stale object over this default later).
     logo_url: initialStore?.logo_url ?? "",
     is_active: initialStore?.is_active ?? true,
     hero_title: initialConfig.hero_title,
@@ -648,7 +652,7 @@ export function StoreSetupForm({ initialStore, initialEmailVerifiedAt = null }: 
       body.append("store_theme_preset", form.store_theme_preset);
       body.append("theme_color", form.theme_color);
       body.append("currency", form.currency);
-      body.append("activated_currencies", JSON.stringify(form.activated_currencies));
+      body.append("activated_currencies", JSON.stringify(form.activated_currencies ?? []));
       body.append("logo_url", form.logo_url);
       body.append("is_active", String(form.is_active));
       body.append("storefront_config", JSON.stringify(storefrontConfig));
@@ -678,7 +682,7 @@ export function StoreSetupForm({ initialStore, initialEmailVerifiedAt = null }: 
         theme_color: nextStore.theme_color ?? "#059669",
         logo_url: nextStore.logo_url ?? "",
         is_active: nextStore.is_active,
-        hero_title: nextConfig.hero_title,  
+        hero_title: nextConfig.hero_title,
         hero_subtitle: nextConfig.hero_subtitle,
         hero_cta_text: nextConfig.hero_cta_text,
         hero_image_url: nextConfig.hero_image_url,
@@ -688,7 +692,7 @@ export function StoreSetupForm({ initialStore, initialEmailVerifiedAt = null }: 
         sections_order: nextConfig.sections_order ?? DEFAULT_STOREFRONT_SECTIONS_ORDER,
         niche_ids: nextStore.niche_ids ?? [],
         custom_niches: nextStore.custom_niches ?? form.custom_niches,
-        currency: nextStore.currency ?? "USD",
+        currency: nextStore.currency ?? "NGN",
         activated_currencies: nextStore.activated_currencies ?? [],
       });
       setMessage(payload.action === "created" ? "Store created!" : "Store updated successfully.");
@@ -751,7 +755,7 @@ export function StoreSetupForm({ initialStore, initialEmailVerifiedAt = null }: 
               <span className="font-medium text-slate-700">Let customers view prices in other currencies</span>
               <div className="flex flex-wrap gap-2">
                 {SUPPORTED_CURRENCIES.filter((c) => c.code !== form.currency).map((c) => {
-                  const checked = form.activated_currencies.includes(c.code);
+                  const checked = (form.activated_currencies ?? []).includes(c.code);
                   return (
                     <label
                       key={c.code}
@@ -766,8 +770,8 @@ export function StoreSetupForm({ initialStore, initialEmailVerifiedAt = null }: 
                           updateFormField(
                             "activated_currencies",
                             e.target.checked
-                              ? [...form.activated_currencies, c.code]
-                              : form.activated_currencies.filter((code) => code !== c.code),
+                              ? [...(form.activated_currencies ?? []), c.code]
+                              : (form.activated_currencies ?? []).filter((code) => code !== c.code),
                           )
                         }
                         className="h-3.5 w-3.5 rounded border-slate-300 text-emerald-600"

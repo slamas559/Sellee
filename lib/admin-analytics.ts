@@ -1,4 +1,5 @@
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
+import { getExchangeRates, convertAmount } from "@/lib/exchange-rates";
 
 // Same revenue definition already used on the vendor-facing analytics page
 // (app/dashboard/analytics/page.tsx) - only orders that actually completed
@@ -176,13 +177,20 @@ export async function getPlatformAnalytics(range: ResolvedRange): Promise<Platfo
       if (queryFloor) q = q.gte("created_at", queryFloor.toISOString());
       return q;
     })(),
-    supabase.from("stores").select("id, vendor_id, name"),
+    supabase.from("stores").select("id, vendor_id, name, currency"),
   ]);
 
   const orders = ordersRes.data ?? [];
   const visits = visitsRes.data ?? [];
   const users = usersRes.data ?? [];
   const storeById = new Map((storesRes.data ?? []).map((s) => [s.id, s]));
+
+  // GMV blends revenue across every vendor's own currency into one NGN
+  // figure for platform reporting - see lib/exchange-rates.ts. This is
+  // reporting-only: it never affects what any vendor is actually paid.
+  const fxRates = await getExchangeRates();
+  const toNgn = (amount: number, storeId: string) =>
+    convertAmount(amount, storeById.get(storeId)?.currency ?? "NGN", "NGN", fxRates);
 
   const inCurrentPeriod = (iso: string) => (!range.start || new Date(iso) >= range.start) && new Date(iso) <= range.end;
   const inPreviousPeriod = (iso: string) =>
@@ -214,7 +222,7 @@ export async function getPlatformAnalytics(range: ResolvedRange): Promise<Platfo
 
   for (const order of orders) {
     if (!REVENUE_STATUSES.has(order.status)) continue;
-    const amount = Number(order.total_amount ?? 0);
+    const amount = toNgn(Number(order.total_amount ?? 0), order.store_id);
     const isCurrent = inCurrentPeriod(order.created_at);
     const isPrevious = inPreviousPeriod(order.created_at);
 

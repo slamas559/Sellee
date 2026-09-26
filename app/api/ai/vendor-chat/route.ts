@@ -52,7 +52,7 @@ export async function POST(request: Request) {
     // store.id/name are resolved server-side from the session above - never
     // taken from the request body, so a vendor can never point the
     // assistant at another vendor's store.
-    const result = await getVendorAssistantReply(parsed.data.messages, { id: store.id, name: store.name });
+    const result = await getVendorAssistantReply(parsed.data.messages, { id: store.id, name: store.name, currency: store.currency });
     return NextResponse.json(result);
   } catch (error) {
     logDevError("ai.vendor_chat.unhandled", error, { userId: session.user.id });

@@ -1,4 +1,4 @@
-import { formatNaira } from "@/lib/format";
+import { formatPrice } from "@/lib/currency";
 import { VENDOR_ASSISTANT_NAME } from "@/lib/ai/vendor-assistant-config";
 import { logDevError, logServerInfo } from "@/lib/logger";
 import {
@@ -50,6 +50,7 @@ export type VendorChatMessage = {
 export type VendorStoreContext = {
   id: string;
   name: string;
+  currency?: string | null;
 };
 
 export type ProposedBroadcast = {
@@ -104,7 +105,7 @@ Behavior:
 - If the vendor wants to add a new product ("add a red ankara gown, 15000 naira, 10 in stock"), call propose_product with what they told you, filling in reasonable defaults only where harmless (e.g. leave description empty if not given). Do NOT claim it was added - it only becomes a real listing when the vendor confirms in the UI.
 - You have NO ability to edit or delete existing products/orders, change prices, issue refunds, or do anything else beyond the tools listed. If asked for something outside this list, say so plainly and point to the relevant dashboard page.
 - For "how do I..." dashboard questions, answer directly from the facts above - no tool needed.
-- Prices are in Nigerian Naira. Keep replies short and practical - this is a dashboard chat widget, not a report.
+- Prices are in the vendor's own store currency (not necessarily Naira - check formatted_price/formatted_total on any product or order data you're given, don't assume). Keep replies short and practical - this is a dashboard chat widget, not a report.
 - Never state a specific number (revenue, stock count, order count) unless it came from a tool result in this conversation.`;
 
 const GET_SALES_SUMMARY_TOOL: ToolDefinition = {
@@ -200,7 +201,7 @@ const PROPOSE_PRODUCT_TOOL: ToolDefinition = {
         name: { type: "string", description: "Product name." },
         description: { type: "string", description: "Optional short product description." },
         category: { type: "string", description: "Optional category, if the vendor mentioned one." },
-        price: { type: "number", description: "Price in Naira." },
+        price: { type: "number", description: "Price in the store's own currency." },
         stock_count: { type: "number", description: "Units in stock." },
       },
       required: ["name", "price", "stock_count"],
@@ -367,7 +368,7 @@ export async function getVendorAssistantReply(
           accumulated.products = products;
           const summaries = products.map((p) => ({
             ...p,
-            formatted_price: formatNaira(Number(p.price)),
+            formatted_price: formatPrice(Number(p.price), store.currency),
           }));
           messages.push({ role: "tool", tool_call_id: toolCall.id, content: JSON.stringify({ products: summaries }) });
           continue;
@@ -380,7 +381,7 @@ export async function getVendorAssistantReply(
             limit: typeof args.limit === "number" ? args.limit : undefined,
           });
           accumulated.orders = orders;
-          const summaries = orders.map((o) => ({ ...o, formatted_total: formatNaira(o.total_amount) }));
+          const summaries = orders.map((o) => ({ ...o, formatted_total: formatPrice(o.total_amount, store.currency) }));
           messages.push({ role: "tool", tool_call_id: toolCall.id, content: JSON.stringify({ orders: summaries }) });
           continue;
         }
