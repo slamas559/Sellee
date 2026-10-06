@@ -7,6 +7,8 @@ import Link from "next/link";
 import { AttributionControl, MapContainer, Marker, Popup, TileLayer, useMap, useMapEvents } from "react-leaflet";
 import {
   Compass,
+  ChevronDown,
+  ChevronUp,
   Loader2,
   LocateFixed,
   MapPin,
@@ -162,6 +164,7 @@ export default function VendorsMap() {
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [isLocating, setIsLocating] = useState(false);
   const [showSearchArea, setShowSearchArea] = useState(false);
+  const [showVendorList, setShowVendorList] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<LocationSearchResult[]>([]);
   const [isSearchingLocation, setIsSearchingLocation] = useState(false);
@@ -171,6 +174,7 @@ export default function VendorsMap() {
   const [error, setError] = useState<string | null>(null);
   const mapPositionRef = useRef<{ lat: number; lng: number }>(center);
   const mapInstanceRef = useRef<L.Map | null>(null);
+  const vendorMarkerRefs = useRef(new Map<string, L.Marker>());
 
   const fetchVendors = useCallback(async (point: { lat: number; lng: number }, category: string | null) => {
     setIsLoadingVendors(true);
@@ -180,7 +184,7 @@ export default function VendorsMap() {
         lat: String(point.lat),
         lng: String(point.lng),
         radius_km: String(DEFAULT_RADIUS_KM),
-        limit: "100",
+        limit: "500",
       });
       if (category) params.set("category", category);
 
@@ -288,6 +292,15 @@ export default function VendorsMap() {
 
   function searchThisArea() {
     moveTo(mapPositionRef.current, "This area");
+  }
+
+  function locateVendor(vendor: VendorPin) {
+    if (vendor.latitude === null || vendor.longitude === null) return;
+    const point = { lat: vendor.latitude, lng: vendor.longitude };
+    mapPositionRef.current = point;
+    setCenter(point);
+    setFlyToTarget({ ...point, zoom: 15 });
+    vendorMarkerRefs.current.get(vendor.id)?.openPopup();
   }
 
   const handleMapInstanceReady = useCallback((map: L.Map) => {
@@ -407,6 +420,10 @@ export default function VendorsMap() {
               key={vendor.id}
               position={[vendor.latitude as number, vendor.longitude as number]}
               icon={vendorIcon(vendor)}
+              ref={(marker) => {
+                if (marker) vendorMarkerRefs.current.set(vendor.id, marker);
+                else vendorMarkerRefs.current.delete(vendor.id);
+              }}
             >
               <Popup>
                 <div className="p-3">
@@ -475,13 +492,85 @@ export default function VendorsMap() {
       ) : null}
 
       {/* Vendor count pill */}
-      <div className="absolute bottom-5 left-1/2 z-[1000] flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-white/95 px-3.5 py-1.5 text-xs font-semibold text-slate-700 shadow-lg backdrop-blur">
-        {isLoadingVendors ? (
-          <Loader2 className="h-3.5 w-3.5 animate-spin text-emerald-600" />
-        ) : (
-          <StoreIcon className="h-3.5 w-3.5 text-emerald-600" />
-        )}
-        {isLoadingVendors ? "Loading vendors..." : `${vendors.length} vendor${vendors.length === 1 ? "" : "s"} near ${locationLabel}`}
+      <div className="absolute bottom-4 left-3 z-[1000] w-[min(22rem,calc(100vw-5rem))] sm:left-4">
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white/95 shadow-xl backdrop-blur">
+          <button
+            type="button"
+            onClick={() => setShowVendorList((open) => !open)}
+            aria-expanded={showVendorList}
+            className="flex w-full items-center justify-between gap-3 px-3.5 py-3 text-left"
+          >
+            <span className="flex min-w-0 items-center gap-2 text-xs font-semibold text-slate-700">
+              {isLoadingVendors ? (
+                <Loader2 className="h-4 w-4 shrink-0 animate-spin text-emerald-600" />
+              ) : (
+                <StoreIcon className="h-4 w-4 shrink-0 text-emerald-600" />
+              )}
+              <span className="truncate">
+                {isLoadingVendors
+                  ? "Loading vendors..."
+                  : `${vendors.length} vendor${vendors.length === 1 ? "" : "s"} near ${locationLabel}`}
+              </span>
+            </span>
+            {showVendorList ? (
+              <ChevronDown className="h-4 w-4 shrink-0 text-slate-500" />
+            ) : (
+              <ChevronUp className="h-4 w-4 shrink-0 text-slate-500" />
+            )}
+          </button>
+          {showVendorList ? (
+            <div className="max-h-[45vh] overflow-y-auto border-t border-slate-100">
+              {error ? (
+                <p className="px-3.5 py-3 text-xs text-red-600">{error}</p>
+              ) : isLoadingVendors && vendors.length === 0 ? (
+                <p className="px-3.5 py-3 text-xs text-slate-500">Finding vendors in this area...</p>
+              ) : vendors.length === 0 ? (
+                <p className="px-3.5 py-3 text-xs text-slate-500">No vendors found in this area.</p>
+              ) : (
+                <ul className="divide-y divide-slate-100">
+                  {vendors.map((vendor) => (
+                    <li key={vendor.id} className="flex items-center gap-2.5 px-3 py-2.5">
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-slate-200 bg-slate-50">
+                        {vendor.logo_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={vendor.logo_url} alt="" className="h-full w-full object-cover" />
+                        ) : (
+                          <StoreIcon className="h-4 w-4 text-slate-400" />
+                        )}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-xs font-semibold text-slate-800">{vendor.name}</p>
+                        <p className="truncate text-[11px] text-slate-500">
+                          {[vendor.city, vendor.state].filter(Boolean).join(", ") || "Location unavailable"}
+                          {vendor.distance_km !== null ? ` · ${vendor.distance_km.toFixed(1)} km` : ""}
+                        </p>
+                      </div>
+                      {vendor.latitude !== null && vendor.longitude !== null ? (
+                        <button
+                          type="button"
+                          onClick={() => locateVendor(vendor)}
+                          aria-label={`Locate ${vendor.name} on map`}
+                          title="Locate on map"
+                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-emerald-700 hover:bg-emerald-50"
+                        >
+                          <MapPin className="h-4 w-4" />
+                        </button>
+                      ) : null}
+                      <Link
+                        href={storeUrl(vendor.slug)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="shrink-0 rounded-lg bg-emerald-600 px-2.5 py-1.5 text-[11px] font-semibold text-white hover:bg-emerald-700"
+                      >
+                        Visit
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          ) : null}
+        </div>
       </div>
 
       {/* Floating search + filter panel */}

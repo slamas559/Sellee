@@ -10,7 +10,7 @@ import { CategoriesMegaMenu } from "@/components/layout/categories-mega-menu";
 import { UserMenu } from "@/components/layout/user-menu";
 import { useSession } from "next-auth/react";
 
-const HIDDEN_ON_ROUTES = ["/login", "/register", "/forgot-password", "/reset-password", "/v", "/admin-console", "/dashboard"];
+const HIDDEN_ON_ROUTES = ["/login", "/register", "/forgot-password", "/reset-password", "/admin-console", "/dashboard"];
 
 type SiteHeaderProps = {
 };
@@ -88,13 +88,15 @@ export default function SiteHeader(_props: SiteHeaderProps = {}) {
 }, []);
 
   // ── All hooks have run — now it is safe to conditionally return ──
-  // Check if we're on the vendor store listing page (not product details)
+  // Hide the vendor storefront, but keep the header on product details and profiles.
   const pathSegments = pathname.split("/").filter(Boolean);
   const isStoreListingPage = pathSegments[0] === "store" && pathSegments.length === 2;
+  const isVendorStorePage = pathSegments[0] === "v" && pathSegments.length === 2;
 
   const shouldHide =
     HIDDEN_ON_ROUTES.some((route) => pathname.startsWith(route)) ||
     isStoreListingPage ||
+    isVendorStorePage ||
     pathname === "/login" ||
     pathname.startsWith("/login/") ||
     pathname === "/register" ||

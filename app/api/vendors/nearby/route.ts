@@ -9,7 +9,7 @@ const nearbyQuerySchema = z.object({
   radius_km: z.coerce.number().min(1).max(200).default(25),
   q: z.string().trim().max(80).optional(),
   category: z.string().trim().max(50).optional(),
-  limit: z.coerce.number().int().min(1).max(100).default(24),
+  limit: z.coerce.number().int().min(1).max(500).default(24),
 });
 
 export async function GET(request: Request) {
