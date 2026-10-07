@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  BadgeCheck,
   ChartNoAxesCombined,
   CreditCard,
   LayoutDashboard,
@@ -48,6 +49,7 @@ const navItems: NavItem[] = [
   { href: "/dashboard/analytics", label: "Analytics", icon: ChartNoAxesCombined, staffPermission: "analytics" },
   { href: "/dashboard/store", label: "Storefront", icon: Store, staffPermission: "store_settings" },
   { href: "/dashboard/integrations", label: "Integrations", icon: PlugZap, vendorOnly: true },
+  { href: "/dashboard/verification", label: "Verification", icon: BadgeCheck, vendorOnly: true },
   { href: "/dashboard/broadcasts", label: "Broadcasts", icon: Megaphone, staffPermission: "broadcasts" },
   { href: "/dashboard/plans", label: "Plans", icon: CreditCard, vendorOnly: true },
   { href: "/dashboard/staff", label: "Staff", icon: Users, vendorOnly: true },

@@ -259,7 +259,7 @@ export function AccountProfileForm() {
               <EmailVerificationBanner
                 prompt={
                   role === "vendor"
-                    ? "Your account email isn't verified yet. Shoppers won't see a Verified badge until you do."
+                    ? "Your account email isn't verified yet. Verify it to keep your account secure and receive important updates."
                     : "Your account email isn't verified yet. Verify it to receive order updates."
                 }
               />

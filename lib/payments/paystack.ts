@@ -94,3 +94,64 @@ export async function verifyPaystackTransaction(
     amountNaira: data.data.amount / 100,
   };
 }
+
+// ---- Bank list + account name resolution (vendor payout accounts) ----
+
+export type PaystackBank = {
+  name: string;
+  code: string;
+};
+
+export async function listPaystackBanks(): Promise<{ banks: PaystackBank[] } | { error: string }> {
+  const secret = getRequiredEnv("PAYSTACK_SECRET_KEY");
+
+  const response = await fetch(`${PAYSTACK_BASE_URL}/bank?country=nigeria&perPage=200`, {
+    headers: { Authorization: `Bearer ${secret}` },
+    cache: "no-store",
+  });
+
+  const data = await response.json().catch(() => null);
+
+  if (!response.ok || !data?.status || !Array.isArray(data.data)) {
+    return { error: data?.message ?? "Could not load the bank list." };
+  }
+
+  const seen = new Set<string>();
+  const banks: PaystackBank[] = [];
+
+  for (const row of data.data as Array<{ name?: string; code?: string; active?: boolean; is_deleted?: boolean | null }>) {
+    if (!row?.name || !row?.code) continue;
+    if (row.active === false || row.is_deleted === true) continue;
+    if (seen.has(row.code)) continue;
+    seen.add(row.code);
+    banks.push({ name: row.name, code: row.code });
+  }
+
+  banks.sort((a, b) => a.name.localeCompare(b.name));
+  return { banks };
+}
+
+export async function resolvePaystackAccount(params: {
+  accountNumber: string;
+  bankCode: string;
+}): Promise<{ accountName: string } | { error: string }> {
+  const secret = getRequiredEnv("PAYSTACK_SECRET_KEY");
+
+  const query = new URLSearchParams({
+    account_number: params.accountNumber,
+    bank_code: params.bankCode,
+  });
+
+  const response = await fetch(`${PAYSTACK_BASE_URL}/bank/resolve?${query.toString()}`, {
+    headers: { Authorization: `Bearer ${secret}` },
+    cache: "no-store",
+  });
+
+  const data = await response.json().catch(() => null);
+
+  if (!response.ok || !data?.status || !data?.data?.account_name) {
+    return { error: "We couldn't find that account. Check the bank and account number and try again." };
+  }
+
+  return { accountName: String(data.data.account_name).trim() };
+}

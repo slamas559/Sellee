@@ -14,6 +14,7 @@ const NAV_SECTIONS: Array<{ label: string; items: Array<{ href: string; label: s
     items: [
       { href: "/admin-console/analytics", label: "Analytics & earnings" },
       { href: "/admin-console/users", label: "Users & vendors" },
+      { href: "/admin-console/verifications", label: "Vendor verification" },
       { href: "/admin-console/orders", label: "Orders" },
       { href: "/admin-console/catalog", label: "Catalog" },
       { href: "/admin-console/settings", label: "Settings" },

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { RECEIVED_PROMPT_LINE } from "@/lib/whatsapp-bot/receipts";
 import { z } from "zod";
 import { requireVendorWorkspaceApi } from "@/lib/vendor-auth";
 import { requireVerifiedPhone } from "@/lib/require-verified-phone";
@@ -123,6 +124,7 @@ export async function PATCH(
           message: waMessage(
             waTitle(`Your order #${ref} has been delivered!`),
             `From ${store.name}. We hope you love it.`,
+            RECEIVED_PROMPT_LINE,
           ),
         });
 

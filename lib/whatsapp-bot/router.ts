@@ -11,6 +11,7 @@ import { handleMorePagination } from "@/lib/whatsapp-bot/pagination";
 import { extractRef, type BotCommand, inferCommand } from "@/lib/whatsapp-bot/parse";
 import { resolveVendorStoreByPhone } from "@/lib/whatsapp-bot/repository";
 import { handleCustomerCommand } from "@/lib/whatsapp-bot/customer-commands";
+import { handleReceivedReply } from "@/lib/whatsapp-bot/receipts";
 import { getPendingReview, handleReviewReply } from "@/lib/whatsapp-bot/reviews";
 import {
   handleBroadcast,
@@ -108,6 +109,20 @@ export async function routeIncomingText(from: string, rawBody: string): Promise<
     command: initialCommand,
     body: rawBody.slice(0, 120),
   });
+
+  // "RECEIVED" confirms a delivered order. It's checked before the review
+  // interception below, which would otherwise treat it as a bad rating.
+  const receipt = await handleReceivedReply(from, rawBody);
+  if (receipt) {
+    return {
+      from,
+      body: rawBody,
+      inferred_command: "ORDER_RECEIVED",
+      role: "customer",
+      scope_store_id: receipt.storeId,
+      status: "ok",
+    };
+  }
 
   const pendingReview = await getPendingReview(from);
   if (pendingReview) {

@@ -29,6 +29,9 @@ import AdminBroadcastEmail, {
 import VendorBroadcastEmail, {
   type VendorBroadcastEmailProps,
 } from "@/emails/VendorBroadcastEmail";
+import VerificationDecisionEmail, {
+  type VerificationDecisionEmailProps,
+} from "@/emails/VerificationDecisionEmail";
 
 const SYSTEM_FROM = "Sellee <hello@sellee.store>";
 const SUPPORT_FROM = "Sellee <support@sellee.store>";
@@ -51,6 +54,11 @@ export interface SendPasswordResetEmailInput extends PasswordResetEmailProps {
 }
 
 export interface SendEmailVerificationEmailInput extends EmailVerificationEmailProps {
+  to: string;
+  subject?: string;
+}
+
+export interface SendVerificationDecisionEmailInput extends VerificationDecisionEmailProps {
   to: string;
   subject?: string;
 }
@@ -623,6 +631,35 @@ export async function sendProductReportNotificationEmail({
           <p style="margin-top: 10px; font-size: 12px; color: #64748b;">Product ID: ${escapeHtml(productId)}</p>
         </div>
       `,
+    });
+
+    if (error) {
+      return { success: false, error };
+    }
+
+    return { success: true, data };
+  } catch (error) {
+    return { success: false, error: normalizeError(error) };
+  }
+}
+
+export async function sendVerificationDecisionEmail({
+  to,
+  subject,
+  ...props
+}: SendVerificationDecisionEmailInput): Promise<EmailActionResult> {
+  try {
+    const resend = getResendClient();
+    const { data, error } = await resend.emails.send({
+      from: SYSTEM_FROM,
+      to,
+      replyTo: SUPPORT_REPLY_TO,
+      subject:
+        subject ??
+        (props.decision === "approved"
+          ? "Your ID was approved"
+          : "We couldn't approve your ID"),
+      react: VerificationDecisionEmail(props),
     });
 
     if (error) {

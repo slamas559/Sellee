@@ -461,6 +461,13 @@ export async function handleReviewReply(
 
     if (completeError) throw new Error(completeError.message);
 
+    // A completed review also proves the buyer got the order.
+    await supabase
+      .from("orders")
+      .update({ buyer_confirmed_at: new Date().toISOString(), buyer_confirmed_via: "review" })
+      .eq("id", pendingReview.order_id)
+      .is("buyer_confirmed_at", null);
+
     // ── Final thank-you message ──────────────────────────────────────────────
     const productEmoji = ["😞", "😕", "😐", "😊", "🤩"][productRating - 1];
     const vendorEmoji = ["😞", "😕", "😐", "😊", "🤩"][vendorRating - 1];

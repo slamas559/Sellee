@@ -4,24 +4,14 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { BadgeCheck, ShieldCheck, Star, Truck } from "lucide-react";
 import { getStorefrontPublicDataCached } from "@/lib/public-cache";
-import { getVendorTrustStats, type SellerTier } from "@/lib/vendor-trust";
+import { getVendorTrustStats } from "@/lib/vendor-trust";
+import { VerificationPill } from "@/components/store/verification-pill";
+import { isVerificationTier } from "@/lib/verification-tier-constants";
 import { storeUrl } from "@/lib/store-url";
 import { SellerProfileTabs } from "@/components/vendors/seller-profile-tabs";
 
 type SellerProfilePageProps = {
   params: Promise<{ slug: string }>;
-};
-
-const TIER_LABEL: Record<SellerTier, string> = {
-  new: "New Seller",
-  trusted: "Trusted Seller",
-  top_rated: "Top Rated Seller",
-};
-
-const TIER_STYLE: Record<SellerTier, string> = {
-  new: "bg-slate-100 text-slate-600",
-  trusted: "bg-emerald-100 text-emerald-700",
-  top_rated: "bg-amber-100 text-amber-700",
 };
 
 export async function generateMetadata({ params }: SellerProfilePageProps): Promise<Metadata> {
@@ -43,6 +33,7 @@ export default async function SellerProfilePage({ params }: SellerProfilePagePro
   }
 
   const trust = await getVendorTrustStats(store.id);
+  const tier = isVerificationTier(store.verification_tier) ? store.verification_tier : "none";
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-8">
@@ -63,13 +54,15 @@ export default async function SellerProfilePage({ params }: SellerProfilePagePro
               <BadgeCheck className="h-4 w-4 shrink-0 text-emerald-600" aria-label="Verified vendor" />
             ) : null}
           </div>
-          {trust && (
-            <span
-              className={`mt-1 inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold ${TIER_STYLE[trust.tier]}`}
-            >
-              {TIER_LABEL[trust.tier]}
-            </span>
-          )}
+          <div className="mt-1">
+            {tier !== "none" ? (
+              <VerificationPill tier={tier} />
+            ) : (
+              <span className="inline-block rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-600">
+                New Seller
+              </span>
+            )}
+          </div>
         </div>
       </div>
 

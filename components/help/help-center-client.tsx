@@ -132,7 +132,7 @@ const faqs: FaqItem[] = [
     category: "Vendors",
     question: "Must I verify my store's WhatsApp number?",
     answer:
-      "No, adding a WhatsApp number is required to run a store, but verifying it is optional. If you skip verification, your store still works and can take orders, but it won't show the Verified badge to shoppers (meaning we could not verify your store). You can verify anytime from Store settings, and if you later change your WhatsApp number, you'll need to verify the new one.",
+      "No, adding a WhatsApp number is required to run a store, but verification is optional. If you skip it, your store still works and can take orders, but it won't show a Verified badge. The badge needs three checks: confirming your store's WhatsApp number, adding a payout bank account whose name matches your ID, and submitting an ID for review. You can start from Verification in your dashboard. Trusted Seller and Top Seller badges are then earned from orders your buyers confirm and your ratings. If you change your WhatsApp number later, you'll need to verify the new one.",
   },
   {
     id: "promote-store",

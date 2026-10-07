@@ -1,4 +1,5 @@
 import { formatPrice } from "@/lib/currency";
+import { RECEIVED_PROMPT_LINE } from "@/lib/whatsapp-bot/receipts";
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
 import { normalizeWhatsAppNumber } from "@/lib/whatsapp";
 import { executeBroadcastNow, scheduleBroadcast } from "@/lib/whatsapp-bot/broadcasts";
@@ -468,6 +469,7 @@ export async function handleMarkDelivered(
       message: waMessage(
         waTitle(`Your order #${shortRef} has been delivered!`),
         `From ${store.name}. We hope you love it.`,
+        RECEIVED_PROMPT_LINE,
       ),
     });
 

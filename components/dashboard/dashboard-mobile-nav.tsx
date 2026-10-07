@@ -21,7 +21,7 @@ type DashboardMobileNavProps = {
 type NavItem = {
   href: string;
   label: string;
-  icon: "home" | "user" | "store" | "box" | "orders" | "chart" | "plug"| "megaphone" | "tag" | "users";
+  icon: "home" | "user" | "store" | "box" | "orders" | "chart" | "plug" | "badge" | "megaphone" | "tag" | "users";
   staffPermission?: StaffPermissionKey;
   vendorOnly?: boolean;
 };
@@ -33,6 +33,7 @@ const navItems: NavItem[] = [
   { href: "/dashboard/analytics", label: "Analytics", icon: "chart", staffPermission: "analytics" },
   { href: "/dashboard/store", label: "Storefront", icon: "store", staffPermission: "store_settings" },
   { href: "/dashboard/integrations", label: "Integrations", icon: "plug", vendorOnly: true },
+  { href: "/dashboard/verification", label: "Verification", icon: "badge", vendorOnly: true },
   { href: "/dashboard/broadcasts", label: "Broadcasts", icon: "megaphone", staffPermission: "broadcasts" },
   { href: "/dashboard/plans", label: "Plans", icon: "tag", vendorOnly: true },
   { href: "/dashboard/staff", label: "Staff", icon: "users", vendorOnly: true },
@@ -73,6 +74,7 @@ function NavIcon({ type, className }: { type: NavItem["icon"]; className?: strin
   if (type === "box") return <svg {...shared}><path d="m3 7 9-4 9 4-9 4-9-4Z" /><path d="M3 7v10l9 4 9-4V7" /><path d="M12 11v10" /></svg>;
   if (type === "orders") return <svg {...shared}><rect x="4" y="4" width="16" height="16" rx="2" /><path d="M8 9h8" /><path d="M8 13h8" /><path d="M8 17h5" /></svg>;
   if (type === "chart") return <svg {...shared}><path d="M4 19h16" /><path d="M7 16v-5" /><path d="M12 16V8" /><path d="M17 16v-9" /></svg>;
+  if (type === "badge") return <svg {...shared}><path d="M12 3 4 6v6c0 4.5 3.2 7.7 8 9 4.8-1.3 8-4.5 8-9V6l-8-3Z" /><path d="m9 12 2 2 4-4" /></svg>;
   if (type === "megaphone") return <svg {...shared}><path d="M3 11v2a2 2 0 0 0 2 2h1l3 5V4L6 9H5a2 2 0 0 0-2 2Z" /><path d="M14 8a4 4 0 0 1 0 8" /><path d="M17 5a8 8 0 0 1 0 14" /></svg>;
   if (type === "tag") return <svg {...shared}><path d="M12 3h6a1 1 0 0 1 1 1v6l-9 9-7-7 9-9Z" /><circle cx="15.5" cy="7.5" r="1.25" /></svg>;
   if (type === "users") return <svg {...shared}><circle cx="9" cy="8" r="3.5" /><path d="M2.5 20a6.5 6.5 0 0 1 13 0" /><path d="M16 8.5a3 3 0 1 1 0-6" /><path d="M15 14.5c2.8.4 5 2.6 5 5.5" /></svg>;

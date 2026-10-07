@@ -453,7 +453,6 @@ export function StoreSetupForm({ initialStore, initialEmailVerifiedAt = null }: 
           ...prev,
           whatsapp_verified_at: new Date().toISOString(),
           whatsapp_number: form.whatsapp_number,
-          is_verified: Boolean(emailVerifiedAt),
         } : prev);
         return;
       }
@@ -804,7 +803,7 @@ export function StoreSetupForm({ initialStore, initialEmailVerifiedAt = null }: 
                 <p className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700"><BadgeCheck className="h-4 w-4" /> Verified</p>
               ) : (
                 <div className="space-y-2">
-                  <p className="text-xs text-slate-500">Not verified — orders will still work, but shoppers won&apos;t see a Verified badge on your store.</p>
+                  <p className="text-xs text-slate-500">Not verified — orders will still work. Confirming this number is the first step toward a Verified badge; the rest is under Verification in your dashboard menu.</p>
                   <button type="button" onClick={() => void startVerification()} disabled={!store || !form.whatsapp_number.trim()} className="rounded-lg border border-emerald-200 px-3 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer">Verify Now</button>
                   {!store ? <p className="text-xs text-slate-500">Save your store first, then verify this number.</p> : null}
                 </div>
@@ -848,9 +847,9 @@ export function StoreSetupForm({ initialStore, initialEmailVerifiedAt = null }: 
               ) : (
                 <div className="space-y-2">
                   <p className="text-xs text-slate-500">
-                    Not verified — your store also needs a verified account email (in addition to a verified WhatsApp number) before shoppers see the Verified badge.
+                    Not verified — verifying your email helps you recover your account and receive important updates. It isn&apos;t needed for the Verified badge.
                   </p>
-                  <EmailVerificationBanner prompt="Verify your account email to unlock your store's Verified badge." />
+                  <EmailVerificationBanner prompt="Verify your account email to keep your account secure." />
                 </div>
               )}
             </div>
