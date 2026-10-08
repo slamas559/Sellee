@@ -10,6 +10,7 @@
 
 import { logDevError } from "@/lib/logger";
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
+import { notifyVendorOfIdDecision } from "@/lib/vendor-verification-notify";
 import { normalizeWhatsAppNumber } from "@/lib/whatsapp";
 import {
   DEMOTION_STRIKES_REQUIRED,
@@ -32,9 +33,9 @@ export type TierMetrics = {
   /** Buyer-confirmed delivered orders after excluding self-orders and applying the per-buyer cap. */
   qualifyingOrders: number;
   distinctBuyers: number;
-  /** Lifetime review count. */
+  /** Reviews written for one of the counted orders (reviews not tied to an order never count). */
   reviewCount: number;
-  /** Trailing-window average when there are enough recent reviews, else lifetime. */
+  /** Average of those reviews: trailing window when there are enough recent ones, else all. */
   ratingAvg: number;
   storeAgeDays: number;
   actionedReports90d: number;
@@ -152,6 +153,7 @@ export function decideNextTier(
 export async function gatherTierData(storeId: string): Promise<GatheredTierData | null> {
   const supabase = createAdminSupabaseClient();
   const sinceIso = new Date(Date.now() - RECENT_WINDOW_DAYS * DAY_MS).toISOString();
+  const sinceMs = Date.now() - RECENT_WINDOW_DAYS * DAY_MS;
 
   const { data: storeData } = await supabase
     .from("stores")
@@ -164,7 +166,7 @@ export async function gatherTierData(storeId: string): Promise<GatheredTierData 
   if (!storeData) return null;
   const store = storeData as StoreTierRow;
 
-  const [payoutResult, idResult, peopleResult, linkResult, ordersResult, recentReviewsResult, reportsResult] =
+  const [payoutResult, idResult, peopleResult, linkResult, ordersResult, linkedReviewsResult, reportsResult] =
     await Promise.all([
       supabase.from("vendor_payout_accounts").select("name_match_status").eq("store_id", storeId).maybeSingle(),
       supabase
@@ -180,12 +182,21 @@ export async function gatherTierData(storeId: string): Promise<GatheredTierData 
       supabase.from("whatsapp_vendor_links").select("whatsapp_number").eq("vendor_id", store.vendor_id),
       supabase
         .from("orders")
-        .select("customer_user_id, customer_whatsapp")
+        .select("id, customer_user_id, customer_whatsapp")
         .eq("store_id", storeId)
         .eq("status", "delivered")
         .not("buyer_confirmed_at", "is", null)
+        // Oldest first, so a buyer's first few orders are the ones that count.
+        .order("created_at", { ascending: true })
         .limit(10000),
-      supabase.from("vendor_reviews").select("rating").eq("store_id", storeId).gte("created_at", sinceIso),
+      // Only reviews tied to an order can count. Which of those orders qualify
+      // is decided below, so this is filtered in memory.
+      supabase
+        .from("vendor_reviews")
+        .select("order_id, rating, created_at")
+        .eq("store_id", storeId)
+        .not("order_id", "is", null)
+        .limit(10000),
       supabase
         .from("product_reports")
         .select("id, product:product_id!inner(store_id)", { count: "exact", head: true })
@@ -208,8 +219,9 @@ export async function gatherTierData(storeId: string): Promise<GatheredTierData 
   if (store.whatsapp_number) selfPhones.add(normalizeWhatsAppNumber(store.whatsapp_number));
   selfPhones.delete("");
 
-  // Count orders per buyer, then cap each buyer's contribution.
+  // Walk the orders oldest-first; each buyer's first few count, the rest don't.
   const ordersPerBuyer = new Map<string, number>();
+  const countedOrderIds = new Set<string>();
   for (const order of ordersResult.data ?? []) {
     const userId = (order.customer_user_id as string | null) ?? null;
     const phone = normalizeWhatsAppNumber(String(order.customer_whatsapp ?? ""));
@@ -219,21 +231,25 @@ export async function gatherTierData(storeId: string): Promise<GatheredTierData 
 
     const buyerKey = userId ? `u:${userId}` : phone ? `p:${phone}` : null;
     if (!buyerKey) continue;
-    ordersPerBuyer.set(buyerKey, (ordersPerBuyer.get(buyerKey) ?? 0) + 1);
+    const seen = ordersPerBuyer.get(buyerKey) ?? 0;
+    ordersPerBuyer.set(buyerKey, seen + 1);
+    if (seen < MAX_ORDERS_PER_BUYER) countedOrderIds.add(order.id as string);
   }
 
-  let qualifyingOrders = 0;
-  for (const count of ordersPerBuyer.values()) {
-    qualifyingOrders += Math.min(count, MAX_ORDERS_PER_BUYER);
-  }
+  const qualifyingOrders = countedOrderIds.size;
 
-  // Rating: use the recent window when there are enough reviews in it.
-  const recentRatings = (recentReviewsResult.data ?? []).map((row) => Number(row.rating));
-  const lifetimeAvg = Number(store.rating_avg ?? 0);
-  const ratingAvg =
-    recentRatings.length >= MIN_RECENT_REVIEWS_FOR_WINDOW
-      ? recentRatings.reduce((sum, value) => sum + value, 0) / recentRatings.length
-      : lifetimeAvg;
+  // Reviews count only when they came from one of those orders. That keeps
+  // out self-reviews, reviews from non-buyers, and a buyer's extra reviews
+  // beyond the per-buyer cap.
+  const countedReviews = (linkedReviewsResult.data ?? []).filter((row) => countedOrderIds.has(row.order_id as string));
+  const allRatings = countedReviews.map((row) => Number(row.rating));
+  const recentRatings = countedReviews
+    .filter((row) => new Date(row.created_at as string).getTime() >= sinceMs)
+    .map((row) => Number(row.rating));
+
+  const average = (values: number[]) => (values.length > 0 ? values.reduce((sum, value) => sum + value, 0) / values.length : 0);
+  // Prefer the recent window when there are enough reviews in it.
+  const ratingAvg = recentRatings.length >= MIN_RECENT_REVIEWS_FOR_WINDOW ? average(recentRatings) : average(allRatings);
 
   const currentTier: VerificationTier = isVerificationTier(store.verification_tier) ? store.verification_tier : "none";
 
@@ -247,7 +263,7 @@ export async function gatherTierData(storeId: string): Promise<GatheredTierData 
       suspended: Boolean(store.verification_suspended_at),
       qualifyingOrders,
       distinctBuyers: ordersPerBuyer.size,
-      reviewCount: Number(store.rating_count ?? 0),
+      reviewCount: allRatings.length,
       ratingAvg,
       storeAgeDays: Math.floor((Date.now() - new Date(store.created_at).getTime()) / DAY_MS),
       actionedReports90d: reportsResult.count ?? 0,
@@ -285,6 +301,17 @@ export async function recomputeStoreTier(storeId: string): Promise<RecomputeResu
   if (error) {
     logDevError("vendor-tier.recompute", error, { storeId });
     throw new Error(error.message);
+  }
+
+  // The badge was pulled automatically (not by an admin, who sends their own
+  // email): tell the vendor why. Only on the transition, so it sends once.
+  if (changed && next.tier === "none" && !metrics.suspended && metrics.actionedReports90d >= REPORTS_AUTO_SUSPEND) {
+    await notifyVendorOfIdDecision({
+      storeId,
+      decision: "suspended",
+      reason:
+        "Several of your product listings were reported and actioned in the last 90 days. The badge can return once those reports are more than 90 days old.",
+    });
   }
 
   return { storeId, previousTier: currentTier, tier: next.tier, changed };

@@ -23,13 +23,16 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
   const supabase = createAdminSupabaseClient();
   const { data: row, error } = await supabase
     .from("vendor_verifications")
-    .select("id, store_id, document_path, selfie_path")
+    .select("id, store_id, document_path, selfie_path, photos_purged_at")
     .eq("id", id)
     .eq("type", "id")
     .maybeSingle();
 
-  if (error || !row || !row.document_path || !row.selfie_path) {
+  if (error || !row) {
     return NextResponse.json({ error: "Submission not found." }, { status: 404 });
+  }
+  if (row.photos_purged_at || !row.document_path || !row.selfie_path) {
+    return NextResponse.json({ error: "These photos were deleted under the retention schedule." }, { status: 410 });
   }
 
   const { data: signed, error: signError } = await supabase.storage

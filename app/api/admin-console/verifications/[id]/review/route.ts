@@ -4,6 +4,7 @@ import { requireAdminApi } from "@/lib/admin-auth";
 import { writeAuditLog } from "@/lib/audit-log";
 import { logDevError } from "@/lib/logger";
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
+import { REJECTED_PHOTO_RETENTION_DAYS } from "@/lib/verification-constants";
 import { recomputeStoreTierSafe } from "@/lib/vendor-tier";
 import { notifyVendorOfIdDecision } from "@/lib/vendor-verification-notify";
 
@@ -72,7 +73,14 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     // safe: only one of them can flip the row out of 'pending'.
     const { data: updated, error: updateError } = await supabase
       .from("vendor_verifications")
-      .update({ status: "approved", reviewer_id: session.user.id, reviewed_at: reviewedAt, rejection_reason: null })
+      .update({
+        status: "approved",
+        reviewer_id: session.user.id,
+        reviewed_at: reviewedAt,
+        rejection_reason: null,
+        // Approved IDs are kept while the account exists.
+        photos_purge_at: null,
+      })
       .eq("id", id)
       .eq("status", "pending")
       .select("id");
@@ -126,6 +134,8 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       reviewer_id: session.user.id,
       reviewed_at: reviewedAt,
       rejection_reason: parsed.data.reason,
+      // Rejected photos aren't needed for long: schedule their deletion.
+      photos_purge_at: new Date(Date.now() + REJECTED_PHOTO_RETENTION_DAYS * 24 * 60 * 60 * 1000).toISOString(),
     })
     .eq("id", id)
     .eq("status", "pending")

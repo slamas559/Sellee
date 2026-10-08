@@ -28,6 +28,8 @@ export type StoreLookup = {
   latitude: number | null;
   longitude: number | null;
   whatsapp_verified_at: string | null;
+  is_verified?: boolean | null;
+  verification_tier?: string | null;
   currency: string;
 };
 
@@ -91,7 +93,7 @@ export async function searchProducts(
 
   const { data: activeStores, error: storesError } = await supabase
     .from("stores")
-    .select("id, name, slug, city, state, country, logo_url, rating_avg, rating_count, latitude, longitude, whatsapp_verified_at, is_verified, currency")
+    .select("id, name, slug, city, state, country, logo_url, rating_avg, rating_count, latitude, longitude, whatsapp_verified_at, is_verified, verification_tier, currency")
     .eq("is_active", true)
     .limit(500);
 

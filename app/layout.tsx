@@ -7,6 +7,7 @@ import { ConditionalAiAssistant } from "@/components/layout/conditional-ai-assis
 import { ConditionalFooter } from "@/components/layout/conditional-footer";
 import SiteHeader from "@/components/layout/site-header";
 import { Suspense } from "react";
+import Script from "next/script";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -85,6 +86,11 @@ export default async function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} ${spaceGrotesk.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
+        <Script
+          src="https://cloud.umami.is/script.js"
+          data-website-id="e8b77d86-41b7-4fac-949b-959a287acade"
+          strategy="afterInteractive"
+        />
         <Providers>
           <div className="flex min-h-full flex-col">
             <div className="flex-1">

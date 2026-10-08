@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { VerificationQueueItem } from "@/app/api/admin-console/verifications/route";
 import { ID_DOCUMENT_TYPES } from "@/lib/verification-constants";
@@ -44,6 +45,7 @@ function ReviewCard({ item, onReviewed }: { item: VerificationQueueItem; onRevie
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [suspendReason, setSuspendReason] = useState("");
+  const [holdReason, setHoldReason] = useState("");
 
   const isPending = item.status === "pending";
   const needsBankChoice = Boolean(item.payout);
@@ -65,6 +67,29 @@ function ReviewCard({ item, onReviewed }: { item: VerificationQueueItem; onRevie
       setError("Network error while loading the photos.");
     } finally {
       setDocsLoading(false);
+    }
+  }
+
+  async function holdAction(body: Record<string, unknown>) {
+    setBusy(true);
+    setError(null);
+    try {
+      const response = await fetch(`/api/admin-console/verifications/${item.id}/hold`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = (await response.json().catch(() => ({}))) as { error?: string };
+      if (!response.ok) {
+        setError(data.error ?? "Could not update the hold.");
+        return;
+      }
+      setHoldReason("");
+      onReviewed();
+    } catch {
+      setError("Network error while updating the hold.");
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -120,7 +145,9 @@ function ReviewCard({ item, onReviewed }: { item: VerificationQueueItem; onRevie
     <div className="p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="min-w-0">
-          <span className="text-[13px] font-medium">{item.store?.name ?? "Unknown store"}</span>
+          <span className="text-[13px] font-medium">
+            {item.store?.name ?? item.snapshot.store_name ?? "Unknown store"}
+          </span>
           {item.store ? (
             <Link
               href={`/v/${item.store.slug}`}
@@ -139,7 +166,8 @@ function ReviewCard({ item, onReviewed }: { item: VerificationQueueItem; onRevie
       </div>
 
       <p className="mt-1 text-[12px]" style={{ color: "var(--atlas-text-muted)" }}>
-        {item.vendor?.full_name || "Unknown"} · {item.vendor?.email ?? "no email"} · submitted {formatDate(item.created_at)}
+        {item.vendor?.full_name || item.snapshot.vendor_full_name || "Unknown"} ·{" "}
+        {item.vendor?.email ?? item.snapshot.vendor_email ?? "no email"} · submitted {formatDate(item.created_at)}
       </p>
 
       <button
@@ -192,7 +220,11 @@ function ReviewCard({ item, onReviewed }: { item: VerificationQueueItem; onRevie
             ) : null}
           </div>
 
-          {docs ? (
+          {item.retention.photos_purged ? (
+            <p className="text-[12.5px]" style={{ color: "var(--atlas-text-muted)" }}>
+              The ID photos for this record were deleted under the retention schedule. The details above are kept.
+            </p>
+          ) : docs ? (
             <div className="grid gap-3 sm:grid-cols-2">
               {([
                 { label: "ID photo", url: docs.id_url },
@@ -227,6 +259,57 @@ function ReviewCard({ item, onReviewed }: { item: VerificationQueueItem; onRevie
               {docsLoading ? "Loading photos..." : "Load ID photos"}
             </button>
           )}
+
+          <div className="space-y-2 text-[12px]" style={{ color: "var(--atlas-text-muted)" }}>
+            {item.retention.account_deleted ? (
+              <span className="atlas-badge" data-tone="warn">
+                Account deleted
+              </span>
+            ) : null}
+            {!item.retention.photos_purged && item.retention.purge_at ? (
+              <p>
+                Photos are scheduled for deletion on {formatDate(item.retention.purge_at)}
+                {item.retention.hold ? " (paused by a hold)" : ""}.
+              </p>
+            ) : null}
+            {item.retention.hold ? (
+              <div className="space-y-1">
+                <p>Held{item.retention.hold_reason ? `: ${item.retention.hold_reason}` : "."}</p>
+                <button
+                  type="button"
+                  onClick={() => holdAction({ hold: false })}
+                  disabled={busy}
+                  className="atlas-btn"
+                  data-variant="outline"
+                  style={{ padding: "4px 10px", fontSize: 11.5 }}
+                >
+                  Release hold
+                </button>
+              </div>
+            ) : !item.retention.photos_purged ? (
+              <div className="flex flex-wrap items-center gap-2">
+                <input
+                  value={holdReason}
+                  onChange={(event) => setHoldReason(event.target.value)}
+                  placeholder="Reason to keep these photos (investigation, dispute...)"
+                  maxLength={300}
+                  disabled={busy}
+                  className="atlas-input"
+                  style={{ maxWidth: 360 }}
+                />
+                <button
+                  type="button"
+                  onClick={() => holdAction({ hold: true, reason: holdReason })}
+                  disabled={busy || holdReason.trim().length < 5}
+                  className="atlas-btn"
+                  data-variant="outline"
+                  style={{ padding: "4px 10px", fontSize: 11.5 }}
+                >
+                  Hold photos
+                </button>
+              </div>
+            ) : null}
+          </div>
 
           {!isPending && item.status === "rejected" && item.rejection_reason ? (
             <p className="text-[12.5px]" style={{ color: "var(--atlas-text-muted)" }}>
@@ -393,6 +476,7 @@ function ReviewCard({ item, onReviewed }: { item: VerificationQueueItem; onRevie
 }
 
 export function VerificationsPanel() {
+  const router = useRouter();
   const [status, setStatus] = useState("pending");
   // null = not loaded yet for the current filter.
   const [items, setItems] = useState<VerificationQueueItem[] | null>(null);
@@ -447,7 +531,11 @@ export function VerificationsPanel() {
 
       <div className="atlas-panel divide-y" style={{ borderColor: "var(--atlas-line)" }}>
         {(items ?? []).map((item) => (
-          <ReviewCard key={item.id} item={item} onReviewed={() => setReloadKey((value) => value + 1)} />
+          <ReviewCard key={item.id} item={item} onReviewed={() => {
+              setReloadKey((value) => value + 1);
+              // Refresh the layout too, so the sidebar count stays right.
+              router.refresh();
+            }} />
         ))}
         {items !== null && items.length === 0 ? (
           <p className="p-4 text-center text-[13px]" style={{ color: "var(--atlas-text-muted)" }}>

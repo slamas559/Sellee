@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { logDevError } from "@/lib/logger";
 import { recomputeAllStoreTiers } from "@/lib/vendor-tier";
-import { cleanupAbandonedVerificationUploads } from "@/lib/vendor-verification-cleanup";
+import { runVerificationRetention } from "@/lib/vendor-verification-cleanup";
 
 export const maxDuration = 60;
 
@@ -35,9 +35,9 @@ async function handleRun(request: Request) {
     const tiers = await recomputeAllStoreTiers();
 
     // Housekeeping should never fail the tier run.
-    let cleanup: { foldersScanned: number; filesRemoved: number } | { error: string };
+    let cleanup: Awaited<ReturnType<typeof runVerificationRetention>> | { error: string };
     try {
-      cleanup = await cleanupAbandonedVerificationUploads();
+      cleanup = await runVerificationRetention();
     } catch (error) {
       logDevError("vendor-tiers.cleanup", error);
       cleanup = { error: "cleanup failed" };

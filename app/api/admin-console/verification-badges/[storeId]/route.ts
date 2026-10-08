@@ -5,6 +5,7 @@ import { writeAuditLog } from "@/lib/audit-log";
 import { logDevError } from "@/lib/logger";
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
 import { recomputeStoreTier } from "@/lib/vendor-tier";
+import { notifyVendorOfIdDecision } from "@/lib/vendor-verification-notify";
 
 const bodySchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("suspend"), reason: z.string().trim().min(5, "Give a short reason.").max(300) }),
@@ -60,6 +61,12 @@ export async function POST(request: Request, context: { params: Promise<{ storeI
     targetId: storeId,
     metadata: suspending && parsed.data.action === "suspend" ? { reason: parsed.data.reason } : {},
   });
+
+  // Tell the vendor why their badge disappeared. (Reinstating needs no email:
+  // the badge simply comes back.)
+  if (parsed.data.action === "suspend") {
+    await notifyVendorOfIdDecision({ storeId, decision: "suspended", reason: parsed.data.reason });
+  }
 
   return NextResponse.json({ ok: true, tier });
 }

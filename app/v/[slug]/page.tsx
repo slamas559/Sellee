@@ -19,7 +19,8 @@ import {
 } from "@/lib/storefront";
 import { getStorefrontPublicDataCached } from "@/lib/public-cache";
 import { storeUrl as buildStoreUrl } from "@/lib/store-url";
-import { BadgeCheck } from "lucide-react";
+import { VerificationPill } from "@/components/store/verification-pill";
+import { effectiveTier } from "@/lib/verification-tier-constants";
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
 import type { ProductRecord, StoreRecord } from "@/types";
 import { DisplayCurrencyProvider, CurrencySwitcher } from "@/components/marketplace/currency-switcher";
@@ -196,9 +197,7 @@ function MarketTemplate({
                 <div>
                   <Link href={`${storeUrl}/profile`} className="flex cursor-pointer items-center gap-1.5 text-2xl font-black tracking-tight text-white sm:text-3xl">
                     <span className="text-white">{store.name}</span>
-                    {store.is_verified ? (
-                      <BadgeCheck className="h-5 w-5 shrink-0 text-white" aria-label="Verified vendor" />
-                    ) : null}
+                    <VerificationPill tier={effectiveTier(store)} onDark />
                   </Link>
                   <p className="mt-0.5 text-sm text-white/80">{config.promo_text}</p>
                   {nicheNames.length > 0 && (
@@ -313,7 +312,7 @@ function EditorialTemplate({
                   <span className="text-white">
                     {store.name}
                   </span>
-                  {store.is_verified ? <BadgeCheck className="h-3.5 w-3.5 shrink-0 text-white/70" aria-label="Verified vendor" /> : null}
+                  <VerificationPill tier={effectiveTier(store)} size="sm" onDark />
                 </Link>
             </div>
             <div className="flex items-center gap-2">
@@ -447,7 +446,7 @@ function ShowcaseTemplate({
               )}
               <Link href={`${storeUrl}/profile`} className="flex cursor-pointer items-center gap-1 text-sm font-semibold text-slate-500">
                 {store.name}
-                {store.is_verified ? <BadgeCheck className="h-3.5 w-3.5 shrink-0 text-emerald-600" aria-label="Verified vendor" /> : null}
+                <VerificationPill tier={effectiveTier(store)} size="sm" />
               </Link>
             </div>
             <h1 className="mt-5 flex flex-wrap items-center gap-2 text-4xl font-black leading-[1.05] tracking-tight text-slate-900 sm:text-5xl lg:text-6xl">
@@ -580,7 +579,7 @@ function GridTemplate({
               <div>
                 <Link href={`${storeUrl}/profile`} className="flex cursor-pointer items-center gap-1 text-sm font-bold text-slate-900">
                   {store.name}
-                  {store.is_verified ? <BadgeCheck className="h-3.5 w-3.5 shrink-0 text-emerald-600" aria-label="Verified vendor" /> : null}
+                  <VerificationPill tier={effectiveTier(store)} size="sm" />
                 </Link>
                 <StarRating value={store.rating_avg} count={store.rating_count} size="sm" />
                 {completedOrdersCount > 0 ? (

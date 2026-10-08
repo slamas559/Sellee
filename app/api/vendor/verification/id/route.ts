@@ -67,6 +67,14 @@ export async function POST(request: Request) {
   const supabase = createAdminSupabaseClient();
   const bucket = supabase.storage.from(VERIFICATION_BUCKET);
 
+  // Snapshot who this is, so the record stays identifiable even if the
+  // account is deleted later.
+  const { data: vendorRow } = await supabase
+    .from("users")
+    .select("email, full_name")
+    .eq("id", ctx.vendorId)
+    .maybeSingle();
+
   const [idExists, selfieExists] = await Promise.all([
     bucket.exists(parsed.data.id_path),
     bucket.exists(parsed.data.selfie_path),
@@ -87,6 +95,9 @@ export async function POST(request: Request) {
       id_full_name: parsed.data.id_full_name,
       document_path: parsed.data.id_path,
       selfie_path: parsed.data.selfie_path,
+      store_name: store.name,
+      vendor_email: (vendorRow?.email as string | undefined) ?? null,
+      vendor_full_name: (vendorRow?.full_name as string | null | undefined) ?? null,
     })
     .select("id")
     .single();

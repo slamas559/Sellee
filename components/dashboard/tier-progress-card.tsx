@@ -74,7 +74,8 @@ export function TierProgressCard({ progress }: TierProgressCardProps) {
           </ul>
           <p className="mt-3 text-xs leading-5 text-slate-500">
             Only orders the buyer confirmed count: they either leave a review or reply RECEIVED on WhatsApp after
-            delivery. A single buyer counts for up to 3 orders.
+            delivery. A single buyer counts for up to 3 orders. Reviews count when they come from one of those
+            orders.
           </p>
         </div>
       ) : null}

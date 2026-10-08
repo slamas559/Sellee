@@ -76,7 +76,7 @@ const getHomeMarketplaceBaseDataInternal = async () => {
     await Promise.all([
       supabase
         .from("stores")
-        .select("id, vendor_id, name, slug, city, state, country, logo_url, rating_avg, rating_count, theme_color, whatsapp_verified_at, is_verified, currency")
+        .select("id, vendor_id, name, slug, city, state, country, logo_url, rating_avg, rating_count, theme_color, whatsapp_verified_at, is_verified, verification_tier, currency")
         .eq("is_active", true)
         .order("created_at", { ascending: false })
         .limit(24),
@@ -170,7 +170,7 @@ const getMarketplaceBaseDataInternal = async () => {
       supabase
         .from("stores")
         .select(
-          "id, name, slug, city, state, country, logo_url, rating_avg, rating_count, latitude, longitude, whatsapp_verified_at, is_verified, currency",
+          "id, name, slug, city, state, country, logo_url, rating_avg, rating_count, latitude, longitude, whatsapp_verified_at, is_verified, verification_tier, currency",
         )
         .eq("is_active", true)
         .limit(500),
@@ -339,7 +339,7 @@ const getNicheLocationPageDataInternal = async (
   const { data: storesRaw } = await supabase
     .from("stores")
     .select(
-      "id, vendor_id, name, slug, city, state, country, logo_url, rating_avg, rating_count, theme_color, whatsapp_verified_at, is_verified, currency",
+      "id, vendor_id, name, slug, city, state, country, logo_url, rating_avg, rating_count, theme_color, whatsapp_verified_at, is_verified, verification_tier, currency",
     )
     .in("id", candidateStoreIds)
     .eq("is_active", true);

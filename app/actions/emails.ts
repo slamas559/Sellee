@@ -658,7 +658,9 @@ export async function sendVerificationDecisionEmail({
         subject ??
         (props.decision === "approved"
           ? "Your ID was approved"
-          : "We couldn't approve your ID"),
+          : props.decision === "suspended"
+            ? "Your verification badge was suspended"
+            : "We couldn't approve your ID"),
       react: VerificationDecisionEmail(props),
     });
 

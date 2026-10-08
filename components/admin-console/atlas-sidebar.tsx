@@ -41,7 +41,7 @@ function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export function AtlasSidebar() {
+export function AtlasSidebar({ pendingVerifications = 0 }: { pendingVerifications?: number }) {
   const pathname = usePathname();
 
   return (
@@ -82,7 +82,18 @@ export function AtlasSidebar() {
                         paddingLeft: active ? "8px" : "10px",
                       }}
                     >
-                      {item.label}
+                      <span className="flex items-center justify-between gap-2">
+                        <span>{item.label}</span>
+                        {item.href === "/admin-console/verifications" && pendingVerifications > 0 ? (
+                          <span
+                            className="rounded-full px-1.5 text-[10px] font-semibold leading-4"
+                            style={{ background: "var(--atlas-brass)", color: "var(--atlas-ink)" }}
+                            aria-label={`${pendingVerifications} pending`}
+                          >
+                            {pendingVerifications > 99 ? "99+" : pendingVerifications}
+                          </span>
+                        ) : null}
+                      </span>
                     </Link>
                   </li>
                 );

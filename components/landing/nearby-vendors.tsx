@@ -3,7 +3,8 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useMemo, useState } from "react";
-import { BadgeCheck } from "lucide-react";
+import { VerificationPill } from "@/components/store/verification-pill";
+import { effectiveTier } from "@/lib/verification-tier-constants";
 import { storeUrl } from "@/lib/store-url";
 
 export type NearbyVendor = {
@@ -21,6 +22,7 @@ export type NearbyVendor = {
   distance_km: number | null;
   niche_names?: string[];
   is_verified?: boolean | null;
+  verification_tier?: string | null;
 };
 
 type NearbyVendorsProps = {
@@ -83,9 +85,7 @@ export function NearbyVendorCard({
           </div>
           <p className="flex min-w-0 items-center gap-1 line-clamp-1 text-sm font-semibold text-slate-900 group-hover:text-emerald-700 sm:text-base">
             <span className="truncate">{vendor.name}</span>
-            {vendor.is_verified ? (
-              <BadgeCheck className="h-3.5 w-3.5 shrink-0 text-emerald-600" aria-label="Verified vendor" />
-            ) : null}
+            <VerificationPill tier={effectiveTier(vendor)} size="sm" />
           </p>
         </div>
         <p className="mt-1.5 line-clamp-1 text-xs text-slate-600 sm:mt-2 sm:text-sm">

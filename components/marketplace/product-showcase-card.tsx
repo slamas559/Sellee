@@ -10,7 +10,9 @@ import { formatProductPathSegment } from "@/lib/format";
 import { useConvertedPrice } from "@/components/marketplace/currency-switcher";
 import { storeUrl, storeProductUrl } from "@/lib/store-url";
 import type { StoreTemplate } from "@/types";
-import { BadgeCheck, ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { VerificationPill } from "@/components/store/verification-pill";
+import { effectiveTier } from "@/lib/verification-tier-constants";
 
 type ProductShowcaseCardProps = {
   product: {
@@ -33,6 +35,7 @@ type ProductShowcaseCardProps = {
     rating_avg?: number | null;
     rating_count?: number;
     is_verified?: boolean | null;
+    verification_tier?: string | null;
     currency?: string | null;
   };
   variant?: "home" | "marketplace" | "store";
@@ -228,9 +231,7 @@ export function ProductShowcaseCard({
           <Link href={storeUrl(store.slug)} target="_blank" rel="noopener noreferrer">
             <p className={`flex items-center gap-1 line-clamp-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${metaClass}`}>
               <span className="truncate">{store.name}</span>
-              {store.is_verified ? (
-                <BadgeCheck className="h-3 w-3 shrink-0 text-emerald-600" aria-label="Verified vendor" />
-              ) : null}
+              <VerificationPill tier={effectiveTier(store)} size="sm" />
             </p>
           </Link>
         </div>

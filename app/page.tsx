@@ -86,6 +86,7 @@ type StoreLite = {
   niche_names?: string[];
   whatsapp_verified_at?: string | null;
   is_verified?: boolean | null;
+  verification_tier?: string | null;
   currency?: string | null;
 };
 

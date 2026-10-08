@@ -425,6 +425,7 @@ export async function handleReviewReply(
         .insert({
           product_id: pendingReview.product_id,
           store_id: pendingReview.store_id,
+          order_id: pendingReview.order_id,
           reviewer_name: reviewerName,
           rating: productRating,
           comment: productComment,
@@ -443,6 +444,7 @@ export async function handleReviewReply(
       .from("vendor_reviews")
       .insert({
         store_id: pendingReview.store_id,
+        order_id: pendingReview.order_id,
         reviewer_name: reviewerName,
         rating: vendorRating,
         comment: null, // Vendor review is service-only, no comment needed

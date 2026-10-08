@@ -19,6 +19,10 @@ export const ID_DOCUMENT_TYPE_VALUES = ID_DOCUMENT_TYPES.map((item) => item.valu
   ...IdDocumentType[],
 ];
 
+// ID photo retention (see supabase/verification-retention.sql).
+export const REJECTED_PHOTO_RETENTION_DAYS = 30;
+export const DELETED_ACCOUNT_PHOTO_RETENTION_DAYS = 730;
+
 export type VerificationStatus = "pending" | "approved" | "rejected";
 
 export const ALLOWED_VERIFICATION_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;

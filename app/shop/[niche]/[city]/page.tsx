@@ -72,6 +72,7 @@ export default async function NicheLocationPage({ params }: PageProps) {
     rating_count: store.rating_count,
     distance_km: null,
     is_verified: store.is_verified,
+    verification_tier: store.verification_tier,
   }));
 
   const breadcrumbJsonLd = {

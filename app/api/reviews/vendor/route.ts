@@ -123,7 +123,7 @@ export async function POST(request: Request) {
     const supabase = createAdminSupabaseClient();
     const { data: user, error: userError } = await supabase
       .from("users")
-      .select("full_name, email")
+      .select("full_name, email, parent_vendor_id")
       .eq("id", session.user.id)
       .maybeSingle();
 
@@ -133,7 +133,7 @@ export async function POST(request: Request) {
 
     const { data: store, error: storeError } = await supabase
       .from("stores")
-      .select("id")
+      .select("id, vendor_id")
       .eq("id", parsed.data.store_id)
       .maybeSingle();
 
@@ -141,19 +141,70 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Store not found." }, { status: 404 });
     }
 
+    // A store's own team can't review it.
+    if (store.vendor_id === session.user.id || user.parent_vendor_id === store.vendor_id) {
+      return NextResponse.json({ error: "You can't review your own store." }, { status: 403 });
+    }
+
+    // A review must come from a real, delivered order of this person's that
+    // hasn't been reviewed yet. The server picks the most recent one.
+    const { data: deliveredOrders } = await supabase
+      .from("orders")
+      .select("id")
+      .eq("store_id", store.id)
+      .eq("customer_user_id", session.user.id)
+      .eq("status", "delivered")
+      .order("delivered_at", { ascending: false })
+      .limit(50);
+
+    const deliveredIds = (deliveredOrders ?? []).map((order) => order.id as string);
+    if (deliveredIds.length === 0) {
+      return NextResponse.json(
+        { error: "You can review a store after you've received an order from it." },
+        { status: 403 },
+      );
+    }
+
+    const { data: alreadyReviewed } = await supabase
+      .from("vendor_reviews")
+      .select("order_id")
+      .in("order_id", deliveredIds);
+    const reviewedIds = new Set((alreadyReviewed ?? []).map((row) => row.order_id as string));
+    const orderId = deliveredIds.find((id) => !reviewedIds.has(id));
+
+    if (!orderId) {
+      return NextResponse.json(
+        { error: "You've already reviewed every order you've received from this store." },
+        { status: 409 },
+      );
+    }
+
     const { error: insertError } = await supabase.from("vendor_reviews").insert({
       store_id: parsed.data.store_id,
+      order_id: orderId,
       reviewer_name: deriveDisplayName(user.full_name, user.email),
       rating: parsed.data.rating,
       comment: parsed.data.comment?.trim() || null,
     });
 
     if (insertError) {
+      // 23505: someone reviewed this order a moment ago (double submit).
+      if (insertError.code === "23505") {
+        return NextResponse.json({ error: "This order has already been reviewed." }, { status: 409 });
+      }
       logDevError("reviews.vendor.create", insertError, { storeId: parsed.data.store_id });
       return NextResponse.json({ error: "Could not submit vendor review." }, { status: 500 });
     }
 
     await refreshVendorRating(parsed.data.store_id);
+
+    // Reviewing an order also confirms the buyer received it.
+    await supabase
+      .from("orders")
+      .update({ buyer_confirmed_at: new Date().toISOString(), buyer_confirmed_via: "review" })
+      .eq("id", orderId)
+      .is("buyer_confirmed_at", null);
+
     return NextResponse.json({ ok: true, message: "Vendor review submitted." });
   } catch (error) {
     logDevError("reviews.vendor.create.unhandled", error);

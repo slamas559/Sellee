@@ -1,6 +1,8 @@
 // lib/vendor-verification-notify.ts  (server only)
 //
-// Emails the vendor when an admin approves or rejects their ID. Failures are
+// Emails the vendor when an admin approves or rejects their ID, or when their
+// badge is suspended (by an admin, or automatically after actioned reports).
+// Failures are
 // logged and swallowed: a flaky email provider must never undo or block a
 // review decision.
 
@@ -11,7 +13,7 @@ import { createAdminSupabaseClient } from "@/lib/supabase-admin";
 
 export async function notifyVendorOfIdDecision(params: {
   storeId: string;
-  decision: "approved" | "rejected";
+  decision: "approved" | "rejected" | "suspended";
   reason?: string | null;
   badgeLive?: boolean;
 }): Promise<void> {

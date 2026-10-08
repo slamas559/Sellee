@@ -8,14 +8,23 @@ import { isVerificationTier, type VerificationTier } from "@/lib/verification-ti
 
 type VerificationRow = {
   id: string;
-  store_id: string;
-  vendor_id: string;
+  // Null once the store / account has been deleted. The record is kept.
+  store_id: string | null;
+  vendor_id: string | null;
   status: VerificationStatus;
   document_type: IdDocumentType | null;
   id_full_name: string | null;
   rejection_reason: string | null;
   reviewed_at: string | null;
   created_at: string;
+  store_name: string | null;
+  vendor_email: string | null;
+  vendor_full_name: string | null;
+  photos_purge_at: string | null;
+  photos_purged_at: string | null;
+  retention_hold: boolean;
+  retention_hold_reason: string | null;
+  account_deleted_at: string | null;
 };
 
 type PayoutRow = {
@@ -45,6 +54,15 @@ export type VerificationQueueItem = {
     shared_with_other_stores: number;
   } | null;
   name_hint: NameMatchLevel | null;
+  /** What we recorded at submission, for records whose account is gone. */
+  snapshot: { store_name: string | null; vendor_email: string | null; vendor_full_name: string | null };
+  retention: {
+    hold: boolean;
+    hold_reason: string | null;
+    purge_at: string | null;
+    photos_purged: boolean;
+    account_deleted: boolean;
+  };
   badge: { tier: VerificationTier; suspended: boolean; suspended_reason: string | null } | null;
 };
 
@@ -64,7 +82,9 @@ export async function GET(request: Request) {
   // first for everything else.
   let query = supabase
     .from("vendor_verifications")
-    .select("id, store_id, vendor_id, status, document_type, id_full_name, rejection_reason, reviewed_at, created_at")
+    .select(
+      "id, store_id, vendor_id, status, document_type, id_full_name, rejection_reason, reviewed_at, created_at, store_name, vendor_email, vendor_full_name, photos_purge_at, photos_purged_at, retention_hold, retention_hold_reason, account_deleted_at",
+    )
     .eq("type", "id")
     .order("created_at", { ascending: status === "pending" })
     .limit(100);
@@ -84,8 +104,8 @@ export async function GET(request: Request) {
     return NextResponse.json({ items: [] satisfies VerificationQueueItem[] });
   }
 
-  const storeIds = [...new Set(rows.map((row) => row.store_id))];
-  const vendorIds = [...new Set(rows.map((row) => row.vendor_id))];
+  const storeIds = [...new Set(rows.map((row) => row.store_id).filter((id): id is string => Boolean(id)))];
+  const vendorIds = [...new Set(rows.map((row) => row.vendor_id).filter((id): id is string => Boolean(id)))];
 
   const [storesResult, vendorsResult, payoutsResult] = await Promise.all([
     supabase
@@ -135,9 +155,9 @@ export async function GET(request: Request) {
   }
 
   const items: VerificationQueueItem[] = rows.map((row) => {
-    const store = stores.get(row.store_id) ?? null;
-    const vendor = vendors.get(row.vendor_id) ?? null;
-    const payout = payouts.get(row.store_id) ?? null;
+    const store = row.store_id ? (stores.get(row.store_id) ?? null) : null;
+    const vendor = row.vendor_id ? (vendors.get(row.vendor_id) ?? null) : null;
+    const payout = row.store_id ? (payouts.get(row.store_id) ?? null) : null;
 
     return {
       id: row.id,
@@ -159,6 +179,18 @@ export async function GET(request: Request) {
           }
         : null,
       name_hint: payout && row.id_full_name ? compareNames(row.id_full_name, payout.resolved_account_name) : null,
+      snapshot: {
+        store_name: row.store_name,
+        vendor_email: row.vendor_email,
+        vendor_full_name: row.vendor_full_name,
+      },
+      retention: {
+        hold: row.retention_hold,
+        hold_reason: row.retention_hold_reason,
+        purge_at: row.photos_purge_at,
+        photos_purged: Boolean(row.photos_purged_at),
+        account_deleted: Boolean(row.account_deleted_at) || !row.store_id || !row.vendor_id,
+      },
       badge: store
         ? {
             tier: isVerificationTier(store.verification_tier) ? store.verification_tier : "none",

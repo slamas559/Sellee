@@ -23,6 +23,21 @@ export function isVerificationTier(value: unknown): value is VerificationTier {
   return value === "none" || value === "verified" || value === "trusted" || value === "top_seller";
 }
 
+/**
+ * The tier to DISPLAY for a store row. Uses verification_tier when the query
+ * selected it, and falls back to the is_verified flag for rows that only
+ * carry that.
+ */
+export function effectiveTier(store: {
+  verification_tier?: string | null;
+  is_verified?: boolean | null;
+}): VerificationTier {
+  if (isVerificationTier(store.verification_tier) && store.verification_tier !== "none") {
+    return store.verification_tier;
+  }
+  return store.is_verified ? "verified" : "none";
+}
+
 // Tune these as real data comes in.
 //  - orders:   buyer-confirmed delivered orders, after the per-buyer cap
 //  - reviews:  lifetime review count
