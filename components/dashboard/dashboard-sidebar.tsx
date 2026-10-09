@@ -115,4 +115,3 @@ export function DashboardSidebar({ name, email, role = "vendor", permissions }: 
     </aside>
   );
 }
-

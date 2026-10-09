@@ -45,6 +45,30 @@ export default function DataDeletionPage() {
           ),
         },
         {
+          id: "verification-documents",
+          title: "Verification Documents",
+          content: (
+            <>
+              <p>
+                If you submitted an ID and selfie for a Verified badge, those photos are
+                handled separately. After your account is deleted we keep them for up to 24
+                months to help prevent fraud and handle disputes, then permanently delete
+                them. A record that verification took place (the name on the ID, ID type,
+                dates and outcome) may be kept as an audit trail.
+              </p>
+              <p className="mt-3">
+                You can ask for earlier deletion. We will consider each request, but may keep
+                documents where we are investigating suspected fraud, handling a dispute, or
+                are legally required to. See our{" "}
+                <Link href="/privacy#vendor-verification" className="text-emerald-700 hover:underline">
+                  Privacy Policy
+                </Link>{" "}
+                for details.
+              </p>
+            </>
+          ),
+        },
+        {
           id: "timeline",
           title: "Timeline",
           content: (

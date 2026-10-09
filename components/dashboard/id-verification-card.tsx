@@ -1,6 +1,7 @@
 "use client";
 
 import { createClient } from "@supabase/supabase-js";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { compareNames } from "@/lib/name-match";
@@ -211,6 +212,10 @@ export function IdVerificationCard({ submission, payoutAccountName }: IdVerifica
       </h2>
       <p className="mt-1 text-sm text-slate-600">
         Upload a clear photo of a government-issued ID and a selfie holding it. Only our review team can see these.
+        We keep them while your account is active, and for a limited time after it is deleted, to prevent fraud.{" "}
+        <Link href="/privacy#vendor-verification" className="font-semibold text-emerald-700 hover:underline">
+          How we handle your documents
+        </Link>
       </p>
 
       {submission?.status === "rejected" ? (

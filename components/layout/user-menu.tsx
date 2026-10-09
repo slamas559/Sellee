@@ -2,6 +2,17 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import {
+  ClipboardList,
+  Heart,
+  LayoutDashboard,
+  LogIn,
+  LogOut,
+  Store,
+  UserRound,
+  Users,
+  type LucideIcon,
+} from "lucide-react";
 import { SignOutButton } from "@/components/auth/sign-out-button";
 import { mainAppUrl } from "@/lib/store-url";
 
@@ -10,6 +21,27 @@ type UserMenuProps = {
   isVendor: boolean;
   appHref?: (path: string) => string;
 };
+
+type MenuLinkProps = {
+  href: string;
+  icon: LucideIcon;
+  label: string;
+  onClick: () => void;
+};
+
+function MenuLink({ href, icon: Icon, label, onClick }: MenuLinkProps) {
+  return (
+    <Link
+      href={href}
+      role="menuitem"
+      onClick={onClick}
+      className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+    >
+      <Icon className="h-4 w-4 shrink-0 text-slate-500" aria-hidden="true" />
+      <span>{label}</span>
+    </Link>
+  );
+}
 
 export function UserMenu({ isLoggedIn, isVendor, appHref = (path) => path }: UserMenuProps) {
   const [open, setOpen] = useState(false);
@@ -64,77 +96,31 @@ export function UserMenu({ isLoggedIn, isVendor, appHref = (path) => path }: Use
       {open ? (
         <div
           role="menu"
-          className="absolute right-0 top-11 z-20 w-52 rounded-xl border border-slate-200 bg-white p-2 shadow-lg"
+          aria-label="Account menu"
+          className="absolute right-0 top-11 z-20 w-56 rounded-xl border border-slate-200 bg-white p-2 shadow-lg"
         >
           {!isLoggedIn ? (
             <>
-              <Link
-                href={appHref("/login")}
-                onClick={() => setOpen(false)}
-                className="block rounded-lg px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-              >
-                Login / Create account
-              </Link>
-              <Link
-                href={appHref("/become-vendor")}
-                onClick={() => setOpen(false)}
-                className="block rounded-lg px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-              >
-                Become a Vendor
-              </Link>
+              <MenuLink href={appHref("/login")} icon={LogIn} label="Login / Create account" onClick={() => setOpen(false)} />
+              <MenuLink href={appHref("/become-vendor")} icon={Store} label="Become a Vendor" onClick={() => setOpen(false)} />
             </>
           ) : (
             <>
               {isVendor ? (
-                <Link
-                  href={appHref("/dashboard")}
-                  onClick={() => setOpen(false)}
-                  className="block rounded-lg px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-                >
-                  Dashboard
-                </Link>
+                <MenuLink href={appHref("/dashboard")} icon={LayoutDashboard} label="Dashboard" onClick={() => setOpen(false)} />
               ) : (
-                <Link
-                  href={appHref("/become-vendor")}
-                  onClick={() => setOpen(false)}
-                  className="block rounded-lg px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-                >
-                  Become a Vendor
-                </Link>
+                <MenuLink href={appHref("/become-vendor")} icon={Store} label="Become a Vendor" onClick={() => setOpen(false)} />
               )}
-              <Link
-                href={appHref("/account")}
-                onClick={() => setOpen(false)}
-                className="block rounded-lg px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-              >
-                Account
-              </Link>
-              <Link
-                href={appHref("/account/orders")}
-                onClick={() => setOpen(false)}
-                className="block rounded-lg px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-              >
-                My Orders
-              </Link>
-              <Link
-                href={appHref("/account/favorites")}
-                onClick={() => setOpen(false)}
-                className="block rounded-lg px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-              >
-                Saved items
-              </Link>
-              <Link
-                href={appHref("/account/follows")}
-                onClick={() => setOpen(false)}
-                className="block rounded-lg px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-              >
-                Followed Vendors
-              </Link>
+              <MenuLink href={appHref("/account")} icon={UserRound} label="Account" onClick={() => setOpen(false)} />
+              <MenuLink href={appHref("/account/orders")} icon={ClipboardList} label="My Orders" onClick={() => setOpen(false)} />
+              <MenuLink href={appHref("/account/favorites")} icon={Heart} label="Saved items" onClick={() => setOpen(false)} />
+              <MenuLink href={appHref("/account/follows")} icon={Users} label="Followed Vendors" onClick={() => setOpen(false)} />
               <div className="mt-1 border-t border-slate-100 pt-1">
                 <SignOutButton
                   callbackUrl={mainAppUrl("/")}
                   label="Logout"
-                  className="w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                  icon={LogOut}
+                  className="inline-flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-50"
                 />
               </div>
             </>
