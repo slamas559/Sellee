@@ -312,7 +312,7 @@ export default async function StoreProductPage({ params, searchParams }: Product
 
       {/* ── Hero product section ── */}
       <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 sm:py-12">
-        <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:gap-14 xl:gap-20">
+        <div className="grid gap-8 md:grid-cols-[1.1fr_0.9fr] md:gap-10 lg:gap-14 xl:gap-20">
 
           {/* Left — Media gallery */}
           <div className="relative">
@@ -332,7 +332,7 @@ export default async function StoreProductPage({ params, searchParams }: Product
           </div>
 
           {/* Right — Product info */}
-          <div className="flex flex-col gap-0 lg:sticky lg:top-8 lg:self-start">
+          <div className="flex flex-col gap-0 md:sticky md:top-8 md:self-start">
 
             <div>
               {/* Sold-by row + actions */}
@@ -412,7 +412,8 @@ export default async function StoreProductPage({ params, searchParams }: Product
             </div>
 
             {/* Vendor card — single source of truth for store identity */}
-            <div className="mt-5 overflow-hidden rounded-xl border border-stone-100 bg-white shadow-sm">
+            {/* Vendor card — single source of truth for store identity */}
+            <div className="mt-5 rounded-xl border border-stone-100 bg-white shadow-sm">
               <div className="flex items-center justify-between gap-3 px-4 py-3">
                 <Link href={storeShareUrl} target="_blank" rel="noopener noreferrer" className="group flex min-w-0 items-center gap-3">
                   {store.logo_url ? (

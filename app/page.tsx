@@ -305,8 +305,10 @@ export default async function Home({ searchParams }: HomeProps) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
       />
 
-      <section className="relative isolate overflow-hidden rounded-xl p-4 sm:p-8">
-        <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
+      <section className="relative isolate overflow-hidden rounded-xl bg-white md:p-8">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none relative aspect-[1600/560] overflow-hidden md:absolute md:inset-0 md:aspect-auto">
           <div className="home-hero-track absolute inset-y-0 left-0 flex">
             {heroCarouselSlides.map((image, index) => (
             <div
@@ -324,18 +326,18 @@ export default async function Home({ searchParams }: HomeProps) {
             </div>
             ))}
           </div>
-          <div className="absolute inset-0 bg-gradient-to-r from-slate-950/90 via-slate-950/70 to-slate-950/45" />
+          <div className="absolute inset-0 hidden bg-gradient-to-r from-white/95 via-white/75 to-white/10 md:block" />
         </div>
 
-        <div className="relative z-10 grid gap-6 lg:grid-cols-[1.1fr_0.9fr] lg:items-center lg:gap-8">
+        <div className="relative z-10 -mt-6 grid gap-6 rounded-t-3xl bg-white p-5 sm:p-8 md:mt-0 md:grid-cols-[1.1fr_0.9fr] md:items-center md:gap-8 md:rounded-none md:bg-transparent md:p-0">
           <div className="space-y-8 sm:space-y-10">
-            <p className="inline-flex rounded-full bg-white/95 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-emerald-800">
+            <p className="inline-flex rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-emerald-800">
               Shop Nearby, Faster
             </p>
-            <h1 className="font-display max-w-xl text-3xl font-bold tracking-tight text-white sm:text-5xl">
+            <h1 className="font-display max-w-xl text-3xl font-bold tracking-tight text-slate-900 sm:text-5xl">
               Discover trusted local vendors and products in one place.
             </h1>
-            <p className="max-w-xl text-sm leading-6 text-white/90 sm:text-base sm:leading-7">
+            <p className="max-w-xl text-sm leading-6 text-slate-600 sm:text-base sm:leading-7">
               Browse categories, compare stores, and order directly through WhatsApp-powered workflows.
             </p>
             <div className="flex flex-wrap items-center gap-5">
@@ -347,7 +349,7 @@ export default async function Home({ searchParams }: HomeProps) {
               </Link>
               <Link
                 href="/marketplace"
-                className="text-sm font-semibold text-white underline decoration-white/60 underline-offset-4 transition hover:decoration-white"
+                className="text-sm font-semibold text-slate-800 underline decoration-slate-400 underline-offset-4 transition hover:decoration-slate-800"
               >
                 Browse Market →
               </Link>

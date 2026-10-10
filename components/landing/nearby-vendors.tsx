@@ -226,18 +226,18 @@ export function NearbyVendors({
 
   return (
     <section className="rounded-xl border border-emerald-100 bg-white p-4 shadow-sm sm:p-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">
+      <div className="flex items-center justify-between gap-2 sm:flex-wrap sm:gap-3">
+        <div className="min-w-0">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-emerald-700 sm:text-xs sm:tracking-[0.16em]">
             {subtitle}
           </p>
-          <h2 className="mt-1 text-2xl font-bold tracking-tight text-slate-900">{title}</h2>
+          <h2 className="mt-1 text-lg font-bold tracking-tight text-slate-900 sm:text-2xl">{title}</h2>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
           {showSeeMoreLink ? (
             <Link
               href="/vendors"
-              className="inline-flex shrink-0 items-center justify-center rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              className="inline-flex shrink-0 items-center justify-center rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 sm:px-3 sm:py-2 sm:text-sm"
             >
               See more
             </Link>
@@ -246,9 +246,16 @@ export function NearbyVendors({
             type="button"
             onClick={handleUseMyLocation}
             disabled={isLocating}
-            className="inline-flex shrink-0 items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-100 disabled:opacity-60"
+            className="inline-flex shrink-0 items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-xs font-semibold text-emerald-800 transition hover:bg-emerald-100 disabled:opacity-60 sm:px-4 sm:py-2 sm:text-sm"
           >
-            {isLocating ? "Detecting..." : "Use my location"}
+            {isLocating ? (
+              "Detecting..."
+            ) : (
+              <>
+                <span className="sm:hidden">Use location</span>
+                <span className="hidden sm:inline">Use my location</span>
+              </>
+            )}
           </button>
         </div>
       </div>

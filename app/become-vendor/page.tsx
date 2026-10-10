@@ -7,7 +7,6 @@ import {
   ArrowRight,
   BadgeCheck,
   BarChart3,
-  Camera,
   MapPin,
   MessageCircle,
   Rocket,
@@ -21,6 +20,12 @@ import {
 } from "lucide-react";
 import { authOptions } from "@/lib/auth";
 import { Reveal } from "@/components/become-vendor/reveal";
+import { CategoryTicker } from "@/components/become-vendor/category-ticker";
+import { CountUp } from "@/components/become-vendor/count-up";
+import { HeroOrderCard } from "@/components/become-vendor/hero-order-card";
+import { PhoneWalkthrough } from "@/components/become-vendor/phone-walkthrough";
+import { StorePreview } from "@/components/become-vendor/store-preview";
+import { getMarketplaceStatsCached } from "@/lib/public-cache";
 
 export const metadata: Metadata = { title: "Become a Vendor" };
 
@@ -94,24 +99,6 @@ const benefits = [
   },
 ];
 
-const steps = [
-  {
-    icon: Store,
-    title: "Set up your storefront",
-    description: "Add your store name, category, location, and a few details it only takes a few minutes.",
-  },
-  {
-    icon: Camera,
-    title: "List your products",
-    description: "Upload clear photos, prices, and descriptions so shoppers know exactly what you're offering.",
-  },
-  {
-    icon: Rocket,
-    title: "Go live and start selling",
-    description: "Your store becomes discoverable on Sellee, and orders can flow straight into WhatsApp.",
-  },
-];
-
 function AnimatedHeadline({ text, startDelay = 0 }: { text: string; startDelay?: number }) {
   const words = text.split(" ");
   return (
@@ -133,6 +120,10 @@ export default async function BecomeVendorPage() {
   const session = await getServerSession(authOptions);
   if (session?.user?.role === "vendor") redirect("/dashboard/store");
 
+  // Only show real marketplace numbers once they're worth showing (same bar as the homepage).
+  const { totalStores, totalProducts } = await getMarketplaceStatsCached();
+  const showRealStats = totalStores >= 30 && totalProducts >= 100;
+
   return (
     <main className="w-full overflow-x-hidden pb-16 sm:pb-24">
       {/* ---------------- HERO ---------------- */}
@@ -151,7 +142,8 @@ export default async function BecomeVendorPage() {
           <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/20 to-transparent" />
         </div>
 
-        <div className="relative z-10 mx-auto w-full max-w-6xl px-4 pb-12 pt-32 sm:px-6 sm:pb-16 lg:pb-20">
+        <div className="relative z-10 mx-auto grid w-full max-w-6xl items-end gap-10 px-4 pb-12 pt-32 sm:px-6 sm:pb-16 md:grid-cols-[1.3fr_0.7fr] lg:pb-20">
+          <div>
           <p
             className="bv-fade-up inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.16em] text-white backdrop-blur-sm"
             style={{ animationDelay: "60ms" }}
@@ -212,10 +204,42 @@ export default async function BecomeVendorPage() {
               </span>
             ))}
           </div>
+          </div>
+
+          <HeroOrderCard className="md:justify-self-end" />
         </div>
       </section>
 
+      <CategoryTicker />
+
       <div className="mx-auto w-full max-w-6xl px-4 sm:px-6">
+        {/* ---------------- STATS STRIP ---------------- */}
+        <Reveal>
+          <dl className="mt-10 grid grid-cols-2 gap-px overflow-hidden rounded-xl bg-slate-200 ring-1 ring-slate-200 md:grid-cols-4">
+            {(showRealStats
+              ? [
+                  { node: <CountUp to={totalStores} suffix="+" />, label: "Active vendors" },
+                  { node: <CountUp to={totalProducts} suffix="+" />, label: "Products listed" },
+                  { node: <CountUp to={3} />, label: "Steps to go live" },
+                  { node: <>₦0</>, label: "To get started" },
+                ]
+              : [
+                  { node: <CountUp to={3} />, label: "Steps to go live" },
+                  { node: <>₦0</>, label: "To get started" },
+                  { node: <>WhatsApp</>, label: "Orders land in your chat" },
+                  { node: <>24/7</>, label: "Your storefront stays open" },
+                ]
+            ).map(({ node, label }) => (
+              <div key={label} className="bg-white px-4 py-5 text-center sm:py-6">
+                <dd className="font-display text-2xl font-black text-slate-950 sm:text-3xl">
+                  {node}
+                </dd>
+                <dt className="mt-1 text-xs font-medium text-slate-500">{label}</dt>
+              </div>
+            ))}
+          </dl>
+        </Reveal>
+
         {/* ---------------- CATEGORY SHOWCASE ---------------- */}
         <section className="mt-16 sm:mt-24">
           <Reveal>
@@ -287,6 +311,9 @@ export default async function BecomeVendorPage() {
           </div>
         </section>
 
+        {/* ---------------- LIVE STORE PREVIEW ---------------- */}
+        <StorePreview />
+
         {/* ---------------- SPLIT: photo + copy ---------------- */}
         <section className="mt-20 grid items-center gap-8 sm:mt-28 lg:grid-cols-2 lg:gap-14">
           <Reveal className="order-2 lg:order-1">
@@ -357,51 +384,7 @@ export default async function BecomeVendorPage() {
         </section>
 
         {/* ---------------- HOW IT WORKS ---------------- */}
-        <section className="mt-20 sm:mt-28">
-          <Reveal>
-            <p className="text-xs font-bold uppercase tracking-[0.14em] text-emerald-700">
-              Getting started
-            </p>
-            <h2 className="mt-2 text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">
-              Three steps between you and your first order.
-            </h2>
-          </Reveal>
-
-          <div className="mt-10 grid gap-6 lg:grid-cols-3">
-            {(() => {
-              const [featured, ...rest] = steps;
-              const FeaturedIcon = featured.icon;
-              return (
-                <>
-                  <div className="rounded-xl bg-slate-950 p-8 text-white lg:col-span-2">
-                    <div className="inline-flex h-14 w-14 items-center justify-center rounded-xl bg-emerald-500 text-slate-950">
-                      <FeaturedIcon className="h-6 w-6" />
-                    </div>
-                    <span className="mt-4 block text-xs font-bold uppercase tracking-[0.14em] text-emerald-400">
-                      Step 1
-                    </span>
-                    <h3 className="mt-2 text-2xl font-black">{featured.title}</h3>
-                    <p className="mt-2 max-w-md text-sm leading-6 text-white/70">{featured.description}</p>
-                  </div>
-                  <div className="flex flex-col gap-6">
-                    {rest.map(({ icon: Icon, title, description }, i) => (
-                      <div key={title} className="flex-1 rounded-xl border border-slate-200 bg-white p-5">
-                        <div className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700">
-                          <Icon className="h-5 w-5" />
-                        </div>
-                        <span className="mt-3 block text-xs font-bold uppercase tracking-[0.14em] text-emerald-700">
-                          Step {i + 2}
-                        </span>
-                        <h3 className="mt-1 text-base font-bold text-slate-950">{title}</h3>
-                        <p className="mt-1.5 text-sm leading-6 text-slate-600">{description}</p>
-                      </div>
-                    ))}
-                  </div>
-                </>
-              );
-            })()}
-          </div>
-        </section>
+        <PhoneWalkthrough />
       </div>
 
       {/* ---------------- FINAL CTA ---------------- */}

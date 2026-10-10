@@ -191,7 +191,7 @@ export default function SiteHeader(_props: SiteHeaderProps = {}) {
 
           <Link
             href={appHref("/map")}
-            className="flex shrink-0 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:border-emerald-200 hover:bg-emerald-50"
+            className="flex shrink-0 items-center gap-1.5 rounded-xl border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:border-emerald-200 hover:bg-emerald-50"
           >
             <MapIcon className="h-4 w-4" />
             Map

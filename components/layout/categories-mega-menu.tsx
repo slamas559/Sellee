@@ -90,7 +90,7 @@ export function CategoriesMegaMenu({ compact = false }: { compact?: boolean }) {
         onClick={() => setIsOpen((prev) => !prev)}
         aria-expanded={isOpen}
         aria-label="Browse categories"
-        className={`flex items-center gap-1.5 rounded-xl border font-semibold transition ${
+        className={`flex items-center gap-1.5 rounded-xl font-semibold transition ${
           compact ? "p-2" : "px-3 py-2 text-sm"
         } ${
           isOpen

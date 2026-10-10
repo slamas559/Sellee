@@ -57,7 +57,10 @@ export async function generateMetadata({ params }: StorePageProps): Promise<Meta
           icon: logoUrl,
           apple: logoUrl,
         }
-      : undefined,
+      : {
+          icon: "/icon.png",
+          apple: "/icon.png",
+        },
     openGraph: {
       title: `${label} Store | Sellee`,
       description,
