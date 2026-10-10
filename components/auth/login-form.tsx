@@ -56,7 +56,9 @@ export function LoginForm() {
 
       if (!result || result.error) {
         setError(
-          "Login failed. Please check your email and password, then try again.",
+          result?.error === "TOO_MANY_ATTEMPTS"
+            ? "Too many login attempts. Please wait about 15 minutes and try again."
+            : "Login failed. Please check your email and password, then try again.",
         );
         setIsLoading(false);
         return;

@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { logDevError } from "@/lib/logger";
 import { searchProducts } from "@/lib/product-search";
+import { enforceRateLimit } from "@/lib/rate-limit-response";
+import { getClientIp } from "@/lib/request-ip";
 
 const searchQuerySchema = z.object({
   q: z.string().trim().max(120).optional(),
@@ -16,6 +18,9 @@ const searchQuerySchema = z.object({
 });
 
 export async function GET(request: Request) {
+  const limited = await enforceRateLimit(`products-search:${getClientIp(request)}`, 60, 60 * 1000);
+  if (limited) return limited;
+
   try {
     const params = Object.fromEntries(new URL(request.url).searchParams.entries());
     const parsed = searchQuerySchema.safeParse(params);

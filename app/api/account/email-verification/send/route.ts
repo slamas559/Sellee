@@ -15,7 +15,7 @@ export async function POST() {
       return NextResponse.json({ error: "Please sign in first." }, { status: 401 });
     }
 
-    const limit = checkRateLimit(`email-verification-send:${session.user.id}`, 3, 10 * 60 * 1000);
+    const limit = await checkRateLimit(`email-verification-send:${session.user.id}`, 3, 10 * 60 * 1000);
     if (!limit.allowed) {
       return NextResponse.json(
         { error: "You've requested this a few times already - please wait a bit and try again." },

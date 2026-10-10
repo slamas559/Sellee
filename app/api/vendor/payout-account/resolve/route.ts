@@ -23,8 +23,8 @@ export async function POST(request: Request) {
 
   // This endpoint turns an account number into a person's name, so keep it
   // from being used to look up arbitrary accounts.
-  const burst = checkRateLimit(`payout-resolve:${ctx.vendorId}`, 8, 10 * 60 * 1000);
-  const daily = checkRateLimit(`payout-resolve-day:${ctx.vendorId}`, 30, 24 * 60 * 60 * 1000);
+  const burst = await checkRateLimit(`payout-resolve:${ctx.vendorId}`, 8, 10 * 60 * 1000);
+  const daily = await checkRateLimit(`payout-resolve-day:${ctx.vendorId}`, 30, 24 * 60 * 60 * 1000);
   if (!burst.allowed || !daily.allowed) {
     const retryAfter = Math.max(burst.allowed ? 0 : burst.retryAfterSeconds, daily.allowed ? 0 : daily.retryAfterSeconds);
     return NextResponse.json(

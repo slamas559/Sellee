@@ -4,6 +4,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
 import { logDevError } from "@/lib/logger";
+import { enforceRateLimit } from "@/lib/rate-limit-response";
+import { getClientIp } from "@/lib/request-ip";
 import { formatProductPathSegment } from "@/lib/format";
 import { storeProductUrl } from "@/lib/store-url";
 import { sendProductReportNotificationEmail } from "@/app/actions/emails";
@@ -21,6 +23,14 @@ export async function POST(
   request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
+  const limited = await enforceRateLimit(
+    `product-report:${getClientIp(request)}`,
+    5,
+    10 * 60 * 1000,
+    "You've sent several reports recently. Please try again in a few minutes.",
+  );
+  if (limited) return limited;
+
   const { id: productId } = await context.params;
   const body = await request.json().catch(() => null);
   const parsed = reportSchema.safeParse(body);

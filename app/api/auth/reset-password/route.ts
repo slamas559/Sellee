@@ -21,7 +21,7 @@ function getClientIp(request: Request): string {
 export async function POST(request: Request) {
   try {
     const ip = getClientIp(request);
-    const limit = checkRateLimit(`reset-password:${ip}`, 10, 15 * 60 * 1000);
+    const limit = await checkRateLimit(`reset-password:${ip}`, 10, 15 * 60 * 1000);
     if (!limit.allowed) {
       return NextResponse.json(
         { error: "Too many attempts - please wait a bit and try again." },

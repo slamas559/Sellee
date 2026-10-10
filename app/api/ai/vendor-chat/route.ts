@@ -27,7 +27,7 @@ export async function POST(request: Request) {
 
   // Rate limited per vendor (not per IP) since this is an authenticated
   // route - protects the shared free-tier LLM quota across all vendors.
-  const limit = checkRateLimit(`ai-vendor-chat:${session.user.id}`, 20, 10 * 60 * 1000);
+  const limit = await checkRateLimit(`ai-vendor-chat:${session.user.id}`, 20, 10 * 60 * 1000);
   if (!limit.allowed) {
     return NextResponse.json(
       { error: "You're chatting a little fast - please wait a bit and try again." },

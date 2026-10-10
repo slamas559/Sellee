@@ -45,7 +45,7 @@ function getClientIp(request: Request): string {
  */
 export async function GET(request: Request) {
   const ip = getClientIp(request);
-  const limit = checkRateLimit(`location-search:${ip}`, 20, 60 * 1000);
+  const limit = await checkRateLimit(`location-search:${ip}`, 20, 60 * 1000);
   if (!limit.allowed) {
     return NextResponse.json({ error: "Too many location searches - please slow down." }, { status: 429 });
   }

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
+import { enforceRateLimit } from "@/lib/rate-limit-response";
 import { z } from "zod";
 import { authOptions } from "@/lib/auth";
 import { logDevError } from "@/lib/logger";
@@ -112,6 +113,14 @@ export async function POST(request: Request) {
         { status: 401 },
       );
     }
+
+    const limited = await enforceRateLimit(
+      `product-review:${session.user.id}`,
+      10,
+      60 * 60 * 1000,
+      "You're submitting reviews too quickly. Please try again later.",
+    );
+    if (limited) return limited;
 
     const body = await request.json();
     const parsed = createProductReviewSchema.safeParse(body);

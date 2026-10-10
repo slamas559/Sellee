@@ -26,7 +26,7 @@ const GENERIC_SUCCESS_MESSAGE =
 export async function POST(request: Request) {
   try {
     const ip = getClientIp(request);
-    const limit = checkRateLimit(`forgot-password:${ip}`, 5, 15 * 60 * 1000);
+    const limit = await checkRateLimit(`forgot-password:${ip}`, 5, 15 * 60 * 1000);
     if (!limit.allowed) {
       // Still return the generic message on rate limit, not an error - an
       // attacker probing for valid emails shouldn't be able to distinguish

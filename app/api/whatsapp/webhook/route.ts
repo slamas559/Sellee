@@ -5,6 +5,7 @@ import { waMessage, waTitle } from "@/lib/whatsapp-bot/message-format";
 import { inferCommand } from "@/lib/whatsapp-bot/parse";
 import { routeIncomingText } from "@/lib/whatsapp-bot/router";
 import { sendWhatsAppTextMessage } from "@/lib/whatsapp-cloud";
+import { verifyWhatsAppSignature } from "@/lib/whatsapp-signature";
 import type {
   WebhookDebugResult,
   WebhookPayload,
@@ -50,7 +51,20 @@ export async function POST(request: Request) {
   const debugEnabled = debugRequested && debugAllowed;
 
   try {
-    const payload = (await request.json()) as WebhookPayload;
+    // Meta signs every webhook POST. Without this check anyone who knows the URL
+    // could send fake "incoming messages". Skipped only in local development when
+    // no app secret is configured.
+    const rawBody = await request.text();
+    const secretConfigured = Boolean(process.env.WHATSAPP_APP_SECRET?.trim());
+    const skipSignatureCheck = process.env.NODE_ENV === "development" && !secretConfigured;
+    if (
+      !skipSignatureCheck &&
+      !verifyWhatsAppSignature(rawBody, request.headers.get("x-hub-signature-256"))
+    ) {
+      logServerInfo("whatsapp.webhook.invalid_signature", { secret_configured: secretConfigured });
+      return new Response("Invalid signature", { status: 401 });
+    }
+    const payload = JSON.parse(rawBody) as WebhookPayload;
     const debugResults: WebhookDebugResult[] = [];
     const rawChanges = payload.entry?.flatMap((entry) => entry.changes ?? []) ?? [];
 

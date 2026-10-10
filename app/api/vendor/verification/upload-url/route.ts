@@ -30,7 +30,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Only the store owner can submit verification documents." }, { status: 403 });
   }
 
-  const limit = checkRateLimit(`verification-upload:${ctx.vendorId}`, 12, 10 * 60 * 1000);
+  const limit = await checkRateLimit(`verification-upload:${ctx.vendorId}`, 12, 10 * 60 * 1000);
   if (!limit.allowed) {
     return NextResponse.json(
       { error: "Too many uploads. Please wait a few minutes and try again." },

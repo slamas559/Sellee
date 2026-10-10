@@ -1,0 +1,613 @@
+diff --git a/app/api/health/route.ts b/app/api/health/route.ts
+index 587067d..94ea17d 100644
+--- a/app/api/health/route.ts
++++ b/app/api/health/route.ts
+@@ -1,7 +1,17 @@
+ import { NextResponse } from "next/server";
+ import { createAdminSupabaseClient } from "@/lib/supabase-admin";
+ 
+-export async function GET() {
++export async function GET(request: Request) {
++  // Anyone can ping this for uptime. The detailed diagnostics (which env vars are missing,
++  // raw database errors) are only returned when the caller sends the right token.
++  const detailsToken = process.env.HEALTH_DETAILS_TOKEN?.trim();
++  const showDetails = Boolean(detailsToken) && request.headers.get("x-health-token") === detailsToken;
++  const respond = (body: Record<string, unknown>, init?: { status?: number }) =>
++    NextResponse.json(
++      showDetails ? body : { ok: body.ok, service: body.service, timestamp: body.timestamp },
++      init,
++    );
++
+   const startedAt = Date.now();
+   const hasWhatsAppToken = Boolean(process.env.WHATSAPP_TOKEN);
+   const hasWhatsAppPhoneNumberId = Boolean(process.env.WHATSAPP_PHONE_NUMBER_ID);
+@@ -19,7 +29,7 @@ export async function GET() {
+     const { error } = await supabase.from("users").select("id").limit(1);
+ 
+     if (error || !whatsappConfigOk) {
+-      return NextResponse.json(
++      return respond(
+         {
+           ok: false,
+           service: "sellee-api",
+@@ -46,7 +56,7 @@ export async function GET() {
+       );
+     }
+ 
+-    return NextResponse.json({
++    return respond({
+       ok: true,
+       service: "sellee-api",
+       timestamp: new Date().toISOString(),
+@@ -57,7 +67,7 @@ export async function GET() {
+       durationMs: Date.now() - startedAt,
+     });
+   } catch (error) {
+-    return NextResponse.json(
++    return respond(
+       {
+         ok: false,
+         service: "sellee-api",
+diff --git a/app/api/products/[id]/report/route.ts b/app/api/products/[id]/report/route.ts
+index a094cad..7385515 100644
+--- a/app/api/products/[id]/report/route.ts
++++ b/app/api/products/[id]/report/route.ts
+@@ -4,6 +4,8 @@ import { getServerSession } from "next-auth";
+ import { authOptions } from "@/lib/auth";
+ import { createAdminSupabaseClient } from "@/lib/supabase-admin";
+ import { logDevError } from "@/lib/logger";
++import { enforceRateLimit } from "@/lib/rate-limit-response";
++import { getClientIp } from "@/lib/request-ip";
+ import { formatProductPathSegment } from "@/lib/format";
+ import { storeProductUrl } from "@/lib/store-url";
+ import { sendProductReportNotificationEmail } from "@/app/actions/emails";
+@@ -21,6 +23,14 @@ export async function POST(
+   request: Request,
+   context: { params: Promise<{ id: string }> },
+ ) {
++  const limited = await enforceRateLimit(
++    `product-report:${getClientIp(request)}`,
++    5,
++    10 * 60 * 1000,
++    "You've sent several reports recently. Please try again in a few minutes.",
++  );
++  if (limited) return limited;
++
+   const { id: productId } = await context.params;
+   const body = await request.json().catch(() => null);
+   const parsed = reportSchema.safeParse(body);
+diff --git a/app/api/products/[id]/route.ts b/app/api/products/[id]/route.ts
+index 4cc89fa..4435ec7 100644
+--- a/app/api/products/[id]/route.ts
++++ b/app/api/products/[id]/route.ts
+@@ -5,6 +5,7 @@ import { z } from "zod";
+ import { requireVendorWorkspaceApi } from "@/lib/vendor-auth";
+ import { slugify } from "@/lib/format";
+ import { logDevError } from "@/lib/logger";
++import { ImageValidationError, readValidatedImage } from "@/lib/image-upload";
+ import { deleteProductImagesFromStorage } from "@/lib/product-images";
+ import { CACHE_TAGS } from "@/lib/public-cache";
+ import { createAdminSupabaseClient } from "@/lib/supabase-admin";
+@@ -140,14 +141,13 @@ async function getAllowedCategoriesForStore(storeId: string): Promise<string[]>
+ 
+ async function uploadProductImage(vendorId: string, file: File): Promise<string> {
+   const supabase = createAdminSupabaseClient();
+-  const bytes = await file.arrayBuffer();
+-  const extension = file.name.includes(".") ? file.name.split(".").pop() : "jpg";
+-  const path = `${vendorId}/${randomUUID()}.${extension}`;
++  const image = await readValidatedImage(file);
++  const path = `${vendorId}/${randomUUID()}.${image.extension}`;
+ 
+   const { error: uploadError } = await supabase.storage
+     .from("product-images")
+-    .upload(path, Buffer.from(bytes), {
+-      contentType: file.type || "application/octet-stream",
++    .upload(path, image.buffer, {
++      contentType: image.contentType,
+       upsert: false,
+     });
+ 
+@@ -396,6 +396,9 @@ export async function PATCH(
+ 
+     return NextResponse.json({ product: data, message: "Product updated successfully." });
+   } catch (error) {
++    if (error instanceof ImageValidationError) {
++      return NextResponse.json({ error: error.message }, { status: 400 });
++    }
+     logDevError("products.update.unhandled", error, { userId: vendorId });
+     return NextResponse.json({ error: "Unexpected product update error." }, { status: 500 });
+   }
+diff --git a/app/api/products/route.ts b/app/api/products/route.ts
+index 7c61805..4e25049 100644
+--- a/app/api/products/route.ts
++++ b/app/api/products/route.ts
+@@ -6,6 +6,7 @@ import { requireVendorWorkspaceApi } from "@/lib/vendor-auth";
+ import { slugify } from "@/lib/format";
+ import { formatPrice } from "@/lib/currency";
+ import { logDevError } from "@/lib/logger";
++import { ImageValidationError, readValidatedImage } from "@/lib/image-upload";
+ import { CACHE_TAGS } from "@/lib/public-cache";
+ import { createAdminSupabaseClient } from "@/lib/supabase-admin";
+ 
+@@ -123,14 +124,13 @@ async function getAllowedCategoriesForStore(storeId: string): Promise<string[]>
+ 
+ async function uploadProductImage(vendorId: string, file: File): Promise<string> {
+   const supabase = createAdminSupabaseClient();
+-  const bytes = await file.arrayBuffer();
+-  const extension = file.name.includes(".") ? file.name.split(".").pop() : "jpg";
+-  const path = `${vendorId}/${randomUUID()}.${extension}`;
++  const image = await readValidatedImage(file);
++  const path = `${vendorId}/${randomUUID()}.${image.extension}`;
+ 
+   const { error: uploadError } = await supabase.storage
+     .from("product-images")
+-    .upload(path, Buffer.from(bytes), {
+-      contentType: file.type || "application/octet-stream",
++    .upload(path, image.buffer, {
++      contentType: image.contentType,
+       upsert: false,
+     });
+ 
+@@ -344,6 +344,9 @@ export async function POST(request: Request) {
+ 
+     return NextResponse.json({ product: data, message: `${data.name} (${formatPrice(Number(data.price), store.currency)}) added.` });
+   } catch (error) {
++    if (error instanceof ImageValidationError) {
++      return NextResponse.json({ error: error.message }, { status: 400 });
++    }
+     logDevError("products.create.unhandled", error, { userId: vendorId });
+     return NextResponse.json({ error: "Unexpected create product error." }, { status: 500 });
+   }
+diff --git a/app/api/products/search/route.ts b/app/api/products/search/route.ts
+index cd89b85..7c35984 100644
+--- a/app/api/products/search/route.ts
++++ b/app/api/products/search/route.ts
+@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
+ import { z } from "zod";
+ import { logDevError } from "@/lib/logger";
+ import { searchProducts } from "@/lib/product-search";
++import { enforceRateLimit } from "@/lib/rate-limit-response";
++import { getClientIp } from "@/lib/request-ip";
+ 
+ const searchQuerySchema = z.object({
+   q: z.string().trim().max(120).optional(),
+@@ -16,6 +18,9 @@ const searchQuerySchema = z.object({
+ });
+ 
+ export async function GET(request: Request) {
++  const limited = await enforceRateLimit(`products-search:${getClientIp(request)}`, 60, 60 * 1000);
++  if (limited) return limited;
++
+   try {
+     const params = Object.fromEntries(new URL(request.url).searchParams.entries());
+     const parsed = searchQuerySchema.safeParse(params);
+diff --git a/app/api/reviews/product/route.ts b/app/api/reviews/product/route.ts
+index 5f0d9f9..f3500ae 100644
+--- a/app/api/reviews/product/route.ts
++++ b/app/api/reviews/product/route.ts
+@@ -1,5 +1,6 @@
+ import { NextResponse } from "next/server";
+ import { getServerSession } from "next-auth";
++import { enforceRateLimit } from "@/lib/rate-limit-response";
+ import { z } from "zod";
+ import { authOptions } from "@/lib/auth";
+ import { logDevError } from "@/lib/logger";
+@@ -113,6 +114,14 @@ export async function POST(request: Request) {
+       );
+     }
+ 
++    const limited = await enforceRateLimit(
++      `product-review:${session.user.id}`,
++      10,
++      60 * 60 * 1000,
++      "You're submitting reviews too quickly. Please try again later.",
++    );
++    if (limited) return limited;
++
+     const body = await request.json();
+     const parsed = createProductReviewSchema.safeParse(body);
+ 
+diff --git a/app/api/reviews/vendor/route.ts b/app/api/reviews/vendor/route.ts
+index 06b4779..3ee1896 100644
+--- a/app/api/reviews/vendor/route.ts
++++ b/app/api/reviews/vendor/route.ts
+@@ -1,5 +1,6 @@
+ import { NextResponse } from "next/server";
+ import { getServerSession } from "next-auth";
++import { enforceRateLimit } from "@/lib/rate-limit-response";
+ import { z } from "zod";
+ import { authOptions } from "@/lib/auth";
+ import { logDevError } from "@/lib/logger";
+@@ -113,6 +114,14 @@ export async function POST(request: Request) {
+       );
+     }
+ 
++    const limited = await enforceRateLimit(
++      `vendor-review:${session.user.id}`,
++      10,
++      60 * 60 * 1000,
++      "You're submitting reviews too quickly. Please try again later.",
++    );
++    if (limited) return limited;
++
+     const body = await request.json();
+     const parsed = createVendorReviewSchema.safeParse(body);
+ 
+diff --git a/app/api/search/suggest/route.ts b/app/api/search/suggest/route.ts
+index 8cbdd39..b409bbb 100644
+--- a/app/api/search/suggest/route.ts
++++ b/app/api/search/suggest/route.ts
+@@ -1,7 +1,12 @@
+ import { NextResponse } from "next/server";
+ import { createAdminSupabaseClient } from "@/lib/supabase-admin";
++import { enforceRateLimit } from "@/lib/rate-limit-response";
++import { getClientIp } from "@/lib/request-ip";
+ 
+ export async function GET(req: Request) {
++  const limited = await enforceRateLimit(`search-suggest:${getClientIp(req)}`, 90, 60 * 1000);
++  if (limited) return limited;
++
+   const url = new URL(req.url);
+   const q = (url.searchParams.get("q") ?? "").trim();
+ 
+diff --git a/app/api/stores/route.ts b/app/api/stores/route.ts
+index 41e4b2f..fd49465 100644
+--- a/app/api/stores/route.ts
++++ b/app/api/stores/route.ts
+@@ -5,11 +5,18 @@ import { z } from "zod";
+ import { requireVendorWorkspaceApi } from "@/lib/vendor-auth";
+ import { slugify } from "@/lib/format";
+ import { logDevError } from "@/lib/logger";
++import { isAllowedImageUrl } from "@/lib/image-hosts";
++import { ImageValidationError, readValidatedImage } from "@/lib/image-upload";
+ import { CACHE_TAGS } from "@/lib/public-cache";
+ import { DEFAULT_STOREFRONT_CONFIG, normalizeStoreTemplate, normalizeThemePreset, normalizeStorefrontConfig } from "@/lib/storefront";
+ import { createAdminSupabaseClient } from "@/lib/supabase-admin";
+ import { validateWhatsAppNumber } from "@/lib/whatsapp";
+ 
++const imageUrlSchema = z
++  .string()
++  .url()
++  .refine(isAllowedImageUrl, "Images must be uploaded to Sellee.");
++
+ const storeSchema = z.object({
+   name: z.string().min(2).max(80),
+   whatsapp_number: z.string().min(10).max(20),
+@@ -27,10 +34,10 @@ const storeSchema = z.object({
+       hero_title: z.string().max(120).optional(),
+       hero_subtitle: z.string().max(220).optional(),
+       hero_cta_text: z.string().max(40).optional(),
+-      hero_image_url: z.string().url().optional().or(z.literal("")),
++      hero_image_url: imageUrlSchema.optional().or(z.literal("")),
+       promo_text: z.string().max(120).optional(),
+-      secondary_banner_url: z.string().url().optional().or(z.literal("")),
+-      banner_urls: z.array(z.string().url()).max(8).optional(),
++      secondary_banner_url: imageUrlSchema.optional().or(z.literal("")),
++      banner_urls: z.array(imageUrlSchema).max(8).optional(),
+       sections_order: z
+         .array(z.enum(["featured_products", "promo_strip", "reviews"]))
+         .optional(),
+@@ -39,7 +46,7 @@ const storeSchema = z.object({
+   theme_color: z.string().regex(/^#([A-Fa-f0-9]{6})$/),
+   currency: z.enum(["NGN", "GHS", "USD", "GBP"]).default("NGN"),
+   activated_currencies: z.array(z.enum(["NGN", "GHS", "USD", "GBP"])).default([]),
+-  logo_url: z.string().url().optional().or(z.literal("")),
++  logo_url: imageUrlSchema.optional().or(z.literal("")),
+   niche_ids: z.array(z.string().uuid()).max(8).optional().default([]),
+   custom_niches: z.array(z.string().min(2).max(80)).max(8).optional().default([]),
+   is_active: z.boolean().optional().default(true),
+@@ -65,14 +72,13 @@ type StoreUploadFiles = {
+ 
+ async function uploadStoreAsset(vendorId: string, file: File, kind: string): Promise<string> {
+   const supabase = createAdminSupabaseClient();
+-  const bytes = await file.arrayBuffer();
+-  const extension = file.name.includes(".") ? file.name.split(".").pop() : "jpg";
+-  const path = `${vendorId}/storefront/${kind}-${randomUUID()}.${extension}`;
++  const image = await readValidatedImage(file);
++  const path = `${vendorId}/storefront/${kind}-${randomUUID()}.${image.extension}`;
+ 
+   const { error: uploadError } = await supabase.storage
+     .from("store-assets")
+-    .upload(path, Buffer.from(bytes), {
+-      contentType: file.type || "application/octet-stream",
++    .upload(path, image.buffer, {
++      contentType: image.contentType,
+       upsert: false,
+     });
+ 
+@@ -587,6 +593,9 @@ export async function POST(request: Request) {
+       became_vendor: Boolean(promotedRows?.length),
+     });
+   } catch (error) {
++    if (error instanceof ImageValidationError) {
++      return NextResponse.json({ error: error.message }, { status: 400 });
++    }
+     logDevError("stores.unhandled", error, { userId: vendorId });
+     return NextResponse.json({ error: "Unexpected store setup error." }, { status: 500 });
+   }
+diff --git a/app/api/stores/upload/route.ts b/app/api/stores/upload/route.ts
+index 6264cb8..dedf31f 100644
+--- a/app/api/stores/upload/route.ts
++++ b/app/api/stores/upload/route.ts
+@@ -2,20 +2,20 @@ import { randomUUID } from "crypto";
+ import { NextResponse } from "next/server";
+ import { requireVendorWorkspaceApi } from "@/lib/vendor-auth";
+ import { logDevError } from "@/lib/logger";
++import { ImageValidationError, readValidatedImage } from "@/lib/image-upload";
+ import { createAdminSupabaseClient } from "@/lib/supabase-admin";
+ 
+ const ALLOWED_KINDS = new Set(["logo", "hero", "banner"]);
+ 
+ async function uploadStoreAsset(vendorId: string, file: File, kind: string): Promise<string> {
+   const supabase = createAdminSupabaseClient();
+-  const bytes = await file.arrayBuffer();
+-  const extension = file.name.includes(".") ? file.name.split(".").pop() : "jpg";
+-  const path = `${vendorId}/storefront/${kind}-${randomUUID()}.${extension}`;
++  const image = await readValidatedImage(file);
++  const path = `${vendorId}/storefront/${kind}-${randomUUID()}.${image.extension}`;
+ 
+   const { error: uploadError } = await supabase.storage
+     .from("store-assets")
+-    .upload(path, Buffer.from(bytes), {
+-      contentType: file.type || "application/octet-stream",
++    .upload(path, image.buffer, {
++      contentType: image.contentType,
+       upsert: false,
+     });
+ 
+@@ -52,6 +52,9 @@ export async function POST(request: Request) {
+     const url = await uploadStoreAsset(vendorId, file, kind);
+     return NextResponse.json({ ok: true, url });
+   } catch (error) {
++    if (error instanceof ImageValidationError) {
++      return NextResponse.json({ error: error.message }, { status: 400 });
++    }
+     logDevError("stores.upload", error, { userId: vendorId });
+     return NextResponse.json({ error: "Could not upload image." }, { status: 500 });
+   }
+diff --git a/app/api/track/visit/route.ts b/app/api/track/visit/route.ts
+index 1fa6f8e..63c2da8 100644
+--- a/app/api/track/visit/route.ts
++++ b/app/api/track/visit/route.ts
+@@ -4,6 +4,8 @@ import { cookies } from "next/headers";
+ import { getServerSession } from "next-auth";
+ import { z } from "zod";
+ import { authOptions } from "@/lib/auth";
++import { enforceRateLimit } from "@/lib/rate-limit-response";
++import { getClientIp } from "@/lib/request-ip";
+ import { createAdminSupabaseClient } from "@/lib/supabase-admin";
+ 
+ const VISITOR_COOKIE = "sellee_vid";
+@@ -44,6 +46,9 @@ export async function POST(request: Request) {
+     return NextResponse.json({ tracked: false }, { status: 202 });
+   }
+ 
++  const limited = await enforceRateLimit(`track-visit:${getClientIp(request)}`, 300, 10 * 60 * 1000);
++  if (limited) return limited;
++
+   const parsed = bodySchema.safeParse(await request.json().catch(() => null));
+   if (!parsed.success) {
+     return NextResponse.json({ error: "Invalid payload." }, { status: 400 });
+diff --git a/app/api/vendors/nearby/route.ts b/app/api/vendors/nearby/route.ts
+index adbd803..97d8809 100644
+--- a/app/api/vendors/nearby/route.ts
++++ b/app/api/vendors/nearby/route.ts
+@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
+ import { z } from "zod";
+ import { logDevError } from "@/lib/logger";
+ import { searchStores } from "@/lib/store-search";
++import { enforceRateLimit } from "@/lib/rate-limit-response";
++import { getClientIp } from "@/lib/request-ip";
+ 
+ const nearbyQuerySchema = z.object({
+   lat: z.coerce.number().min(-90).max(90).optional(),
+@@ -13,6 +15,9 @@ const nearbyQuerySchema = z.object({
+ });
+ 
+ export async function GET(request: Request) {
++  const limited = await enforceRateLimit(`vendors-nearby:${getClientIp(request)}`, 60, 60 * 1000);
++  if (limited) return limited;
++
+   try {
+     const params = Object.fromEntries(new URL(request.url).searchParams.entries());
+     const parsed = nearbyQuerySchema.safeParse(params);
+diff --git a/lib/image-hosts.ts b/lib/image-hosts.ts
+new file mode 100644
+index 0000000..83e4270
+--- /dev/null
++++ b/lib/image-hosts.ts
+@@ -0,0 +1,56 @@
++/**
++ * Hosts Sellee is willing to load images from through next/image.
++ * Kept free of imports so next.config.ts can use it too.
++ */
++
++const STATIC_HOSTS = ["images.unsplash.com", "images.pexels.com"];
++
++function getSupabaseUrl(): URL | null {
++  try {
++    return new URL(process.env.NEXT_PUBLIC_SUPABASE_URL ?? "");
++  } catch {
++    return null;
++  }
++}
++
++export function getAllowedImageHosts(): string[] {
++  const supabase = getSupabaseUrl();
++  return [supabase?.hostname ?? "*.supabase.co", ...STATIC_HOSTS];
++}
++
++export function getImageRemotePatterns() {
++  const supabase = getSupabaseUrl();
++  const patterns: Array<{ protocol: "http" | "https"; hostname: string; port?: string }> = [
++    ...STATIC_HOSTS.map((hostname) => ({ protocol: "https" as const, hostname })),
++  ];
++
++  if (supabase) {
++    patterns.push({
++      protocol: supabase.protocol === "http:" ? "http" : "https",
++      hostname: supabase.hostname,
++      ...(supabase.port ? { port: supabase.port } : {}),
++    });
++  } else {
++    patterns.push({ protocol: "https", hostname: "*.supabase.co" });
++  }
++
++  return patterns;
++}
++
++/** True when `value` is an https URL on one of the allowed image hosts. */
++export function isAllowedImageUrl(value: string): boolean {
++  try {
++    const url = new URL(value);
++    const supabase = getSupabaseUrl();
++    const okProtocol =
++      url.protocol === "https:" ||
++      (supabase?.protocol === "http:" && url.hostname === supabase.hostname);
++    if (!okProtocol) return false;
++
++    return getAllowedImageHosts().some((host) =>
++      host.startsWith("*.") ? url.hostname.endsWith(host.slice(1)) : url.hostname === host,
++    );
++  } catch {
++    return false;
++  }
++}
+diff --git a/lib/image-upload.ts b/lib/image-upload.ts
+new file mode 100644
+index 0000000..4ea716b
+--- /dev/null
++++ b/lib/image-upload.ts
+@@ -0,0 +1,71 @@
++/**
++ * Server-side image validation for vendor uploads.
++ *
++ * The browser-supplied filename and Content-Type can't be trusted, so we read
++ * the file's real signature (magic bytes) and derive the extension and
++ * Content-Type ourselves. Anything that isn't a real image is rejected.
++ */
++
++export class ImageValidationError extends Error {
++  constructor(message: string) {
++    super(message);
++    this.name = "ImageValidationError";
++  }
++}
++
++export const MAX_IMAGE_BYTES = 10 * 1024 * 1024; // 10MB
++
++export type DetectedImage = { contentType: string; extension: string };
++
++function startsWith(bytes: Uint8Array, signature: number[], offset = 0): boolean {
++  return signature.every((value, index) => bytes[offset + index] === value);
++}
++
++export function detectImageType(bytes: Uint8Array): DetectedImage | null {
++  if (bytes.length < 12) return null;
++
++  // JPEG: FF D8 FF
++  if (startsWith(bytes, [0xff, 0xd8, 0xff])) return { contentType: "image/jpeg", extension: "jpg" };
++
++  // PNG: 89 50 4E 47 0D 0A 1A 0A
++  if (startsWith(bytes, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) {
++    return { contentType: "image/png", extension: "png" };
++  }
++
++  // GIF: "GIF87a" / "GIF89a"
++  if (startsWith(bytes, [0x47, 0x49, 0x46, 0x38]) && (bytes[4] === 0x37 || bytes[4] === 0x39) && bytes[5] === 0x61) {
++    return { contentType: "image/gif", extension: "gif" };
++  }
++
++  // WebP: "RIFF" .... "WEBP"
++  if (startsWith(bytes, [0x52, 0x49, 0x46, 0x46]) && startsWith(bytes, [0x57, 0x45, 0x42, 0x50], 8)) {
++    return { contentType: "image/webp", extension: "webp" };
++  }
++
++  // AVIF: ISO-BMFF box "ftyp" at byte 4 with brand "avif" / "avis"
++  if (
++    startsWith(bytes, [0x66, 0x74, 0x79, 0x70], 4) &&
++    (startsWith(bytes, [0x61, 0x76, 0x69, 0x66], 8) || startsWith(bytes, [0x61, 0x76, 0x69, 0x73], 8))
++  ) {
++    return { contentType: "image/avif", extension: "avif" };
++  }
++
++  return null;
++}
++
++/** Reads a File, checks size + real image type, and returns bytes ready to upload. */
++export async function readValidatedImage(
++  file: File,
++): Promise<DetectedImage & { buffer: Buffer }> {
++  if (file.size > MAX_IMAGE_BYTES) {
++    throw new ImageValidationError("Image is too large. Max 10MB.");
++  }
++
++  const buffer = Buffer.from(await file.arrayBuffer());
++  const detected = detectImageType(buffer);
++  if (!detected) {
++    throw new ImageValidationError("Unsupported file. Upload a JPG, PNG, WebP, GIF or AVIF image.");
++  }
++
++  return { ...detected, buffer };
++}
+diff --git a/lib/rate-limit-response.ts b/lib/rate-limit-response.ts
+new file mode 100644
+index 0000000..d4c72fc
+--- /dev/null
++++ b/lib/rate-limit-response.ts
+@@ -0,0 +1,24 @@
++import { NextResponse } from "next/server";
++import { checkRateLimit } from "@/lib/rate-limit";
++
++/**
++ * Counts a request and returns a ready-made 429 response when the caller is over the limit,
++ * or `null` when the request may proceed.
++ *
++ *   const limited = await enforceRateLimit(`search:${getClientIp(request)}`, 60, 60_000);
++ *   if (limited) return limited;
++ */
++export async function enforceRateLimit(
++  key: string,
++  maxRequests: number,
++  windowMs: number,
++  message = "Too many requests. Please slow down and try again shortly.",
++): Promise<NextResponse | null> {
++  const limit = await checkRateLimit(key, maxRequests, windowMs);
++  if (limit.allowed) return null;
++
++  return NextResponse.json(
++    { error: message },
++    { status: 429, headers: { "Retry-After": String(limit.retryAfterSeconds) } },
++  );
++}
+diff --git a/next.config.ts b/next.config.ts
+index 2d7cab6..c821580 100644
+--- a/next.config.ts
++++ b/next.config.ts
+@@ -1,4 +1,5 @@
+ import type { NextConfig } from "next";
++import { getImageRemotePatterns } from "./lib/image-hosts";
+ 
+ const ngrokOrigin = process.env.NEXTAUTH_URL;
+ 
+@@ -12,16 +13,10 @@ const nextConfig: NextConfig = {
+   images: {
+     formats: ["image/avif", "image/webp"],
+     minimumCacheTTL: 60 * 60 * 24 * 30,
+-    remotePatterns: [
+-      {
+-        protocol: "https",
+-        hostname: "**",
+-      },
+-      {
+-        protocol: "http",
+-        hostname: "**",
+-      },
+-    ],
++    // Only images from our own storage and the stock-photo hosts we use are
++    // allowed through the optimizer. A wildcard here lets anyone proxy
++    // arbitrary images through (and bill) the site.
++    remotePatterns: getImageRemotePatterns(),
+   },
+   async headers() {
+     return [

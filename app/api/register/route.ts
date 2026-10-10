@@ -32,7 +32,7 @@ function getClientIp(request: Request): string {
 export async function POST(request: Request) {
   try {
     const ip = getClientIp(request);
-    const limit = checkRateLimit(`register:${ip}`, 8, 15 * 60 * 1000);
+    const limit = await checkRateLimit(`register:${ip}`, 8, 15 * 60 * 1000);
 
     if (!limit.allowed) {
       return NextResponse.json(

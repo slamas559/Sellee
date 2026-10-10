@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { logDevError } from "@/lib/logger";
 import { searchStores } from "@/lib/store-search";
+import { enforceRateLimit } from "@/lib/rate-limit-response";
+import { getClientIp } from "@/lib/request-ip";
 
 const nearbyQuerySchema = z.object({
   lat: z.coerce.number().min(-90).max(90).optional(),
@@ -13,6 +15,9 @@ const nearbyQuerySchema = z.object({
 });
 
 export async function GET(request: Request) {
+  const limited = await enforceRateLimit(`vendors-nearby:${getClientIp(request)}`, 60, 60 * 1000);
+  if (limited) return limited;
+
   try {
     const params = Object.fromEntries(new URL(request.url).searchParams.entries());
     const parsed = nearbyQuerySchema.safeParse(params);

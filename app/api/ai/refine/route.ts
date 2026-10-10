@@ -20,7 +20,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Vendor account required." }, { status: 403 });
   }
 
-  const limit = checkRateLimit(`ai-refine:${session.user.id}`, 20, 10 * 60 * 1000);
+  const limit = await checkRateLimit(`ai-refine:${session.user.id}`, 20, 10 * 60 * 1000);
   if (!limit.allowed) {
     return NextResponse.json(
       { error: "Too many refine requests - please wait a bit and try again." },

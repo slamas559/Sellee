@@ -1,7 +1,17 @@
 import { NextResponse } from "next/server";
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
 
-export async function GET() {
+export async function GET(request: Request) {
+  // Anyone can ping this for uptime. The detailed diagnostics (which env vars are missing,
+  // raw database errors) are only returned when the caller sends the right token.
+  const detailsToken = process.env.HEALTH_DETAILS_TOKEN?.trim();
+  const showDetails = Boolean(detailsToken) && request.headers.get("x-health-token") === detailsToken;
+  const respond = (body: Record<string, unknown>, init?: { status?: number }) =>
+    NextResponse.json(
+      showDetails ? body : { ok: body.ok, service: body.service, timestamp: body.timestamp },
+      init,
+    );
+
   const startedAt = Date.now();
   const hasWhatsAppToken = Boolean(process.env.WHATSAPP_TOKEN);
   const hasWhatsAppPhoneNumberId = Boolean(process.env.WHATSAPP_PHONE_NUMBER_ID);
@@ -19,7 +29,7 @@ export async function GET() {
     const { error } = await supabase.from("users").select("id").limit(1);
 
     if (error || !whatsappConfigOk) {
-      return NextResponse.json(
+      return respond(
         {
           ok: false,
           service: "sellee-api",
@@ -46,7 +56,7 @@ export async function GET() {
       );
     }
 
-    return NextResponse.json({
+    return respond({
       ok: true,
       service: "sellee-api",
       timestamp: new Date().toISOString(),
@@ -57,7 +67,7 @@ export async function GET() {
       durationMs: Date.now() - startedAt,
     });
   } catch (error) {
-    return NextResponse.json(
+    return respond(
       {
         ok: false,
         service: "sellee-api",

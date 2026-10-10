@@ -4,6 +4,8 @@ import { cookies } from "next/headers";
 import { getServerSession } from "next-auth";
 import { z } from "zod";
 import { authOptions } from "@/lib/auth";
+import { enforceRateLimit } from "@/lib/rate-limit-response";
+import { getClientIp } from "@/lib/request-ip";
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
 
 const VISITOR_COOKIE = "sellee_vid";
@@ -43,6 +45,9 @@ export async function POST(request: Request) {
     // Don't log crawler/preview-bot traffic as a real visit.
     return NextResponse.json({ tracked: false }, { status: 202 });
   }
+
+  const limited = await enforceRateLimit(`track-visit:${getClientIp(request)}`, 300, 10 * 60 * 1000);
+  if (limited) return limited;
 
   const parsed = bodySchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) {

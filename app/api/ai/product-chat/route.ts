@@ -36,7 +36,7 @@ export async function POST(request: Request) {
     // Generous but real cap: this proxies to a free-tier LLM provider with
     // its own rate limits, so we don't want one visitor exhausting the
     // shared quota for everyone else browsing the marketplace.
-    const limit = checkRateLimit(`ai-product-chat:${ip}`, 20, 10 * 60 * 1000);
+    const limit = await checkRateLimit(`ai-product-chat:${ip}`, 20, 10 * 60 * 1000);
 
     if (!limit.allowed) {
       return NextResponse.json(

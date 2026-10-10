@@ -5,10 +5,17 @@ import { z } from "zod";
 import { requireVendorWorkspaceApi } from "@/lib/vendor-auth";
 import { slugify } from "@/lib/format";
 import { logDevError } from "@/lib/logger";
+import { isAllowedImageUrl } from "@/lib/image-hosts";
+import { ImageValidationError, readValidatedImage } from "@/lib/image-upload";
 import { CACHE_TAGS } from "@/lib/public-cache";
 import { DEFAULT_STOREFRONT_CONFIG, normalizeStoreTemplate, normalizeThemePreset, normalizeStorefrontConfig } from "@/lib/storefront";
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
 import { validateWhatsAppNumber } from "@/lib/whatsapp";
+
+const imageUrlSchema = z
+  .string()
+  .url()
+  .refine(isAllowedImageUrl, "Images must be uploaded to Sellee.");
 
 const storeSchema = z.object({
   name: z.string().min(2).max(80),
@@ -27,10 +34,10 @@ const storeSchema = z.object({
       hero_title: z.string().max(120).optional(),
       hero_subtitle: z.string().max(220).optional(),
       hero_cta_text: z.string().max(40).optional(),
-      hero_image_url: z.string().url().optional().or(z.literal("")),
+      hero_image_url: imageUrlSchema.optional().or(z.literal("")),
       promo_text: z.string().max(120).optional(),
-      secondary_banner_url: z.string().url().optional().or(z.literal("")),
-      banner_urls: z.array(z.string().url()).max(8).optional(),
+      secondary_banner_url: imageUrlSchema.optional().or(z.literal("")),
+      banner_urls: z.array(imageUrlSchema).max(8).optional(),
       sections_order: z
         .array(z.enum(["featured_products", "promo_strip", "reviews"]))
         .optional(),
@@ -39,7 +46,7 @@ const storeSchema = z.object({
   theme_color: z.string().regex(/^#([A-Fa-f0-9]{6})$/),
   currency: z.enum(["NGN", "GHS", "USD", "GBP"]).default("NGN"),
   activated_currencies: z.array(z.enum(["NGN", "GHS", "USD", "GBP"])).default([]),
-  logo_url: z.string().url().optional().or(z.literal("")),
+  logo_url: imageUrlSchema.optional().or(z.literal("")),
   niche_ids: z.array(z.string().uuid()).max(8).optional().default([]),
   custom_niches: z.array(z.string().min(2).max(80)).max(8).optional().default([]),
   is_active: z.boolean().optional().default(true),
@@ -65,14 +72,13 @@ type StoreUploadFiles = {
 
 async function uploadStoreAsset(vendorId: string, file: File, kind: string): Promise<string> {
   const supabase = createAdminSupabaseClient();
-  const bytes = await file.arrayBuffer();
-  const extension = file.name.includes(".") ? file.name.split(".").pop() : "jpg";
-  const path = `${vendorId}/storefront/${kind}-${randomUUID()}.${extension}`;
+  const image = await readValidatedImage(file);
+  const path = `${vendorId}/storefront/${kind}-${randomUUID()}.${image.extension}`;
 
   const { error: uploadError } = await supabase.storage
     .from("store-assets")
-    .upload(path, Buffer.from(bytes), {
-      contentType: file.type || "application/octet-stream",
+    .upload(path, image.buffer, {
+      contentType: image.contentType,
       upsert: false,
     });
 
@@ -587,6 +593,9 @@ export async function POST(request: Request) {
       became_vendor: Boolean(promotedRows?.length),
     });
   } catch (error) {
+    if (error instanceof ImageValidationError) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
     logDevError("stores.unhandled", error, { userId: vendorId });
     return NextResponse.json({ error: "Unexpected store setup error." }, { status: 500 });
   }

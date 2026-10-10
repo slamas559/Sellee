@@ -20,7 +20,11 @@ export function AdminLoginForm() {
       const result = await signIn("credentials", { email, password, redirect: false });
 
       if (!result || result.error) {
-        setError("Check your email and password and try again.");
+        setError(
+          result?.error === "TOO_MANY_ATTEMPTS"
+            ? "Too many attempts. Please wait about 15 minutes and try again."
+            : "Check your email and password and try again.",
+        );
         setIsLoading(false);
         return;
       }

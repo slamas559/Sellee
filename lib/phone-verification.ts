@@ -4,6 +4,7 @@ import { logDevError } from "@/lib/logger";
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
 import { validateWhatsAppNumber } from "@/lib/whatsapp";
 import { sendWhatsAppTextMessage } from "@/lib/whatsapp-cloud";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 type ChallengePurpose = "register" | "account_phone_change" | "store_whatsapp_number";
 type CompleteVia = "verify_command" | "otp";
@@ -240,6 +241,14 @@ export async function startRegistrationVerification(params: {
 }
 
 export async function sendOtpForChallenge(challengeId: string, userId?: string): Promise<void> {
+  // Each OTP is a paid WhatsApp message: cap resends per challenge.
+  const sendLimit = await checkRateLimit(`otp-send:${challengeId}`, 3, 10 * 60 * 1000);
+  if (!sendLimit.allowed) {
+    throw new Error(
+      `Too many OTP requests. Try again in ${Math.ceil(sendLimit.retryAfterSeconds / 60)} minute(s).`,
+    );
+  }
+
   const supabase = createAdminSupabaseClient();
   const { data, error } = await supabase
     .from("phone_verification_challenges")
@@ -262,6 +271,12 @@ export async function sendOtpForChallenge(challengeId: string, userId?: string):
     if (!userId || challenge.user_id !== userId) {
       throw new Error("Unauthorized challenge access.");
     }
+  }
+
+  // Also cap per destination number, so a phone can't be spammed via many challenges.
+  const phoneLimit = await checkRateLimit(`otp-send-phone:${challenge.target_phone}`, 5, 60 * 60 * 1000);
+  if (!phoneLimit.allowed) {
+    throw new Error("Too many OTP requests for this number. Please try again later.");
   }
 
   await sendWhatsAppTextMessage({
@@ -395,6 +410,12 @@ export async function verifyChallengeByOtp(params: {
   email?: string;
   userId?: string;
 }> {
+  // A 6-digit code is only safe if guesses are capped: 5 tries per challenge (it expires in 10 min).
+  const verifyLimit = await checkRateLimit(`otp-verify:${params.challengeId}`, 5, 10 * 60 * 1000);
+  if (!verifyLimit.allowed) {
+    throw new Error("Too many incorrect attempts. Please request a new code and try again.");
+  }
+
   const supabase = createAdminSupabaseClient();
   const { data, error } = await supabase
     .from("phone_verification_challenges")

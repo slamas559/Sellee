@@ -4,6 +4,8 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import { z } from "zod";
 import { logDevError } from "@/lib/logger";
+import { checkRateLimit } from "@/lib/rate-limit";
+import { getIpFromHeaders } from "@/lib/request-ip";
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
 import { sendWelcomeEmail } from "@/app/actions/emails";
 
@@ -80,7 +82,7 @@ export const authOptions: NextAuthOptions = {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
-      async authorize(rawCredentials) {
+      async authorize(rawCredentials, req) {
         const parsed = credentialsSchema.safeParse(rawCredentials);
 
         if (!parsed.success) {
@@ -88,6 +90,23 @@ export const authOptions: NextAuthOptions = {
         }
 
         const email = normalizeEmail(parsed.data.email);
+
+        // Brute-force / credential-stuffing protection. Three buckets: this
+        // IP + email pair, the IP overall (password spraying), and the email
+        // overall (distributed attacks on one account).
+        const ip = getIpFromHeaders(req?.headers?.["x-forwarded-for"], req?.headers?.["x-real-ip"]);
+        const windowMs = 15 * 60 * 1000;
+        const [pairLimit, ipLimit, emailLimit] = await Promise.all([
+          checkRateLimit(`login:${ip}:${email}`, 8, windowMs),
+          ip === "unknown"
+            ? Promise.resolve({ allowed: true })
+            : checkRateLimit(`login-ip:${ip}`, 40, windowMs),
+          checkRateLimit(`login-email:${email}`, 30, 60 * 60 * 1000),
+        ]);
+        if (!pairLimit.allowed || !ipLimit.allowed || !emailLimit.allowed) {
+          throw new Error("TOO_MANY_ATTEMPTS");
+        }
+
         const supabase = createAdminSupabaseClient();
 
         const { data: user, error } = await supabase

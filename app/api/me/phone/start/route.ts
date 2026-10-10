@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { z } from "zod";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { authOptions } from "@/lib/auth";
 import { startAccountPhoneChangeVerification } from "@/lib/phone-verification";
 
@@ -12,6 +13,14 @@ export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const limit = await checkRateLimit(`phone-change-start:${session.user.id}`, 8, 60 * 60 * 1000);
+  if (!limit.allowed) {
+    return NextResponse.json(
+      { error: "Too many verification attempts. Please try again later." },
+      { status: 429, headers: { "Retry-After": String(limit.retryAfterSeconds) } },
+    );
   }
 
   const parsed = bodySchema.safeParse(await request.json().catch(() => ({})));

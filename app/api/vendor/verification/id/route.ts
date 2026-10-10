@@ -28,7 +28,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Only the store owner can submit verification documents." }, { status: 403 });
   }
 
-  const limit = checkRateLimit(`verification-submit:${ctx.vendorId}`, 5, 24 * 60 * 60 * 1000);
+  const limit = await checkRateLimit(`verification-submit:${ctx.vendorId}`, 5, 24 * 60 * 60 * 1000);
   if (!limit.allowed) {
     return NextResponse.json(
       { error: "Too many submissions today. Please try again tomorrow." },

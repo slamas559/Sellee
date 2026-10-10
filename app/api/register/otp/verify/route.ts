@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { getClientIp } from "@/lib/request-ip";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { verifyChallengeByOtp } from "@/lib/phone-verification";
 
 const bodySchema = z.object({
@@ -8,6 +10,14 @@ const bodySchema = z.object({
 });
 
 export async function POST(request: Request) {
+  const limit = await checkRateLimit(`register-otp-verify:${getClientIp(request)}`, 30, 10 * 60 * 1000);
+  if (!limit.allowed) {
+    return NextResponse.json(
+      { error: "Too many attempts. Please wait a few minutes and try again." },
+      { status: 429, headers: { "Retry-After": String(limit.retryAfterSeconds) } },
+    );
+  }
+
   const parsed = bodySchema.safeParse(await request.json().catch(() => ({})));
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid OTP payload." }, { status: 400 });

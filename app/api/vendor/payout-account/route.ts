@@ -44,7 +44,7 @@ export async function PUT(request: Request) {
     return NextResponse.json({ error: "Only the store owner can manage payout details." }, { status: 403 });
   }
 
-  const limit = checkRateLimit(`payout-save:${ctx.vendorId}`, 6, 10 * 60 * 1000);
+  const limit = await checkRateLimit(`payout-save:${ctx.vendorId}`, 6, 10 * 60 * 1000);
   if (!limit.allowed) {
     return NextResponse.json(
       { error: "Too many attempts. Please wait a few minutes and try again." },

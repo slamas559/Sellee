@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
+import { enforceRateLimit } from "@/lib/rate-limit-response";
+import { getClientIp } from "@/lib/request-ip";
 
 export async function GET(req: Request) {
+  const limited = await enforceRateLimit(`search-suggest:${getClientIp(req)}`, 90, 60 * 1000);
+  if (limited) return limited;
+
   const url = new URL(req.url);
   const q = (url.searchParams.get("q") ?? "").trim();
 

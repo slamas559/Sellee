@@ -2,20 +2,20 @@ import { randomUUID } from "crypto";
 import { NextResponse } from "next/server";
 import { requireVendorWorkspaceApi } from "@/lib/vendor-auth";
 import { logDevError } from "@/lib/logger";
+import { ImageValidationError, readValidatedImage } from "@/lib/image-upload";
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
 
 const ALLOWED_KINDS = new Set(["logo", "hero", "banner"]);
 
 async function uploadStoreAsset(vendorId: string, file: File, kind: string): Promise<string> {
   const supabase = createAdminSupabaseClient();
-  const bytes = await file.arrayBuffer();
-  const extension = file.name.includes(".") ? file.name.split(".").pop() : "jpg";
-  const path = `${vendorId}/storefront/${kind}-${randomUUID()}.${extension}`;
+  const image = await readValidatedImage(file);
+  const path = `${vendorId}/storefront/${kind}-${randomUUID()}.${image.extension}`;
 
   const { error: uploadError } = await supabase.storage
     .from("store-assets")
-    .upload(path, Buffer.from(bytes), {
-      contentType: file.type || "application/octet-stream",
+    .upload(path, image.buffer, {
+      contentType: image.contentType,
       upsert: false,
     });
 
@@ -52,6 +52,9 @@ export async function POST(request: Request) {
     const url = await uploadStoreAsset(vendorId, file, kind);
     return NextResponse.json({ ok: true, url });
   } catch (error) {
+    if (error instanceof ImageValidationError) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
     logDevError("stores.upload", error, { userId: vendorId });
     return NextResponse.json({ error: "Could not upload image." }, { status: 500 });
   }

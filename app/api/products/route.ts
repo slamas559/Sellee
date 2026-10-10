@@ -6,6 +6,7 @@ import { requireVendorWorkspaceApi } from "@/lib/vendor-auth";
 import { slugify } from "@/lib/format";
 import { formatPrice } from "@/lib/currency";
 import { logDevError } from "@/lib/logger";
+import { ImageValidationError, readValidatedImage } from "@/lib/image-upload";
 import { CACHE_TAGS } from "@/lib/public-cache";
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
 
@@ -123,14 +124,13 @@ async function getAllowedCategoriesForStore(storeId: string): Promise<string[]> 
 
 async function uploadProductImage(vendorId: string, file: File): Promise<string> {
   const supabase = createAdminSupabaseClient();
-  const bytes = await file.arrayBuffer();
-  const extension = file.name.includes(".") ? file.name.split(".").pop() : "jpg";
-  const path = `${vendorId}/${randomUUID()}.${extension}`;
+  const image = await readValidatedImage(file);
+  const path = `${vendorId}/${randomUUID()}.${image.extension}`;
 
   const { error: uploadError } = await supabase.storage
     .from("product-images")
-    .upload(path, Buffer.from(bytes), {
-      contentType: file.type || "application/octet-stream",
+    .upload(path, image.buffer, {
+      contentType: image.contentType,
       upsert: false,
     });
 
@@ -344,6 +344,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ product: data, message: `${data.name} (${formatPrice(Number(data.price), store.currency)}) added.` });
   } catch (error) {
+    if (error instanceof ImageValidationError) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
     logDevError("products.create.unhandled", error, { userId: vendorId });
     return NextResponse.json({ error: "Unexpected create product error." }, { status: 500 });
   }
