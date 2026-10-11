@@ -2,14 +2,20 @@ import type { Metadata } from "next";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { getPricingPageData } from "@/lib/plans";
-import { PlanCard } from "@/components/dashboard/plan-card";
+import { PlanPricing } from "@/components/dashboard/plan-pricing";
 
 export const metadata: Metadata = {
   title: "Plans",
 };
 
-export default async function DashboardPlansPage() {
+export default async function DashboardPlansPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ billingCycle?: string }>;
+}) {
   const session = await getServerSession(authOptions);
+  const params = await searchParams;
+  const billingCycle = params?.billingCycle === "yearly" ? "yearly" : "monthly";
   const { plans, currentPlanKey, monetizationEnabled } = await getPricingPageData(session?.user?.id);
 
   return (
@@ -24,16 +30,12 @@ export default async function DashboardPlansPage() {
         </p>
       </header>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {plans.map((plan) => (
-          <PlanCard
-            key={plan.id}
-            plan={plan}
-            isCurrent={plan.key === currentPlanKey}
-            monetizationEnabled={monetizationEnabled}
-          />
-        ))}
-      </div>
+      <PlanPricing
+        plans={plans}
+        currentPlanKey={currentPlanKey}
+        monetizationEnabled={monetizationEnabled}
+        initialBillingCycle={billingCycle}
+      />
     </section>
   );
 }

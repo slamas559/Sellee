@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import { ProductsManager } from "@/components/dashboard/products-manager";
 import { authOptions } from "@/lib/auth";
 import { getVendorProducts, getVendorStore } from "@/lib/dashboard-data";
+import { hasFeature, withinLimit } from "@/lib/plans";
 import { getEffectiveVendorId, getStaffPermissions } from "@/lib/staff";
 
 export const metadata: Metadata = {
@@ -24,6 +25,12 @@ export default async function DashboardProductsPage() {
   const [products, store] = vendorId
     ? await Promise.all([getVendorProducts(vendorId), getVendorStore(vendorId)])
     : [[], null];
+  const [promoPricingEnabled, canCreateProducts] = vendorId
+    ? await Promise.all([
+        hasFeature(vendorId, "promo_pricing"),
+        withinLimit(vendorId, "max_products", products.length),
+      ])
+    : [false, false];
 
   return (
     <section className="space-y-4">
@@ -34,7 +41,12 @@ export default async function DashboardProductsPage() {
           Add, edit, and organize product listings for your storefront.
         </p>
       </header>
-      <ProductsManager initialProducts={products} currency={store?.currency} />
+      <ProductsManager
+        initialProducts={products}
+        currency={store?.currency}
+        initialPromoPricingEnabled={promoPricingEnabled}
+        initialCanCreateProducts={canCreateProducts}
+      />
     </section>
   );
 }

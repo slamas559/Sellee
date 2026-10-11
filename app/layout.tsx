@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic'
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Space_Grotesk } from "next/font/google";
+import { Geist, Geist_Mono } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import { Providers } from "@/app/providers";
 import { ConditionalAiAssistant } from "@/components/layout/conditional-ai-assistant";
@@ -19,10 +20,10 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const spaceGrotesk = Space_Grotesk({
+const spaceGrotesk = localFont({
+  src: "./fonts/space-grotesk-variable.ttf",
   variable: "--font-space-grotesk",
-  subsets: ["latin"],
-  weight: ["600", "700"],
+  weight: "600 700",
 });
 
 export const metadata: Metadata = {

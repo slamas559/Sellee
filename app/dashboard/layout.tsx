@@ -20,6 +20,24 @@ export default async function DashboardLayout({ children }: DashboardLayoutProps
     redirect("/login");
   }
 
+  if (session.error === "StaffPlanRestricted") {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-[#f7faf8] px-4 py-10">
+        <section className="w-full max-w-lg rounded-xl border border-slate-200 bg-white p-6 text-center shadow-sm sm:p-8">
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-amber-700">
+            Staff access paused
+          </p>
+          <h1 className="mt-2 text-2xl font-black tracking-tight text-slate-900">
+            This vendor plan does not include staff access
+          </h1>
+          <p className="mt-2 text-sm leading-6 text-slate-600">
+            Ask the vendor who invited you to upgrade their plan or re-enable staff accounts before trying again.
+          </p>
+        </section>
+      </main>
+    );
+  }
+
   if (session.user.role !== "vendor" && session.user.role !== "staff") {
     redirect("/");
   }

@@ -1,6 +1,6 @@
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
 import { logDevError } from "@/lib/logger";
-import { sendAdminBroadcastEmail } from "@/app/actions/emails";
+import { sendAdminBroadcastEmail } from "@/lib/emails";
 
 export type BroadcastSegment = "all_customers" | "all_vendors" | "verified_vendors" | "niche";
 

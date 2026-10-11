@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
+import { enforceRateLimit } from "@/lib/rate-limit-response";
 import { z } from "zod";
 import { authOptions } from "@/lib/auth";
 import { logDevError } from "@/lib/logger";
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
 import { sendWhatsAppTextMessage } from "@/lib/whatsapp-cloud";
 import { waMessage, waTitle } from "@/lib/whatsapp-bot/message-format";
-import { sendOrderNotificationEmail } from "@/app/actions/emails";
+import { sendOrderNotificationEmail } from "@/lib/emails";
 import { formatPrice } from "@/lib/currency";
 
 const createOrderSchema = z.object({
@@ -34,6 +35,15 @@ export async function POST(request: Request) {
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Please login to place an order." }, { status: 401 });
     }
+
+    // Each order notifies a vendor, so cap how fast one account can place them.
+    const limited = await enforceRateLimit(
+      `orders:${session.user.id}`,
+      30,
+      60 * 60 * 1000,
+      "You're placing orders too quickly. Please try again in a little while.",
+    );
+    if (limited) return limited;
 
     const body = await request.json();
     const parsed = createOrderSchema.safeParse(body);

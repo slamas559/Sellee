@@ -56,12 +56,12 @@ export function AnalyticsRangeFilter({
   }
 
   return (
-    <div className="w-full sm:w-auto">
+    <div className="relative w-auto shrink-0 sm:w-auto">
       {/* Mobile: dropdown */}
       <select
         value={active}
         onChange={(e) => handleSelect(e.target.value as AnalyticsRangeKey)}
-        className="w-full rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 sm:hidden"
+        className="w-[7.5rem] rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 sm:hidden"
       >
         {RANGE_OPTIONS.map((option) => (
           <option key={option.key} value={option.key}>
@@ -92,7 +92,7 @@ export function AnalyticsRangeFilter({
       </div>
 
       {showCustom && (
-        <div className="mt-2 flex flex-wrap items-end gap-2 rounded-lg border border-slate-200 bg-white p-3">
+        <div className="absolute right-0 top-full z-20 mt-2 flex w-72 max-w-[calc(100vw-2rem)] flex-wrap items-end gap-2 rounded-lg border border-slate-200 bg-white p-3 shadow-lg">
           <label className="flex flex-col text-xs text-slate-500">
             From
             <input

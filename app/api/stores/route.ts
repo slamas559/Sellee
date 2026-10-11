@@ -8,7 +8,8 @@ import { logDevError } from "@/lib/logger";
 import { isAllowedImageUrl } from "@/lib/image-hosts";
 import { ImageValidationError, readValidatedImage } from "@/lib/image-upload";
 import { CACHE_TAGS } from "@/lib/public-cache";
-import { DEFAULT_STOREFRONT_CONFIG, normalizeStoreTemplate, normalizeThemePreset, normalizeStorefrontConfig } from "@/lib/storefront";
+import { canUseAllStoreTemplates } from "@/lib/plans";
+import { DEFAULT_STOREFRONT_CONFIG, FREE_STORE_TEMPLATE, normalizeStoreTemplate, normalizeThemePreset, normalizeStorefrontConfig } from "@/lib/storefront";
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
 import { validateWhatsAppNumber } from "@/lib/whatsapp";
 
@@ -400,6 +401,17 @@ export async function POST(request: Request) {
     if (!parsed.success) {
       return NextResponse.json({ error: "Invalid store setup data." }, { status: 400 });
     }
+    const requestedTemplate = normalizeStoreTemplate(parsed.data.store_template);
+    if (
+      requestedTemplate !== FREE_STORE_TEMPLATE &&
+      !(await canUseAllStoreTemplates(vendorId))
+    ) {
+      return NextResponse.json(
+        { error: "This storefront template is only available on Pro and Business plans." },
+        { status: 403 },
+      );
+    }
+
     const whatsappCheck = validateWhatsAppNumber(parsed.data.whatsapp_number);
     if (!whatsappCheck.ok) {
       return NextResponse.json(
@@ -431,7 +443,7 @@ export async function POST(request: Request) {
     const latitude = parsed.data.latitude ?? null;
     const longitude = parsed.data.longitude ?? null;
     const locationSource = latitude !== null && longitude !== null ? parsed.data.location_source ?? "manual" : null;
-    const storeTemplate = normalizeStoreTemplate(parsed.data.store_template);
+    const storeTemplate = requestedTemplate;
     const storeThemePreset = normalizeThemePreset(parsed.data.store_theme_preset);
     const existingConfig = normalizeStorefrontConfig(existingStore?.storefront_config);
     const parsedData: ParsedStoreInput = parsed.data;

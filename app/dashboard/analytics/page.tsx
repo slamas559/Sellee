@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import Image from "next/image";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -21,6 +23,7 @@ import { AnalyticsRangeFilter } from "@/components/dashboard/analytics-range-fil
 import { getAnalyticsRange, parseRangeKey } from "@/lib/date-range";
 import { computeVendorPeriodMetrics } from "@/lib/vendor-metrics";
 import { computeProductInsights } from "@/lib/product-insights";
+import { hasFeature } from "@/lib/plans";
 import {
   generateRevenueChartData,
   generateOrderStatusData,
@@ -88,6 +91,28 @@ export default async function DashboardAnalyticsPage({
   }
 
   const vendorId = getEffectiveVendorId(session);
+  if (vendorId && !(await hasFeature(vendorId, "advanced_analytics"))) {
+    return (
+      <section className="mx-auto max-w-2xl rounded-xl border border-slate-200 bg-white p-6 text-center shadow-sm sm:p-8">
+        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">
+          Plan feature
+        </p>
+        <h1 className="mt-2 text-2xl font-black tracking-tight text-slate-900">
+          Advanced analytics is locked
+        </h1>
+        <p className="mt-2 text-sm leading-6 text-slate-600">
+          Upgrade to a plan that includes advanced analytics to view performance metrics and reports.
+        </p>
+        <Link
+          href="/dashboard/plans"
+          className="mt-5 inline-flex rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700"
+        >
+          View plans
+        </Link>
+      </section>
+    );
+  }
+
   const params = await searchParams;
   const rangeKey = parseRangeKey(params?.range);
   const range = getAnalyticsRange(rangeKey, new Date(), { from: params?.from, to: params?.to });
@@ -161,6 +186,9 @@ export default async function DashboardAnalyticsPage({
   const orderTrendsData = generateOrderTrendsData(orders, range);
   const productPerformanceData = generateProductPerformanceData(orders);
   const visitsChartData = generateVisitsChartData(visits, range);
+  const exportParams = new URLSearchParams({ range: rangeKey });
+  if (params?.from) exportParams.set("from", params.from);
+  if (params?.to) exportParams.set("to", params.to);
 
   return (
     <section className="space-y-4">
@@ -173,7 +201,17 @@ export default async function DashboardAnalyticsPage({
               Commercial metrics for {range.label.toLowerCase()} and operational alerts.
             </p>
           </div>
-          <AnalyticsRangeFilter active={rangeKey} customFrom={params?.from} customTo={params?.to} />
+          <div className="ml-auto flex w-full flex-nowrap items-center justify-end gap-2 sm:ml-0 sm:w-auto sm:flex-wrap">
+            {vendorId && (await hasFeature(vendorId, "exportable_reports")) ? (
+              <a
+                href={`/api/dashboard/analytics/export?${exportParams.toString()}`}
+                className="shrink-0 whitespace-nowrap rounded-lg border border-slate-300 bg-white px-2.5 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 sm:px-3 sm:text-sm"
+              >
+                Export report
+              </a>
+            ) : null}
+            <AnalyticsRangeFilter active={rangeKey} customFrom={params?.from} customTo={params?.to} />
+          </div>
         </div>
       </header>
 
@@ -367,19 +405,43 @@ export default async function DashboardAnalyticsPage({
           <p className="mt-2 text-sm text-slate-600">No orders in this period.</p>
         ) : (
           <div className="mt-3 space-y-2">
-            {orders.slice(0, 6).map(({ order }) => (
-              <div
-                key={order.id}
-                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 px-3 py-2"
-              >
-                <p className="text-sm font-medium text-slate-900">
-                  #{order.id.slice(0, 8).toUpperCase()} - {order.status}
-                </p>
-                <p className="text-sm font-semibold text-slate-700">
-                  {formatPrice(Number(order.total_amount), store?.currency)}
-                </p>
-              </div>
-            ))}
+            {orders.slice(0, 6).map(({ order, items }) => {
+              const firstItem = items[0];
+              return (
+                <div
+                  key={order.id}
+                  className="flex items-center gap-3 rounded-lg border border-slate-200 px-3 py-2"
+                >
+                  {firstItem?.image_url ? (
+                    <Image
+                      src={firstItem.image_url}
+                      alt={firstItem.product_name}
+                      width={48}
+                      height={48}
+                      className="h-12 w-12 shrink-0 rounded-md object-cover"
+                    />
+                  ) : (
+                    <div
+                      aria-hidden="true"
+                      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-slate-100 text-slate-400"
+                    >
+                      <Package className="h-5 w-5" />
+                    </div>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-slate-900">
+                      {firstItem?.product_name ?? "Order"}{items.length > 1 ? ` + ${items.length - 1} more` : ""}
+                    </p>
+                    <p className="mt-0.5 text-xs capitalize text-slate-500">
+                      #{order.id.slice(0, 8).toUpperCase()} · {order.status}
+                    </p>
+                  </div>
+                  <p className="shrink-0 text-sm font-semibold text-slate-700">
+                    {formatPrice(Number(order.total_amount), store?.currency)}
+                  </p>
+                </div>
+              );
+            })}
           </div>
         )}
       </section>

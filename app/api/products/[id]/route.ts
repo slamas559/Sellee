@@ -8,6 +8,7 @@ import { logDevError } from "@/lib/logger";
 import { ImageValidationError, readValidatedImage } from "@/lib/image-upload";
 import { deleteProductImagesFromStorage } from "@/lib/product-images";
 import { CACHE_TAGS } from "@/lib/public-cache";
+import { hasFeature } from "@/lib/plans";
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
 import { notifyRestockSubscribers } from "@/lib/whatsapp-bot/restock-alerts";
 
@@ -242,6 +243,13 @@ export async function PATCH(
 
     if (!store) {
       return NextResponse.json({ error: "Store not found for this vendor." }, { status: 400 });
+    }
+
+    if (parsed.data.compare_at_price !== null && !(await hasFeature(vendorId, "promo_pricing"))) {
+      return NextResponse.json(
+        { error: "Promo pricing is only available on plans that include this feature." },
+        { status: 403 },
+      );
     }
 
     let allowedCategories: string[] = [];

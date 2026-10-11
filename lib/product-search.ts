@@ -1,6 +1,7 @@
 import { haversineDistanceKm } from "@/lib/geo";
 import { logDevError } from "@/lib/logger";
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
+import { getVendorFeatureAccess } from "@/lib/plans";
 
 export type ProductSearchParams = {
   q?: string;
@@ -17,6 +18,7 @@ export type ProductSearchParams = {
 
 export type StoreLookup = {
   id: string;
+  vendor_id: string;
   name: string;
   slug: string;
   city: string | null;
@@ -93,7 +95,7 @@ export async function searchProducts(
 
   const { data: activeStores, error: storesError } = await supabase
     .from("stores")
-    .select("id, name, slug, city, state, country, logo_url, rating_avg, rating_count, latitude, longitude, whatsapp_verified_at, is_verified, verification_tier, currency")
+    .select("id, vendor_id, name, slug, city, state, country, logo_url, rating_avg, rating_count, latitude, longitude, whatsapp_verified_at, is_verified, verification_tier, currency")
     .eq("is_active", true)
     .limit(500);
 
@@ -163,7 +165,21 @@ export async function searchProducts(
       return searchText.includes(qLower);
     });
 
+  const featureAccess = await getVendorFeatureAccess(
+    [...new Set([...storesById.values()].map((store) => store.vendor_id))],
+    ["priority_search_placement", "promo_pricing"],
+  );
+  for (const product of filtered) {
+    if (!featureAccess.promo_pricing.has(product.store.vendor_id)) {
+      product.compare_at_price = null;
+    }
+  }
+
   const sorted = filtered.sort((a, b) => {
+    const aPriority = featureAccess.priority_search_placement.has(a.store.vendor_id);
+    const bPriority = featureAccess.priority_search_placement.has(b.store.vendor_id);
+    if (aPriority !== bPriority) return aPriority ? -1 : 1;
+
     if (sort === "price_asc") return Number(a.price) - Number(b.price);
     if (sort === "price_desc") return Number(b.price) - Number(a.price);
     if (sort === "distance") {

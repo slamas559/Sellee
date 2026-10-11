@@ -6,7 +6,7 @@
 // logged and swallowed: a flaky email provider must never undo or block a
 // review decision.
 
-import { sendVerificationDecisionEmail } from "@/app/actions/emails";
+import { sendVerificationDecisionEmail } from "@/lib/emails";
 import { appUrl } from "@/lib/app-url";
 import { logDevError } from "@/lib/logger";
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";

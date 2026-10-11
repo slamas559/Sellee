@@ -8,7 +8,7 @@ import { enforceRateLimit } from "@/lib/rate-limit-response";
 import { getClientIp } from "@/lib/request-ip";
 import { formatProductPathSegment } from "@/lib/format";
 import { storeProductUrl } from "@/lib/store-url";
-import { sendProductReportNotificationEmail } from "@/app/actions/emails";
+import { sendProductReportNotificationEmail } from "@/lib/emails";
 
 const reportSchema = z.object({
   reason: z.enum(["counterfeit", "misleading", "inappropriate", "other"]),

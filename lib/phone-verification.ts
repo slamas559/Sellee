@@ -1,5 +1,5 @@
 import bcrypt from "bcryptjs";
-import { sendWelcomeEmail } from "@/app/actions/emails";
+import { sendWelcomeEmail } from "@/lib/emails";
 import { logDevError } from "@/lib/logger";
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
 import { validateWhatsAppNumber } from "@/lib/whatsapp";

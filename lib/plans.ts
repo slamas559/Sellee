@@ -12,6 +12,9 @@
 // data, so nothing will actually block anyone until monetization_enabled flips.
 
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
+import { logDevError } from "@/lib/logger";
+import { FEATURE_LABELS, LIMIT_LABELS } from "@/lib/plan-labels";
+export { FEATURE_LABELS, LIMIT_LABELS } from "@/lib/plan-labels";
 
 export type VendorPlan = {
   planId: string;
@@ -38,7 +41,10 @@ export async function getVendorPlan(vendorId: string): Promise<VendorPlan | null
     return null;
   }
 
-  const [{ data: limitRows }, { data: featureRows }] = await Promise.all([
+  const [
+    { data: limitRows, error: limitError },
+    { data: featureRows, error: featureError },
+  ] = await Promise.all([
     supabase
       .from("plan_limits")
       .select("limit_key, limit_value")
@@ -48,6 +54,15 @@ export async function getVendorPlan(vendorId: string): Promise<VendorPlan | null
       .select("feature_key, enabled")
       .eq("plan_id", sub.plan_id),
   ]);
+
+  if (limitError) {
+    logDevError("plans.vendor_plan.limits", limitError, { vendorId, planId: sub.plan_id });
+    throw new Error("Could not load vendor plan limits.");
+  }
+  if (featureError) {
+    logDevError("plans.vendor_plan.features", featureError, { vendorId, planId: sub.plan_id });
+    throw new Error("Could not load vendor plan features.");
+  }
 
   const limits: Record<string, number | null> = {};
   for (const row of limitRows ?? []) {
@@ -61,7 +76,7 @@ export async function getVendorPlan(vendorId: string): Promise<VendorPlan | null
 
   // @ts-expect-error - nested relation typing depends on your generated Supabase types
   const planKey = sub.plans?.key ?? "free";
-  // @ts-expect-error
+  // @ts-expect-error - nested relation typing depends on generated Supabase types
   const planName = sub.plans?.name ?? "Free";
 
   return {
@@ -100,20 +115,94 @@ export async function withinLimit(
   if (!plan) return false;
 
   const limit = plan.limits[limitKey];
-  if (limit === null || limit === undefined) return true; // unlimited or undefined = no restriction
+  if (limit === null) return true;
+  if (limit === undefined) return false;
 
   return currentCount < limit;
 }
 
+export async function canUseStaffAccounts(vendorId: string): Promise<boolean> {
+  return withinLimit(vendorId, "max_staff", 0);
+}
+
+export async function getVendorFeatureAccess(
+  vendorIds: string[],
+  featureKeys: string[],
+): Promise<Record<string, Set<string>>> {
+  const uniqueVendorIds = [...new Set(vendorIds)];
+  const access = Object.fromEntries(featureKeys.map((key) => [key, new Set<string>()]));
+  if (uniqueVendorIds.length === 0 || featureKeys.length === 0) return access;
+
+  if (!(await isMonetizationEnabled())) {
+    for (const vendorId of uniqueVendorIds) {
+      for (const featureKey of featureKeys) access[featureKey].add(vendorId);
+    }
+    return access;
+  }
+
+  const supabase = createAdminSupabaseClient();
+  const { data: subscriptions, error: subscriptionError } = await supabase
+    .from("vendor_subscriptions")
+    .select("vendor_id, plan_id")
+    .in("vendor_id", uniqueVendorIds);
+
+  if (subscriptionError) {
+    logDevError("plans.feature_access.subscriptions", subscriptionError);
+    throw new Error("Could not load vendor plan access.");
+  }
+
+  const planIds = [...new Set((subscriptions ?? []).map((row) => row.plan_id))];
+  if (planIds.length === 0) return access;
+
+  const { data: featureRows, error: featureError } = await supabase
+    .from("plan_features")
+    .select("plan_id, feature_key, enabled")
+    .in("plan_id", planIds)
+    .in("feature_key", featureKeys);
+
+  if (featureError) {
+    logDevError("plans.feature_access.features", featureError);
+    throw new Error("Could not load plan feature access.");
+  }
+
+  const enabledByPlanAndFeature = new Set(
+    (featureRows ?? [])
+      .filter((row) => row.enabled === true)
+      .map((row) => `${row.plan_id}:${row.feature_key}`),
+  );
+
+  for (const subscription of subscriptions ?? []) {
+    for (const featureKey of featureKeys) {
+      if (enabledByPlanAndFeature.has(`${subscription.plan_id}:${featureKey}`)) {
+        access[featureKey].add(subscription.vendor_id);
+      }
+    }
+  }
+
+  return access;
+}
+
 export async function isMonetizationEnabled(): Promise<boolean> {
   const supabase = createAdminSupabaseClient();
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("app_config")
     .select("value")
     .eq("key", "monetization_enabled")
     .single();
 
+  if (error) {
+    logDevError("plans.monetization_config", error);
+    throw new Error("Could not load monetization settings.");
+  }
+
   return data?.value === true || data?.value === "true";
+}
+
+export async function canUseAllStoreTemplates(vendorId: string): Promise<boolean> {
+  if (!(await isMonetizationEnabled())) return true;
+
+  const plan = await getVendorPlan(vendorId);
+  return plan?.planKey === "pro" || plan?.planKey === "business";
 }
 
 // ---- Additions for the /dashboard/plans pricing page ----
@@ -138,21 +227,6 @@ export type PricingPageData = {
 // Human-readable copy for each limit/feature key, in display order.
 // Keeping this centralized means adding a new feature later is a one-line
 // change here rather than editing markup in three places.
-export const LIMIT_LABELS: Record<string, (value: number | null) => string> = {
-  max_products: (v) => (v === null ? "Unlimited products" : `Up to ${v} products`),
-  max_staff: (v) => (v === null ? "Unlimited staff accounts" : `${v} staff account${v === 1 ? "" : "s"}`),
-  broadcast_per_month: (v) =>
-    v === null ? "Unlimited WhatsApp broadcasts" : v === 0 ? "No WhatsApp broadcasts" : `${v} WhatsApp broadcasts/month`,
-};
-
-export const FEATURE_LABELS: Record<string, string> = {
-  advanced_analytics: "Advanced analytics (AOV, repeat rate, fulfillment time)",
-  exportable_reports: "Exportable analytics reports",
-  promo_pricing: "Promo / compare-at pricing",
-  priority_search_placement: "Priority placement in marketplace search",
-  featured_homepage_boost: "Featured homepage boost",
-};
-
 export async function getPricingPageData(vendorId: string | undefined): Promise<PricingPageData> {
   const supabase = createAdminSupabaseClient();
 

@@ -75,14 +75,14 @@ on conflict (key) do nothing;
 -- Limits
 insert into public.plan_limits (plan_id, limit_key, limit_value)
 select id, 'max_products', 20 from public.plans where key = 'free'
-union all select id, 'max_staff', 1 from public.plans where key = 'free'
+union all select id, 'max_staff', 0 from public.plans where key = 'free'
 union all select id, 'broadcast_per_month', 0 from public.plans where key = 'free'
 union all select id, 'max_products', 200 from public.plans where key = 'pro'
-union all select id, 'max_staff', 2 from public.plans where key = 'pro'
-union all select id, 'broadcast_per_month', 500 from public.plans where key = 'pro'
+union all select id, 'max_staff', 1 from public.plans where key = 'pro'
+union all select id, 'broadcast_per_month', 1 from public.plans where key = 'pro'
 union all select id, 'max_products', null from public.plans where key = 'business'
-union all select id, 'max_staff', 5 from public.plans where key = 'business'
-union all select id, 'broadcast_per_month', null from public.plans where key = 'business'
+union all select id, 'max_staff', 3 from public.plans where key = 'business'
+union all select id, 'broadcast_per_month', 3 from public.plans where key = 'business'
 on conflict (plan_id, limit_key) do nothing;
 
 -- Features

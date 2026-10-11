@@ -8,6 +8,7 @@ import { formatPrice } from "@/lib/currency";
 import { logDevError } from "@/lib/logger";
 import { ImageValidationError, readValidatedImage } from "@/lib/image-upload";
 import { CACHE_TAGS } from "@/lib/public-cache";
+import { hasFeature, withinLimit } from "@/lib/plans";
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
 
 const productSchema = z.object({
@@ -221,10 +222,18 @@ export async function GET() {
       });
     }
 
+    const products = data ?? [];
+    const promoPricingEnabled = await hasFeature(vendorId, "promo_pricing");
+    const canCreateProducts = await withinLimit(vendorId, "max_products", products.length);
+
     return NextResponse.json({
-      products: data ?? [],
+      products: promoPricingEnabled
+        ? products
+        : products.map((product) => ({ ...product, compare_at_price: null })),
       allowed_categories: allowedCategories,
       currency: store.currency,
+      promo_pricing_enabled: promoPricingEnabled,
+      can_create_products: canCreateProducts,
     });
   } catch (error) {
     logDevError("products.get.unhandled", error, { userId: vendorId });
@@ -269,6 +278,31 @@ export async function POST(request: Request) {
       );
     }
 
+    if (parsed.data.compare_at_price !== null && !(await hasFeature(vendorId, "promo_pricing"))) {
+      return NextResponse.json(
+        { error: "Promo pricing is only available on plans that include this feature." },
+        { status: 403 },
+      );
+    }
+
+    const supabase = createAdminSupabaseClient();
+    const { count: productCount, error: countError } = await supabase
+      .from("products")
+      .select("id", { count: "exact", head: true })
+      .eq("store_id", store.id);
+
+    if (countError) {
+      logDevError("products.create.count", countError, { userId: vendorId, storeId: store.id });
+      return NextResponse.json({ error: "Could not verify your product limit." }, { status: 500 });
+    }
+
+    if (!(await withinLimit(vendorId, "max_products", productCount ?? 0))) {
+      return NextResponse.json(
+        { error: "You've reached the product limit for your current plan." },
+        { status: 403 },
+      );
+    }
+
     let allowedCategories: string[] = [];
     try {
       allowedCategories = await getAllowedCategoriesForStore(store.id);
@@ -306,8 +340,6 @@ export async function POST(request: Request) {
     const uploadedImageUrls =
       imageFiles.length > 0 ? await uploadProductImages(vendorId, imageFiles) : [];
     const imageUrl = uploadedImageUrls[0] ?? null;
-
-    const supabase = createAdminSupabaseClient();
 
     const productSlug = await buildUniqueProductSlug(store.id, parsed.data.name);
     const attributes = parseProductAttributes(formData.get("attributes"));

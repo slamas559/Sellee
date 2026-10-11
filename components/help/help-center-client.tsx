@@ -16,7 +16,7 @@ import {
   Store,
   type LucideIcon,
 } from "lucide-react";
-import { submitHelpCenterTicket } from "@/app/actions/emails";
+import { submitHelpCenterTicket } from "@/app/actions/help-center";
 
 const SUPPORT_EMAIL = "support@sellee.store";
 const SUPPORT_PHONE_DISPLAY = "08100596007";

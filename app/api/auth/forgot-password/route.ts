@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { sendPasswordResetEmail } from "@/app/actions/emails";
+import { sendPasswordResetEmail } from "@/lib/emails";
 import { logDevError } from "@/lib/logger";
 import { appUrl } from "@/lib/app-url";
 import { createPasswordResetToken } from "@/lib/password-reset";

@@ -3,7 +3,7 @@ import { z } from "zod";
 import { requireAdminApi } from "@/lib/admin-auth";
 import { adminConsoleUrl } from "@/lib/app-url";
 import { createAdminInvite } from "@/lib/admin-invites";
-import { sendAdminInviteEmail } from "@/app/actions/emails";
+import { sendAdminInviteEmail } from "@/lib/emails";
 import { writeAuditLog } from "@/lib/audit-log";
 import { logDevError } from "@/lib/logger";
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";

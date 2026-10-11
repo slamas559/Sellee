@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import { StoreSetupForm } from "@/components/dashboard/store-setup-form";
 import { authOptions } from "@/lib/auth";
 import { getUserEmailVerifiedAt, getVendorStore } from "@/lib/dashboard-data";
+import { canUseAllStoreTemplates } from "@/lib/plans";
 import { getEffectiveVendorId, getStaffPermissions } from "@/lib/staff";
 
 export const metadata: Metadata = {
@@ -26,6 +27,7 @@ export default async function DashboardStorePage() {
   const [store, emailVerifiedAt] = vendorId
     ? await Promise.all([getVendorStore(vendorId), getUserEmailVerifiedAt(vendorId)])
     : [null, null];
+  const canUseAllTemplates = vendorId ? await canUseAllStoreTemplates(vendorId) : true;
 
   return (
     <section className="space-y-4">
@@ -38,7 +40,11 @@ export default async function DashboardStorePage() {
           Manage profile, location, and storefront template style from one place.
         </p>
       </header>
-      <StoreSetupForm initialStore={store} initialEmailVerifiedAt={emailVerifiedAt} />
+      <StoreSetupForm
+        initialStore={store}
+        initialEmailVerifiedAt={emailVerifiedAt}
+        canUseAllStoreTemplates={canUseAllTemplates}
+      />
     </section>
   );
 }

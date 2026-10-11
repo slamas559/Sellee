@@ -19,6 +19,7 @@ import {
   getStoreNichesAndFollowersCached,
 } from "@/lib/public-cache";
 import { getUserEmailVerifiedAt } from "@/lib/dashboard-data";
+import { getVendorFeatureAccess } from "@/lib/plans";
 import { Search, SearchIcon } from "lucide-react";
 
 const heroCarouselImages = [
@@ -97,6 +98,7 @@ type ProductLite = {
   description: string | null;
   category: string | null;
   price: number;
+  compare_at_price: number | null;
   image_url: string | null;
   image_urls: string[] | null;
   rating_avg: number | null;
@@ -219,6 +221,30 @@ async function getMarketplaceData(q?: string, category?: string, nicheParam?: st
       return false;
     });
   }
+
+  const homepageFeatureAccess = await getVendorFeatureAccess(
+    enrichedStores.map((store) => store.vendor_id),
+    ["featured_homepage_boost", "promo_pricing"],
+  );
+  filteredProducts = filteredProducts.map((product) => {
+    const vendorId = storesById.get(product.store_id)?.vendor_id;
+    return vendorId && !homepageFeatureAccess.promo_pricing.has(vendorId)
+      ? { ...product, compare_at_price: null }
+      : product;
+  });
+
+  filteredProducts.sort((a, b) => {
+    const aVendorId = storesById.get(a.store_id)?.vendor_id ?? "";
+    const bVendorId = storesById.get(b.store_id)?.vendor_id ?? "";
+    const aBoosted = homepageFeatureAccess.featured_homepage_boost.has(
+      aVendorId,
+    );
+    const bBoosted = homepageFeatureAccess.featured_homepage_boost.has(
+      bVendorId,
+    );
+    if (aBoosted !== bBoosted) return aBoosted ? -1 : 1;
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+  });
 
   // The category strip displays niches. Only include a niche when at least one
   // of its categories has an available product, so empty catalog sections are

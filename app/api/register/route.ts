@@ -1,7 +1,7 @@
 import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { sendEmailVerificationEmail } from "@/app/actions/emails";
+import { sendEmailVerificationEmail } from "@/lib/emails";
 import { appUrl } from "@/lib/app-url";
 import { createEmailVerificationToken } from "@/lib/email-verification";
 import { logDevError } from "@/lib/logger";

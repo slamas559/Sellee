@@ -170,7 +170,7 @@ const getMarketplaceBaseDataInternal = async () => {
       supabase
         .from("stores")
         .select(
-          "id, name, slug, city, state, country, logo_url, rating_avg, rating_count, latitude, longitude, whatsapp_verified_at, is_verified, verification_tier, currency",
+          "id, vendor_id, name, slug, city, state, country, logo_url, rating_avg, rating_count, latitude, longitude, whatsapp_verified_at, is_verified, verification_tier, currency",
         )
         .eq("is_active", true)
         .limit(500),

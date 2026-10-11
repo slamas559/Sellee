@@ -1,5 +1,3 @@
-"use server";
-
 import { Resend } from "resend";
 import { appUrl } from "@/lib/app-url";
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
@@ -37,7 +35,7 @@ const SYSTEM_FROM = "Sellee <hello@sellee.store>";
 const SUPPORT_FROM = "Sellee <support@sellee.store>";
 const SUPPORT_REPLY_TO = "support@sellee.store";
 
-type EmailActionResult<TData = unknown> = {
+export type EmailActionResult<TData = unknown> = {
   success: boolean;
   data?: TData;
   error?: unknown;
@@ -326,7 +324,7 @@ export async function sendSupportTicketEmail({
   }
 }
 
-export async function submitHelpCenterTicket({
+export async function createHelpCenterTicket({
   requesterEmail,
   requesterName,
   issueType,

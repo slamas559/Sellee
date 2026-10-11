@@ -1,6 +1,6 @@
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
 import { logDevError } from "@/lib/logger";
-import { sendVendorBroadcastEmail } from "@/app/actions/emails";
+import { sendVendorBroadcastEmail } from "@/lib/emails";
 import { resolveEmailBroadcastTargets, type EmailBroadcastRecipient } from "@/lib/broadcasts/email-audience";
 import { storeUrl } from "@/lib/store-url";
 

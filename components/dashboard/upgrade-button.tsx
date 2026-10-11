@@ -3,14 +3,17 @@
 import { useState } from "react";
 
 type Provider = "paystack" | "flutterwave";
+type BillingCycle = "monthly" | "yearly";
 
 export function UpgradeButton({
   planKey,
   planName,
+  billingCycle,
   className,
 }: {
   planKey: "pro" | "business";
   planName: string;
+  billingCycle: BillingCycle;
   className: string;
 }) {
   const [isLoading, setIsLoading] = useState(false);
@@ -24,7 +27,7 @@ export function UpgradeButton({
       const response = await fetch("/api/checkout/subscription", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ planKey, billingCycle: "monthly", provider }),
+        body: JSON.stringify({ planKey, billingCycle, provider }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error ?? "Could not start checkout.");

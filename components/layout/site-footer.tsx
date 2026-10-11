@@ -146,6 +146,11 @@ export function SiteFooter() {
                 </Link>
               </li>
               <li>
+                <Link href="/plans" className="transition hover:text-emerald-700">
+                  Plans &amp; pricing
+                </Link>
+              </li>
+              <li>
                 <Link href="/about" className="transition hover:text-emerald-700">
                   About Us
                 </Link>

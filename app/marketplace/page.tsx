@@ -14,6 +14,7 @@ import {
  
 import { FilterButton } from "@/components/marketplace/filter-button";
 import MarketplaceFilterForm from "@/components/marketplace/marketplace-filter-form";
+import { getVendorFeatureAccess } from "@/lib/plans";
 
 export const metadata: Metadata = {
   title: "Marketplace",
@@ -38,6 +39,7 @@ type MarketplacePageProps = {
 
 type StoreLite = {
   id: string;
+  vendor_id: string;
   name: string;
   slug: string;
   city: string | null;
@@ -60,6 +62,7 @@ type ProductLite = {
   description: string | null;
   category: string | null;
   price: number;
+  compare_at_price?: number | null;
   image_url: string | null;
   image_urls: string[] | null;
   rating_avg: number | null;
@@ -261,7 +264,7 @@ export async function getMarketplaceResults(state: SearchState) {
       )
     : new Set<string>();
 
-  const qFiltered = qLower
+  let qFiltered = qLower
     ? filtered.filter((product) => {
         const productName = product.name.toLowerCase();
         const description = (product.description ?? "").toLowerCase();
@@ -306,7 +309,22 @@ export async function getMarketplaceResults(state: SearchState) {
       })
     : filtered;
 
-  filtered.sort((a, b) => {
+  const vendorIds = [...new Set(typedStores.map((store) => store.vendor_id))];
+  const featureAccess = await getVendorFeatureAccess(vendorIds, [
+    "priority_search_placement",
+    "promo_pricing",
+  ]);
+  qFiltered = qFiltered.map((product) =>
+    featureAccess.promo_pricing.has(product.store.vendor_id)
+      ? product
+      : { ...product, compare_at_price: null },
+  );
+
+  qFiltered.sort((a, b) => {
+    const aPriority = featureAccess.priority_search_placement.has(a.store.vendor_id);
+    const bPriority = featureAccess.priority_search_placement.has(b.store.vendor_id);
+    if (aPriority !== bPriority) return aPriority ? -1 : 1;
+
     if (state.sort === "price_asc") return Number(a.price) - Number(b.price);
     if (state.sort === "price_desc") return Number(b.price) - Number(a.price);
     if (state.sort === "distance") {

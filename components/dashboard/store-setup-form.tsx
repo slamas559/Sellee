@@ -2,11 +2,12 @@
 
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
-import { BadgeCheck, Check, MapPin } from "lucide-react";
+import { BadgeCheck, Check, LockKeyhole, MapPin } from "lucide-react";
 import { AiRefineButton } from "@/components/ai/ai-refine-button";
 import {
   DEFAULT_STOREFRONT_CONFIG,
   DEFAULT_STOREFRONT_SECTIONS_ORDER,
+  FREE_STORE_TEMPLATE,
   STOREFRONT_TEMPLATE_OPTIONS,
   STOREFRONT_THEME_PRESETS,
   normalizeStoreTemplate,
@@ -22,6 +23,7 @@ import { SUPPORTED_CURRENCIES } from "@/lib/currency";
 type StoreSetupFormProps = {
   initialStore: StoreRecord | null;
   initialEmailVerifiedAt?: string | null;
+  canUseAllStoreTemplates: boolean;
 };
 
 type UploadKind = "logo" | "hero" | "banner";
@@ -63,20 +65,30 @@ const SECTION_LABELS: Record<StorefrontSectionId, string> = {
 function TemplateCard({
   option,
   selected,
+  locked,
   onSelect,
 }: {
   option: (typeof STOREFRONT_TEMPLATE_OPTIONS)[number];
   selected: boolean;
+  locked: boolean;
   onSelect: () => void;
 }) {
   return (
     <button
       type="button"
       onClick={onSelect}
+      disabled={locked}
+      aria-label={
+        locked
+          ? `${option.label}. Only available on Pro and Business.`
+          : option.label
+      }
       className={`group relative flex-shrink-0 snap-start rounded-2xl border-2 p-4 text-left transition-all duration-200 rounded-xl ${
         selected
           ? "border-emerald-500 bg-emerald-50 shadow-md"
-          : "border-slate-200 bg-white hover:border-emerald-300 hover:shadow-sm"
+          : locked
+            ? "cursor-not-allowed border-slate-200 bg-slate-50 opacity-75"
+            : "border-slate-200 bg-white hover:border-emerald-300 hover:shadow-sm"
       } min-w-[200px] max-w-[240px] sm:min-w-[220px]`}
     >
       {/* Visual icon area */}
@@ -143,9 +155,21 @@ function TemplateCard({
           <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" className="h-3 w-3"><path d="m5 12 5 5 9-9" /></svg>
         </div>
       )}
+      {locked && (
+        <div className="absolute right-2 top-2 flex items-center gap-1 rounded-full bg-slate-200 px-2 py-1 text-[10px] font-semibold text-slate-700">
+          <LockKeyhole aria-hidden="true" className="h-3 w-3" />
+          Locked
+        </div>
+      )}
 
       <p className="text-sm font-bold text-slate-900">{option.label}</p>
       <p className="mt-0.5 text-xs leading-4 text-slate-500">{option.description}</p>
+      {locked && (
+        <p className="mt-2 flex items-center gap-1 text-xs font-semibold leading-4 text-amber-800">
+          <LockKeyhole aria-hidden="true" className="h-3 w-3 shrink-0" />
+          Only available on Pro and Business
+        </p>
+      )}
     </button>
   );
 }
@@ -280,7 +304,11 @@ function StepSection({
 
 // ─── Main form ────────────────────────────────────────────────────────────
 
-export function StoreSetupForm({ initialStore, initialEmailVerifiedAt = null }: StoreSetupFormProps) {
+export function StoreSetupForm({
+  initialStore,
+  initialEmailVerifiedAt = null,
+  canUseAllStoreTemplates,
+}: StoreSetupFormProps) {
   const initialConfig = normalizeStorefrontConfig(initialStore?.storefront_config);
   const [store, setStore] = useState<StoreRecord | null>(initialStore);
   const [emailVerifiedAt] = useState<string | null>(initialEmailVerifiedAt);
@@ -319,7 +347,9 @@ export function StoreSetupForm({ initialStore, initialEmailVerifiedAt = null }: 
     latitude: initialStore?.latitude?.toString() ?? "",
     longitude: initialStore?.longitude?.toString() ?? "",
     location_source: initialStore?.location_source ?? "manual",
-    store_template: normalizeStoreTemplate(initialStore?.store_template),
+    store_template: canUseAllStoreTemplates
+      ? normalizeStoreTemplate(initialStore?.store_template)
+      : FREE_STORE_TEMPLATE,
     store_theme_preset: normalizeThemePreset(initialStore?.store_theme_preset),
     theme_color: initialStore?.theme_color ?? "#059669",
     currency: initialStore?.currency ?? "NGN",
@@ -920,6 +950,7 @@ export function StoreSetupForm({ initialStore, initialEmailVerifiedAt = null }: 
                 key={option.key}
                 option={option}
                 selected={form.store_template === option.key}
+                locked={!canUseAllStoreTemplates && option.key !== FREE_STORE_TEMPLATE}
                 onSelect={() => updateFormField("store_template", option.key)}
               />
             ))}

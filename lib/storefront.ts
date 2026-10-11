@@ -5,6 +5,8 @@ export const DEFAULT_STOREFRONT_SECTIONS_ORDER: StorefrontSectionId[] = [
   "promo_strip",
 ];
 
+export const FREE_STORE_TEMPLATE: StoreTemplate = "grocery_promo";
+
 export const STOREFRONT_TEMPLATE_OPTIONS: Array<{
   key: StoreTemplate;
   label: string;
@@ -12,7 +14,7 @@ export const STOREFRONT_TEMPLATE_OPTIONS: Array<{
   accent: string; // accent colour shown in the picker card
 }> = [
   {
-    key: "grocery_promo",
+    key: FREE_STORE_TEMPLATE,
     label: "Market",
     description: "Bold hero, vibrant promo strip, dense product grid — built for high-volume stores.",
     accent: "#10b981",

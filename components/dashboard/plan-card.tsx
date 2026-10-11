@@ -1,16 +1,19 @@
+"use client";
+
 import { Check } from "lucide-react";
+import Link from "next/link";
 import { formatNaira } from "@/lib/format";
-import {
-  FEATURE_LABELS,
-  LIMIT_LABELS,
-  type PlanWithDetails,
-} from "@/lib/plans";
+import { FEATURE_LABELS, LIMIT_LABELS } from "@/lib/plan-labels";
+import type { PlanWithDetails } from "@/lib/plans";
 import { UpgradeButton } from "@/components/dashboard/upgrade-button";
+import type { BillingCycle } from "@/lib/payments/checkout";
 
 type PlanCardProps = {
   plan: PlanWithDetails;
   isCurrent: boolean;
   monetizationEnabled: boolean;
+  billingCycle: BillingCycle;
+  publicView?: boolean;
 };
 
 // Copy is deliberately specific per plan rather than a generic tagline —
@@ -22,7 +25,13 @@ const PLAN_TAGLINE: Record<string, string> = {
   business: "For established sellers running serious volume.",
 };
 
-export function PlanCard({ plan, isCurrent, monetizationEnabled }: PlanCardProps) {
+export function PlanCard({
+  plan,
+  isCurrent,
+  monetizationEnabled,
+  billingCycle,
+  publicView = false,
+}: PlanCardProps) {
   const limitLines = Object.entries(plan.limits)
     .filter(([key]) => LIMIT_LABELS[key])
     .map(([key, value]) => LIMIT_LABELS[key](value));
@@ -39,6 +48,11 @@ export function PlanCard({ plan, isCurrent, monetizationEnabled }: PlanCardProps
     : monetizationEnabled && plan.isPurchasable
       ? `Switch to ${plan.name}`
       : "Coming soon";
+  const selectedPrice = billingCycle === "yearly" ? plan.priceYearly : plan.priceMonthly;
+  const yearlySavingsPercent =
+    plan.priceMonthly > 0
+      ? Math.max(0, Math.round((1 - plan.priceYearly / (plan.priceMonthly * 12)) * 100))
+      : 0;
 
   return (
     <article
@@ -58,12 +72,21 @@ export function PlanCard({ plan, isCurrent, monetizationEnabled }: PlanCardProps
         <p className="mt-1 text-sm text-slate-600">{PLAN_TAGLINE[plan.key]}</p>
       </div>
 
-      <div className="mt-4 flex items-baseline gap-1">
+      <div className="mt-4 flex flex-wrap items-baseline gap-x-1.5 gap-y-1">
         <span className="font-display text-3xl font-black tabular-nums text-slate-900">
-          {plan.priceMonthly === 0 ? "Free" : formatNaira(plan.priceMonthly)}
+          {plan.priceMonthly === 0 ? "Free" : formatNaira(selectedPrice)}
         </span>
-        {plan.priceMonthly > 0 ? <span className="text-sm text-slate-500">/month</span> : null}
+        {plan.priceMonthly > 0 ? (
+          <span className="text-sm text-slate-500">
+            /{billingCycle === "yearly" ? "year" : "month"}
+          </span>
+        ) : null}
       </div>
+      {billingCycle === "yearly" && plan.priceMonthly > 0 && yearlySavingsPercent > 0 ? (
+        <p className="mt-1 text-xs font-semibold text-emerald-700">
+          Save {yearlySavingsPercent}% with yearly billing
+        </p>
+      ) : null}
 
       <ul className="mt-5 flex-1 space-y-2.5">
         {lines.map((line) => (
@@ -74,10 +97,24 @@ export function PlanCard({ plan, isCurrent, monetizationEnabled }: PlanCardProps
         ))}
       </ul>
 
-      {canUpgrade && monetizationEnabled && plan.isPurchasable ? (
+      {publicView ? (
+        plan.key === "free" || (monetizationEnabled && plan.isPurchasable) ? (
+          <Link
+            href="/become-vendor"
+            className="mt-6 inline-flex items-center justify-center rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700"
+          >
+            {plan.key === "free" ? "Start selling free" : "Create account to choose"}
+          </Link>
+        ) : (
+          <p className="mt-6 rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-center text-sm font-medium text-slate-500">
+            Paid plans opening soon
+          </p>
+        )
+      ) : canUpgrade && monetizationEnabled && plan.isPurchasable ? (
         <UpgradeButton
           planKey={plan.key as "pro" | "business"}
           planName={plan.name}
+          billingCycle={billingCycle}
           className="mt-6 rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700"
         />
       ) : (

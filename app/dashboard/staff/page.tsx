@@ -25,7 +25,7 @@ export default async function DashboardStaffPage() {
     isMonetizationEnabled(),
   ]);
 
-  const maxStaff = plan?.limits.max_staff ?? 0;
+  const maxStaff = plan?.limits.max_staff ?? null;
   const staffLimit = monetizationEnabled ? maxStaff : null; // null = unlimited while monetization is off
 
   return (

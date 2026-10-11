@@ -7,7 +7,8 @@ import { logDevError } from "@/lib/logger";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { getIpFromHeaders } from "@/lib/request-ip";
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
-import { sendWelcomeEmail } from "@/app/actions/emails";
+import { sendWelcomeEmail } from "@/lib/emails";
+import { canUseStaffAccounts } from "@/lib/plans";
 
 const credentialsSchema = z.object({
   email: z.string().email(),
@@ -182,6 +183,13 @@ export const authOptions: NextAuthOptions = {
           token.role = profile.role;
         }
         token.parentVendorId = profile?.parent_vendor_id ?? null;
+        token.isStaffPlanRestricted =
+          profile.role === "staff" &&
+          (!profile.parent_vendor_id || !(await canUseStaffAccounts(profile.parent_vendor_id)));
+        if (token.isStaffPlanRestricted) {
+          token.role = "customer";
+          token.parentVendorId = null;
+        }
         if (profile?.full_name) {
           token.name = profile.full_name;
         }
@@ -206,6 +214,14 @@ export const authOptions: NextAuthOptions = {
           session.user.role = "customer";
           session.user.name = null;
           session.error = "UserSuspended";
+          return session;
+        }
+
+        if (token.isStaffPlanRestricted) {
+          session.user.id = "";
+          session.user.role = "customer";
+          session.user.parentVendorId = null;
+          session.error = "StaffPlanRestricted";
           return session;
         }
 

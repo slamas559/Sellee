@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { enforceRateLimit } from "@/lib/rate-limit-response";
+import { getClientIp } from "@/lib/request-ip";
 
 const querySchema = z.object({
   lat: z.coerce.number().min(-90).max(90),
@@ -49,6 +51,10 @@ function cityFrom(address: NominatimResponse["address"]): string | null {
 }
 
 export async function GET(request: Request) {
+  // We forward these to a free public geocoder that bans heavy callers.
+  const limited = await enforceRateLimit(`location-reverse:${getClientIp(request)}`, 30, 60 * 1000);
+  if (limited) return limited;
+
   const params = Object.fromEntries(new URL(request.url).searchParams.entries());
   const parsed = querySchema.safeParse(params);
 

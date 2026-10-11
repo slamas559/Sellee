@@ -1,0 +1,342 @@
+diff --git a/app/actions/help-center.ts b/app/actions/help-center.ts
+new file mode 100644
+index 0000000..c468f9f
+--- /dev/null
++++ b/app/actions/help-center.ts
+@@ -0,0 +1,51 @@
++"use server";
++
++import { headers } from "next/headers";
++import { z } from "zod";
++import { createHelpCenterTicket, type EmailActionResult } from "@/lib/emails";
++import { checkRateLimit } from "@/lib/rate-limit";
++import { getIpFromHeaders } from "@/lib/request-ip";
++
++// This is the only email-related Server Action: it is called straight from the
++// public Help Center form, so anyone on the internet can invoke it with any
++// arguments. It therefore validates its input and limits how often it can run
++// (it sends mail to whatever address is supplied, so it must not be usable to
++// spam strangers).
++const ticketSchema = z.object({
++  requesterEmail: z.string().trim().toLowerCase().email().max(254),
++  requesterName: z.string().trim().max(80).optional(),
++  issueType: z.string().trim().max(80),
++  details: z.string().trim().min(10).max(3000),
++});
++
++function failure(message: string): EmailActionResult<{ ticketId: string }> {
++  return { success: false, error: { message } };
++}
++
++export async function submitHelpCenterTicket(
++  input: unknown,
++): Promise<EmailActionResult<{ ticketId: string }>> {
++  const parsed = ticketSchema.safeParse(input);
++  if (!parsed.success) {
++    const field = parsed.error.issues[0]?.path[0];
++    if (field === "requesterEmail") return failure("Please enter a valid email address.");
++    if (field === "details") {
++      return failure("Please describe the issue in 10 to 3000 characters.");
++    }
++    return failure("Please check the form and try again.");
++  }
++
++  const headerList = await headers();
++  const ip = getIpFromHeaders(headerList.get("x-forwarded-for"), headerList.get("x-real-ip"));
++  const hour = 60 * 60 * 1000;
++
++  const [byIp, byEmail] = await Promise.all([
++    checkRateLimit(`help-ticket-ip:${ip}`, 5, hour),
++    checkRateLimit(`help-ticket-email:${parsed.data.requesterEmail}`, 3, hour),
++  ]);
++  if (!byIp.allowed || !byEmail.allowed) {
++    return failure("You've sent several requests recently. Please try again in a little while.");
++  }
++
++  return createHelpCenterTicket(parsed.data);
++}
+diff --git a/app/api/account/email-verification/send/route.ts b/app/api/account/email-verification/send/route.ts
+index da36f18..129ae20 100644
+--- a/app/api/account/email-verification/send/route.ts
++++ b/app/api/account/email-verification/send/route.ts
+@@ -1,6 +1,6 @@
+ import { NextResponse } from "next/server";
+ import { getServerSession } from "next-auth";
+-import { sendEmailVerificationEmail } from "@/app/actions/emails";
++import { sendEmailVerificationEmail } from "@/lib/emails";
+ import { appUrl } from "@/lib/app-url";
+ import { authOptions } from "@/lib/auth";
+ import { createEmailVerificationToken } from "@/lib/email-verification";
+diff --git a/app/api/admin-console/admins/route.ts b/app/api/admin-console/admins/route.ts
+index 1ff266f..9bbe5bd 100644
+--- a/app/api/admin-console/admins/route.ts
++++ b/app/api/admin-console/admins/route.ts
+@@ -3,7 +3,7 @@ import { z } from "zod";
+ import { requireAdminApi } from "@/lib/admin-auth";
+ import { adminConsoleUrl } from "@/lib/app-url";
+ import { createAdminInvite } from "@/lib/admin-invites";
+-import { sendAdminInviteEmail } from "@/app/actions/emails";
++import { sendAdminInviteEmail } from "@/lib/emails";
+ import { writeAuditLog } from "@/lib/audit-log";
+ import { logDevError } from "@/lib/logger";
+ import { createAdminSupabaseClient } from "@/lib/supabase-admin";
+diff --git a/app/api/auth/forgot-password/route.ts b/app/api/auth/forgot-password/route.ts
+index 8730d51..6997828 100644
+--- a/app/api/auth/forgot-password/route.ts
++++ b/app/api/auth/forgot-password/route.ts
+@@ -1,6 +1,6 @@
+ import { NextResponse } from "next/server";
+ import { z } from "zod";
+-import { sendPasswordResetEmail } from "@/app/actions/emails";
++import { sendPasswordResetEmail } from "@/lib/emails";
+ import { logDevError } from "@/lib/logger";
+ import { appUrl } from "@/lib/app-url";
+ import { createPasswordResetToken } from "@/lib/password-reset";
+diff --git a/app/api/checkout/subscription/route.ts b/app/api/checkout/subscription/route.ts
+index ce1eb1e..efd5445 100644
+--- a/app/api/checkout/subscription/route.ts
++++ b/app/api/checkout/subscription/route.ts
+@@ -8,6 +8,7 @@ import { initializePaystackTransaction } from "@/lib/payments/paystack";
+ import { initializeFlutterwaveTransaction } from "@/lib/payments/flutterwave";
+ import { appUrl } from "@/lib/app-url";
+ import { logDevError } from "@/lib/logger";
++import { enforceRateLimit } from "@/lib/rate-limit-response";
+ 
+ const bodySchema = z.object({
+   planKey: z.enum(["pro", "business"]),
+@@ -21,6 +22,15 @@ export async function POST(request: Request) {
+     return NextResponse.json({ error: "Sign in required." }, { status: 401 });
+   }
+ 
++  // Plans belong to the store owner's account. Staff and customers must not start a
++  // checkout, or the plan would be attached to the wrong user.
++  if (session.user.role !== "vendor") {
++    return NextResponse.json({ error: "Only the store owner can change the plan." }, { status: 403 });
++  }
++
++  const limited = await enforceRateLimit(`checkout-subscription:${session.user.id}`, 10, 60 * 60 * 1000);
++  if (limited) return limited;
++
+   const body = await request.json().catch(() => null);
+   const parsed = bodySchema.safeParse(body);
+   if (!parsed.success) {
+diff --git a/app/api/location/reverse/route.ts b/app/api/location/reverse/route.ts
+index 193017e..003ae5a 100644
+--- a/app/api/location/reverse/route.ts
++++ b/app/api/location/reverse/route.ts
+@@ -1,5 +1,7 @@
+ import { NextResponse } from "next/server";
+ import { z } from "zod";
++import { enforceRateLimit } from "@/lib/rate-limit-response";
++import { getClientIp } from "@/lib/request-ip";
+ 
+ const querySchema = z.object({
+   lat: z.coerce.number().min(-90).max(90),
+@@ -49,6 +51,10 @@ function cityFrom(address: NominatimResponse["address"]): string | null {
+ }
+ 
+ export async function GET(request: Request) {
++  // We forward these to a free public geocoder that bans heavy callers.
++  const limited = await enforceRateLimit(`location-reverse:${getClientIp(request)}`, 30, 60 * 1000);
++  if (limited) return limited;
++
+   const params = Object.fromEntries(new URL(request.url).searchParams.entries());
+   const parsed = querySchema.safeParse(params);
+ 
+diff --git a/app/api/orders/route.ts b/app/api/orders/route.ts
+index 8e4f6b2..c8fe443 100644
+--- a/app/api/orders/route.ts
++++ b/app/api/orders/route.ts
+@@ -1,12 +1,13 @@
+ import { NextResponse } from "next/server";
+ import { getServerSession } from "next-auth";
++import { enforceRateLimit } from "@/lib/rate-limit-response";
+ import { z } from "zod";
+ import { authOptions } from "@/lib/auth";
+ import { logDevError } from "@/lib/logger";
+ import { createAdminSupabaseClient } from "@/lib/supabase-admin";
+ import { sendWhatsAppTextMessage } from "@/lib/whatsapp-cloud";
+ import { waMessage, waTitle } from "@/lib/whatsapp-bot/message-format";
+-import { sendOrderNotificationEmail } from "@/app/actions/emails";
++import { sendOrderNotificationEmail } from "@/lib/emails";
+ import { formatPrice } from "@/lib/currency";
+ 
+ const createOrderSchema = z.object({
+@@ -35,6 +36,15 @@ export async function POST(request: Request) {
+       return NextResponse.json({ error: "Please login to place an order." }, { status: 401 });
+     }
+ 
++    // Each order notifies a vendor, so cap how fast one account can place them.
++    const limited = await enforceRateLimit(
++      `orders:${session.user.id}`,
++      30,
++      60 * 60 * 1000,
++      "You're placing orders too quickly. Please try again in a little while.",
++    );
++    if (limited) return limited;
++
+     const body = await request.json();
+     const parsed = createOrderSchema.safeParse(body);
+ 
+diff --git a/app/api/products/[id]/report/route.ts b/app/api/products/[id]/report/route.ts
+index 7385515..d076b43 100644
+--- a/app/api/products/[id]/report/route.ts
++++ b/app/api/products/[id]/report/route.ts
+@@ -8,7 +8,7 @@ import { enforceRateLimit } from "@/lib/rate-limit-response";
+ import { getClientIp } from "@/lib/request-ip";
+ import { formatProductPathSegment } from "@/lib/format";
+ import { storeProductUrl } from "@/lib/store-url";
+-import { sendProductReportNotificationEmail } from "@/app/actions/emails";
++import { sendProductReportNotificationEmail } from "@/lib/emails";
+ 
+ const reportSchema = z.object({
+   reason: z.enum(["counterfeit", "misleading", "inappropriate", "other"]),
+diff --git a/app/api/register/route.ts b/app/api/register/route.ts
+index bdb38e0..0941436 100644
+--- a/app/api/register/route.ts
++++ b/app/api/register/route.ts
+@@ -1,7 +1,7 @@
+ import bcrypt from "bcryptjs";
+ import { NextResponse } from "next/server";
+ import { z } from "zod";
+-import { sendEmailVerificationEmail } from "@/app/actions/emails";
++import { sendEmailVerificationEmail } from "@/lib/emails";
+ import { appUrl } from "@/lib/app-url";
+ import { createEmailVerificationToken } from "@/lib/email-verification";
+ import { logDevError } from "@/lib/logger";
+diff --git a/components/help/help-center-client.tsx b/components/help/help-center-client.tsx
+index 743746b..9468ed3 100644
+--- a/components/help/help-center-client.tsx
++++ b/components/help/help-center-client.tsx
+@@ -16,7 +16,7 @@ import {
+   Store,
+   type LucideIcon,
+ } from "lucide-react";
+-import { submitHelpCenterTicket } from "@/app/actions/emails";
++import { submitHelpCenterTicket } from "@/app/actions/help-center";
+ 
+ const SUPPORT_EMAIL = "support@sellee.store";
+ const SUPPORT_PHONE_DISPLAY = "08100596007";
+diff --git a/lib/app-url.ts b/lib/app-url.ts
+index b023080..09ac570 100644
+--- a/lib/app-url.ts
++++ b/lib/app-url.ts
+@@ -4,10 +4,9 @@ const DEFAULT_APP_URL = "https://sellee.store";
+  * Builds an absolute URL for the app, used for links inside emails and
+  * anywhere else a full URL (not a relative path) is needed server-side.
+  *
+- * Deliberately NOT in app/actions/emails.ts - that file has "use server" at
+- * the top, which turns every export into a Server Action, and Server
+- * Actions must be async. This is a plain sync helper, so it lives in its
+- * own file instead.
++ * Deliberately kept out of any "use server" file - that directive turns every
++ * export into a Server Action, and Server Actions must be async. This is a
++ * plain sync helper, so it lives in its own file instead.
+  */
+ export function appUrl(path = "/") {
+   const baseUrl =
+diff --git a/lib/auth.ts b/lib/auth.ts
+index 63feb1b..1a672f9 100644
+--- a/lib/auth.ts
++++ b/lib/auth.ts
+@@ -7,7 +7,7 @@ import { logDevError } from "@/lib/logger";
+ import { checkRateLimit } from "@/lib/rate-limit";
+ import { getIpFromHeaders } from "@/lib/request-ip";
+ import { createAdminSupabaseClient } from "@/lib/supabase-admin";
+-import { sendWelcomeEmail } from "@/app/actions/emails";
++import { sendWelcomeEmail } from "@/lib/emails";
+ 
+ const credentialsSchema = z.object({
+   email: z.string().email(),
+diff --git a/lib/broadcasts/send-email-broadcast.ts b/lib/broadcasts/send-email-broadcast.ts
+index d9144c2..76204a6 100644
+--- a/lib/broadcasts/send-email-broadcast.ts
++++ b/lib/broadcasts/send-email-broadcast.ts
+@@ -1,6 +1,6 @@
+ import { createAdminSupabaseClient } from "@/lib/supabase-admin";
+ import { logDevError } from "@/lib/logger";
+-import { sendVendorBroadcastEmail } from "@/app/actions/emails";
++import { sendVendorBroadcastEmail } from "@/lib/emails";
+ import { resolveEmailBroadcastTargets, type EmailBroadcastRecipient } from "@/lib/broadcasts/email-audience";
+ import { storeUrl } from "@/lib/store-url";
+ 
+diff --git a/lib/email-broadcasts.ts b/lib/email-broadcasts.ts
+index 9109e4a..fbb9a3e 100644
+--- a/lib/email-broadcasts.ts
++++ b/lib/email-broadcasts.ts
+@@ -1,6 +1,6 @@
+ import { createAdminSupabaseClient } from "@/lib/supabase-admin";
+ import { logDevError } from "@/lib/logger";
+-import { sendAdminBroadcastEmail } from "@/app/actions/emails";
++import { sendAdminBroadcastEmail } from "@/lib/emails";
+ 
+ export type BroadcastSegment = "all_customers" | "all_vendors" | "verified_vendors" | "niche";
+ 
+diff --git a/app/actions/emails.ts b/lib/emails.ts
+similarity index 99%
+rename from app/actions/emails.ts
+rename to lib/emails.ts
+index 5fc47cf..9f46825 100644
+--- a/app/actions/emails.ts
++++ b/lib/emails.ts
+@@ -1,5 +1,3 @@
+-"use server";
+-
+ import { Resend } from "resend";
+ import { appUrl } from "@/lib/app-url";
+ import { createAdminSupabaseClient } from "@/lib/supabase-admin";
+@@ -37,7 +35,7 @@ const SYSTEM_FROM = "Sellee <hello@sellee.store>";
+ const SUPPORT_FROM = "Sellee <support@sellee.store>";
+ const SUPPORT_REPLY_TO = "support@sellee.store";
+ 
+-type EmailActionResult<TData = unknown> = {
++export type EmailActionResult<TData = unknown> = {
+   success: boolean;
+   data?: TData;
+   error?: unknown;
+@@ -326,7 +324,7 @@ export async function sendSupportTicketEmail({
+   }
+ }
+ 
+-export async function submitHelpCenterTicket({
++export async function createHelpCenterTicket({
+   requesterEmail,
+   requesterName,
+   issueType,
+diff --git a/lib/phone-verification.ts b/lib/phone-verification.ts
+index 4976281..2fa158f 100644
+--- a/lib/phone-verification.ts
++++ b/lib/phone-verification.ts
+@@ -1,5 +1,5 @@
+ import bcrypt from "bcryptjs";
+-import { sendWelcomeEmail } from "@/app/actions/emails";
++import { sendWelcomeEmail } from "@/lib/emails";
+ import { logDevError } from "@/lib/logger";
+ import { createAdminSupabaseClient } from "@/lib/supabase-admin";
+ import { validateWhatsAppNumber } from "@/lib/whatsapp";
+diff --git a/lib/subscriptions/renewals.ts b/lib/subscriptions/renewals.ts
+index e35af95..ba8f94e 100644
+--- a/lib/subscriptions/renewals.ts
++++ b/lib/subscriptions/renewals.ts
+@@ -14,7 +14,7 @@
+ 
+ import { createAdminSupabaseClient } from "@/lib/supabase-admin";
+ import { logDevError, logServerInfo } from "@/lib/logger";
+-import { sendUpdateEmail } from "@/app/actions/emails";
++import { sendUpdateEmail } from "@/lib/emails";
+ import { appUrl } from "@/lib/app-url";
+ 
+ const REMINDER_WINDOW_DAYS = 3;
+diff --git a/lib/vendor-verification-notify.ts b/lib/vendor-verification-notify.ts
+index 8a3f5ac..6673ad1 100644
+--- a/lib/vendor-verification-notify.ts
++++ b/lib/vendor-verification-notify.ts
+@@ -6,7 +6,7 @@
+ // logged and swallowed: a flaky email provider must never undo or block a
+ // review decision.
+ 
+-import { sendVerificationDecisionEmail } from "@/app/actions/emails";
++import { sendVerificationDecisionEmail } from "@/lib/emails";
+ import { appUrl } from "@/lib/app-url";
+ import { logDevError } from "@/lib/logger";
+ import { createAdminSupabaseClient } from "@/lib/supabase-admin";

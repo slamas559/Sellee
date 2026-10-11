@@ -8,6 +8,7 @@ import { initializePaystackTransaction } from "@/lib/payments/paystack";
 import { initializeFlutterwaveTransaction } from "@/lib/payments/flutterwave";
 import { appUrl } from "@/lib/app-url";
 import { logDevError } from "@/lib/logger";
+import { enforceRateLimit } from "@/lib/rate-limit-response";
 
 const bodySchema = z.object({
   planKey: z.enum(["pro", "business"]),
@@ -20,6 +21,15 @@ export async function POST(request: Request) {
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Sign in required." }, { status: 401 });
   }
+
+  // Plans belong to the store owner's account. Staff and customers must not start a
+  // checkout, or the plan would be attached to the wrong user.
+  if (session.user.role !== "vendor") {
+    return NextResponse.json({ error: "Only the store owner can change the plan." }, { status: 403 });
+  }
+
+  const limited = await enforceRateLimit(`checkout-subscription:${session.user.id}`, 10, 60 * 60 * 1000);
+  if (limited) return limited;
 
   const body = await request.json().catch(() => null);
   const parsed = bodySchema.safeParse(body);

@@ -10,7 +10,7 @@ declare module "next-auth" {
       // not session.user.id, when the session is a staff session.
       parentVendorId?: string | null;
     };
-    error?: "UserDeleted" | "UserSuspended";
+    error?: "UserDeleted" | "UserSuspended" | "StaffPlanRestricted";
   }
 
   interface User {
@@ -25,5 +25,6 @@ declare module "next-auth/jwt" {
     parentVendorId?: string | null;
     isDeleted?: boolean;
     isSuspended?: boolean;
+    isStaffPlanRestricted?: boolean;
   }
 }

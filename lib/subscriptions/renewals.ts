@@ -14,7 +14,7 @@
 
 import { createAdminSupabaseClient } from "@/lib/supabase-admin";
 import { logDevError, logServerInfo } from "@/lib/logger";
-import { sendUpdateEmail } from "@/app/actions/emails";
+import { sendUpdateEmail } from "@/lib/emails";
 import { appUrl } from "@/lib/app-url";
 
 const REMINDER_WINDOW_DAYS = 3;

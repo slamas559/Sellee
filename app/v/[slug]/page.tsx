@@ -12,12 +12,14 @@ import { StoreVisitTracker } from "@/components/store/store-visit-tracker";
 import { StarRating } from "@/components/store/star-rating";
 import { authOptions } from "@/lib/auth";
 import {
+  FREE_STORE_TEMPLATE,
   getThemeByPreset,
   normalizeStoreTemplate,
   normalizeStorefrontConfig,
   normalizeThemePreset,
 } from "@/lib/storefront";
 import { getStorefrontPublicDataCached } from "@/lib/public-cache";
+import { canUseAllStoreTemplates, hasFeature } from "@/lib/plans";
 import { storeUrl as buildStoreUrl } from "@/lib/store-url";
 import { VerificationPill } from "@/components/store/verification-pill";
 import { effectiveTier } from "@/lib/verification-tier-constants";
@@ -734,7 +736,10 @@ export default async function StorePage({ params, searchParams }: StorePageProps
   const store = storefrontData.store as StoreRecord | null;
   if (!store) notFound();
 
-  const products = storefrontData.products;
+  const promoPricingEnabled = await hasFeature(store.vendor_id, "promo_pricing");
+  const products = promoPricingEnabled
+    ? storefrontData.products
+    : storefrontData.products.map((product) => ({ ...product, compare_at_price: null }));
   const nicheNames = storefrontData.nicheNames;
   const completedOrdersCount = storefrontData.completedOrdersCount;
 
@@ -760,7 +765,10 @@ export default async function StorePage({ params, searchParams }: StorePageProps
     return `${p.name} ${p.description ?? ""} ${p.category ?? ""}`.toLowerCase().includes(q);
   });
 
-  const template = normalizeStoreTemplate(store.store_template);
+  const canUseAllTemplates = await canUseAllStoreTemplates(store.vendor_id);
+  const template = canUseAllTemplates
+    ? normalizeStoreTemplate(store.store_template)
+    : FREE_STORE_TEMPLATE;
   const themePreset = normalizeThemePreset(store.store_theme_preset);
   const theme = getThemeByPreset(themePreset);
   const config = normalizeStorefrontConfig(store.storefront_config);

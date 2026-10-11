@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { sendEmailVerificationEmail } from "@/app/actions/emails";
+import { sendEmailVerificationEmail } from "@/lib/emails";
 import { appUrl } from "@/lib/app-url";
 import { authOptions } from "@/lib/auth";
 import { createEmailVerificationToken } from "@/lib/email-verification";

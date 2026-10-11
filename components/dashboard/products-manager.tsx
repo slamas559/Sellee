@@ -1,7 +1,9 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { LockKeyhole } from "lucide-react";
 import { AiRefineButton } from "@/components/ai/ai-refine-button";
 import {
   Sheet,
@@ -16,6 +18,8 @@ import type { ProductRecord } from "@/types";
 type ProductsResponse = {
   products?: ProductRecord[];
   allowed_categories?: string[];
+  promo_pricing_enabled?: boolean;
+  can_create_products?: boolean;
   error?: string;
 };
 
@@ -58,11 +62,20 @@ const initialForm: ProductFormState = {
 type ProductsManagerProps = {
   initialProducts: ProductRecord[];
   currency?: string | null;
+  initialPromoPricingEnabled?: boolean;
+  initialCanCreateProducts?: boolean;
 };
 
-export function ProductsManager({ initialProducts, currency }: ProductsManagerProps) {
+export function ProductsManager({
+  initialProducts,
+  currency,
+  initialPromoPricingEnabled = true,
+  initialCanCreateProducts = true,
+}: ProductsManagerProps) {
   const [products, setProducts] = useState<ProductRecord[]>(initialProducts);
   const [allowedCategories, setAllowedCategories] = useState<string[]>([]);
+  const [promoPricingEnabled, setPromoPricingEnabled] = useState(initialPromoPricingEnabled);
+  const [canCreateProducts, setCanCreateProducts] = useState(initialCanCreateProducts);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -105,6 +118,8 @@ export function ProductsManager({ initialProducts, currency }: ProductsManagerPr
 
       setProducts(payload.products ?? []);
       setAllowedCategories(payload.allowed_categories ?? []);
+      setPromoPricingEnabled(payload.promo_pricing_enabled ?? false);
+      setCanCreateProducts(payload.can_create_products ?? false);
       setCurrentPage(1);
     } catch {
       setError("Network error while loading products.");
@@ -389,17 +404,31 @@ export function ProductsManager({ initialProducts, currency }: ProductsManagerPr
           </label>
 
           <label className="space-y-2 text-sm">
-            <span className="font-medium text-slate-700">Old Price (optional)</span>
+            <span className="flex items-center gap-1.5 font-medium text-slate-700">
+              Old Price (optional)
+              {!promoPricingEnabled ? (
+                <LockKeyhole aria-hidden="true" className="h-3.5 w-3.5 text-slate-500" />
+              ) : null}
+            </span>
             <input
               type="number"
               min="0"
               value={form.compare_at_price}
+              disabled={!promoPricingEnabled}
               onChange={(event) =>
                 setForm((prev) => ({ ...prev, compare_at_price: event.target.value }))
               }
-              className="w-full rounded-md border border-slate-200 px-3 py-2 outline-none ring-emerald-300 focus:ring-2"
+              className="w-full rounded-md border border-slate-200 px-3 py-2 outline-none ring-emerald-300 focus:ring-2 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
               placeholder="e.g. 2000 — shown struck-through as a promo"
             />
+            {!promoPricingEnabled ? (
+              <p className="text-xs text-slate-500">
+                Promo pricing is locked on your plan.{" "}
+                <Link className="font-semibold text-emerald-700 underline" href="/dashboard/plans">
+                  View plans
+                </Link>
+              </p>
+            ) : null}
           </label>
 
           <label className="space-y-2 text-sm md:col-span-2">
@@ -768,6 +797,7 @@ export function ProductsManager({ initialProducts, currency }: ProductsManagerPr
             <button
               type="button"
               onClick={openAddForm}
+              disabled={!canCreateProducts}
               className="rounded-md bg-emerald-600 px-2 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 sm:px-3 sm:py-2 sm:text-sm"
             >
               + Add product
@@ -781,6 +811,15 @@ export function ProductsManager({ initialProducts, currency }: ProductsManagerPr
             </button>
           </div>
         </div>
+
+        {!canCreateProducts ? (
+          <p className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+            You&apos;ve reached the product limit for your current plan.{" "}
+            <Link className="font-semibold underline" href="/dashboard/plans">
+              View plans
+            </Link>
+          </p>
+        ) : null}
 
         {isLoading ? <p className="text-sm text-slate-500">Loading products...</p> : null}
 
