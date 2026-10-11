@@ -165,33 +165,38 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: `Could not update ${planKey} plan.` }, { status: 500 });
     }
 
-    if (parsed.data.planPricing) {
-      const { planKey, priceMonthly, priceYearly } = parsed.data.planPricing;
-      const { error } = await supabase
-        .from("plans")
-        .update({ price_monthly: priceMonthly, price_yearly: priceYearly })
-        .eq("key", planKey);
-
-      if (error) {
-        logDevError("admin-console.settings.plan_pricing", error, { planKey });
-        return NextResponse.json({ error: `Could not update ${planKey} plan prices.` }, { status: 500 });
-      }
-
-      await writeAuditLog({
-        adminId: session.user.id,
-        action: "settings.plan_pricing_updated",
-        targetType: "plan",
-        targetId: planKey,
-        metadata: { priceMonthly, priceYearly },
-      });
-    }
-
     await writeAuditLog({
       adminId: session.user.id,
       action: isPurchasable ? "settings.plan_enabled" : "settings.plan_disabled",
       targetType: "plan",
       targetId: planKey,
       metadata: { isPurchasable },
+    });
+  }
+
+  if (parsed.data.planPricing) {
+    const { planKey, priceMonthly, priceYearly } = parsed.data.planPricing;
+    const { data: updatedPlan, error } = await supabase
+      .from("plans")
+      .update({ price_monthly: priceMonthly, price_yearly: priceYearly })
+      .eq("key", planKey)
+      .select("key, price_monthly, price_yearly")
+      .maybeSingle();
+
+    if (error) {
+      logDevError("admin-console.settings.plan_pricing", error, { planKey });
+      return NextResponse.json({ error: `Could not update ${planKey} plan prices.` }, { status: 500 });
+    }
+    if (!updatedPlan) {
+      return NextResponse.json({ error: `The ${planKey} plan was not found.` }, { status: 404 });
+    }
+
+    await writeAuditLog({
+      adminId: session.user.id,
+      action: "settings.plan_pricing_updated",
+      targetType: "plan",
+      targetId: planKey,
+      metadata: { priceMonthly, priceYearly },
     });
   }
 
