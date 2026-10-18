@@ -10,7 +10,7 @@ import { formatProductPathSegment } from "@/lib/format";
 import { useConvertedPrice } from "@/components/marketplace/currency-switcher";
 import { storeUrl, storeProductUrl } from "@/lib/store-url";
 import type { StoreTemplate } from "@/types";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowUpRight, ChevronLeft, ChevronRight } from "lucide-react";
 import { VerificationPill } from "@/components/store/verification-pill";
 import { effectiveTier } from "@/lib/verification-tier-constants";
 
@@ -170,9 +170,9 @@ export function ProductShowcaseCard({
         </div>
 
         <span className="absolute left-2 top-2 rounded-full bg-white/85 px-2 py-1 text-[10px] font-semibold text-slate-700 backdrop-blur sm:left-3 sm:top-3 sm:px-3 sm:text-xs">
-          {product.rating_avg && product.rating_avg >= 4.5
+          {product.rating_avg && product.rating_avg >= 4.5 && product.rating_count >= 5
             ? "Best Seller"
-            : product.category || "Featured"}
+            : product.category || "New"}
         </span>
 
         <div className="absolute right-2 top-2 z-20 flex flex-col items-end gap-1.5 sm:right-3 sm:top-3">
@@ -241,7 +241,7 @@ export function ProductShowcaseCard({
           {product.name}
         </h3>
         <p className={descriptionClass}>
-          {product.description || "Quality product from a verified local vendor."}
+          {product.description || "\u00A0"}
         </p>
 
         <div className="">
@@ -271,22 +271,7 @@ export function ProductShowcaseCard({
             title="Open product"
             className={`inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition sm:h-9 sm:w-9 ${ctaClass}`}
           >
-          <span className="text-white">
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="h-4 w-4"
-              aria-hidden="true"
-            >       
-              <circle cx="9" cy="20" r="1.5" />
-              <circle cx="17" cy="20" r="1.5" />
-              <path d="M3 4h2l2.2 10.5a1 1 0 0 0 1 .8h8.9a1 1 0 0 0 1-.8L20 7H7" />
-            </svg>
-          </span>
+          <ArrowUpRight className="h-4 w-4 text-white" aria-hidden="true" />
           </Link>
         </div>
       </div>

@@ -6,6 +6,10 @@ import { authOptions } from "@/lib/auth";
 import { ProductShowcaseCard } from "@/components/marketplace/product-showcase-card";
 import { SocialShareActions } from "@/components/shared/social-share-actions";
 import { StoreVisitTracker } from "@/components/store/store-visit-tracker";
+import { ThemeScope } from "@/components/storefront/theme-scope";
+import { canUseAllStoreTemplates } from "@/lib/plans";
+import { FREE_STORE_TEMPLATE, getThemeByPreset, normalizeThemePreset } from "@/lib/storefront";
+import { resolveTemplate, safePrimary } from "@/lib/storefront-theme";
 import { OrderButton } from "@/components/store/order-button";
 import WishlistButton from "@/components/store/wishlist-button";
 import { ProductMediaGallery } from "@/components/store/product-media-gallery";
@@ -280,12 +284,16 @@ export default async function StoreProductPage({ params, searchParams }: Product
           ? { href: "/vendors", label: "Vendors" }
           : { href: buildStoreUrl(store.slug), label: store.name };
 
+  const canUseAllTemplates = await canUseAllStoreTemplates(store.vendor_id);
+  const template = resolveTemplate(canUseAllTemplates ? store.store_template : FREE_STORE_TEMPLATE);
+  const primary = safePrimary(store.theme_color ?? getThemeByPreset(normalizeThemePreset(store.store_theme_preset)).primary);
+
   const isInStock = product.stock_count > 0;
   const isOwnerViewing = session?.user?.id === store.vendor_id;
 
   return (
     <DisplayCurrencyProvider authorizedCurrency={store.currency} activatedCurrencies={store.activated_currencies ?? []}>
-      <main className="min-h-screen bg-[#f8f7f5]">
+      <ThemeScope template={template} primary={primary}>
       <StoreVisitTracker storeId={store.id} productId={product.id} isOwnerViewing={isOwnerViewing} />
       <script
         type="application/ld+json"
@@ -295,7 +303,7 @@ export default async function StoreProductPage({ params, searchParams }: Product
       {/* ── Breadcrumb bar ── */}
       <div className="border-b border-stone-200 bg-white">
         <div className="mx-auto flex max-w-7xl items-center gap-1.5 px-4 py-3 text-xs text-stone-500 sm:px-6">
-          <Link href={backTarget.href} className="flex items-center gap-1 font-medium text-stone-700 transition-colors hover:text-emerald-700">
+          <Link href={backTarget.href} className="flex items-center gap-1 font-medium text-stone-700 transition-colors hover:text-[color:var(--s-primary)]">
             <ArrowLeftIcon className="h-3.5 w-3.5" />
             {backTarget.label}
           </Link>
@@ -316,7 +324,7 @@ export default async function StoreProductPage({ params, searchParams }: Product
 
           {/* Left — Media gallery */}
           <div className="relative">
-            <div className="overflow-hidden rounded-2xl bg-white shadow-[0_4px_32px_rgba(0,0,0,0.08)] ring-1 ring-stone-100">
+            <div className="overflow-hidden rounded-[var(--s-r-lg)] bg-white shadow-[0_4px_32px_rgba(0,0,0,0.08)] ring-1 ring-stone-100">
               <ProductMediaGallery
                 name={product.name}
                 imageUrl={product.image_url}
@@ -325,7 +333,7 @@ export default async function StoreProductPage({ params, searchParams }: Product
             </div>
             {/* Floating category pill on image */}
             {product.category && (
-              <span className="absolute left-4 top-4 z-10 rounded-full bg-white/90 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-emerald-700 shadow-sm backdrop-blur-sm ring-1 ring-emerald-100">
+              <span className="absolute left-4 top-4 z-10 rounded-full bg-white/90 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-[color:var(--s-primary)] shadow-sm backdrop-blur-sm">
                 {product.category}
               </span>
             )}
@@ -341,7 +349,7 @@ export default async function StoreProductPage({ params, searchParams }: Product
                   href={storeShareUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-xs font-semibold text-stone-500 transition-colors hover:text-emerald-700"
+                  className="text-xs font-semibold text-stone-500 transition-colors hover:text-[color:var(--s-primary)]"
                 >
                   Sold by <span className="text-stone-800">{store.name}</span>
                 </Link>
@@ -361,7 +369,7 @@ export default async function StoreProductPage({ params, searchParams }: Product
                 </div>
               </div>
               {/* Product name */}
-              <h1 className="text-3xl font-black tracking-tight text-stone-900 sm:text-4xl lg:text-[2.6rem] lg:leading-[1.1]">
+              <h1 className="font-[family-name:var(--s-font-display)] text-3xl font-black tracking-tight text-stone-900 sm:text-4xl lg:text-[2.6rem] lg:leading-[1.1]">
                 {product.name}
               </h1>
 
@@ -413,19 +421,19 @@ export default async function StoreProductPage({ params, searchParams }: Product
 
             {/* Vendor card — single source of truth for store identity */}
             {/* Vendor card — single source of truth for store identity */}
-            <div className="mt-5 rounded-xl border border-stone-100 bg-white shadow-sm">
+            <div className="mt-5 rounded-[var(--s-r)] border border-stone-100 bg-white shadow-sm">
               <div className="flex items-center justify-between gap-3 px-4 py-3">
                 <Link href={storeShareUrl} target="_blank" rel="noopener noreferrer" className="group flex min-w-0 items-center gap-3">
                   {store.logo_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={store.logo_url} alt={store.name} className="h-10 w-10 shrink-0 rounded-full object-cover ring-2 ring-stone-100" />
                   ) : (
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-50 ring-2 ring-stone-100">
-                      <Store className="h-4 w-4 text-emerald-700" />
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--s-primary-soft)] ring-2 ring-stone-100">
+                      <Store className="h-4 w-4 text-[color:var(--s-primary)]" />
                     </div>
                   )}
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-bold text-stone-800 group-hover:text-emerald-700">
+                    <p className="truncate text-sm font-bold text-stone-800 group-hover:text-[color:var(--s-primary)]">
                       {store.name}
                     </p>
                     <div className="mt-0.5 flex items-center gap-1.5">
@@ -438,7 +446,7 @@ export default async function StoreProductPage({ params, searchParams }: Product
                 </Link>
                 <Link
                   href={`${storeShareUrl}/profile`}
-                  className="shrink-0 text-xs font-semibold text-emerald-700 underline"
+                  className="shrink-0 text-xs font-semibold text-[color:var(--s-primary)] underline"
                 >
                   About seller
                 </Link>
@@ -472,10 +480,10 @@ export default async function StoreProductPage({ params, searchParams }: Product
 
       {/* ── Reviews ── */}
       <div className="mx-auto max-w-7xl px-4 pb-4 sm:px-6">
-        <div className="rounded-2xl border border-stone-200 bg-white shadow-sm">
+        <div className="rounded-[var(--s-r-lg)] border border-stone-200 bg-white shadow-sm">
           {/* Section header */}
           <div className="border-b border-stone-100 px-5 py-5 sm:px-7">
-            <h2 className="text-lg font-bold text-stone-900">Customer Reviews</h2>
+            <h2 className="font-[family-name:var(--s-font-display)] text-lg font-bold text-stone-900">Customer Reviews</h2>
           </div>
           {/* Reviews content — constrained width so it doesn't sprawl */}
           <div className="p-2 sm:px-5 lg:max-w-3xl">
@@ -490,17 +498,17 @@ export default async function StoreProductPage({ params, searchParams }: Product
 
       {/* ── More from this vendor ── */}
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
-        <div className="rounded-2xl border border-stone-200 bg-white shadow-sm">
+        <div className="rounded-[var(--s-r-lg)] border border-stone-200 bg-white shadow-sm">
           <div className="flex items-center justify-between border-b border-stone-100 px-5 py-5 sm:px-7">
             <div>
-              <h2 className="text-lg font-bold text-stone-900">More from {store.name}</h2>
+              <h2 className="font-[family-name:var(--s-font-display)] text-lg font-bold text-stone-900">More from {store.name}</h2>
               <p className="mt-0.5 text-xs text-stone-400">Other products by this vendor</p>
             </div>
             <Link
               href={storeShareUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="rounded-full border border-stone-200 px-4 py-1.5 text-xs font-semibold text-stone-600 transition-all hover:border-emerald-300 hover:text-emerald-700"
+              className="rounded-full border border-stone-200 px-4 py-1.5 text-xs font-semibold text-stone-600 transition-all hover:border-[color:var(--s-primary)] hover:text-[color:var(--s-primary)]"
             >
               view store
             </Link>
@@ -508,7 +516,7 @@ export default async function StoreProductPage({ params, searchParams }: Product
 
           <div className="p-4 sm:p-6">
             {vendorProducts.length === 0 ? (
-              <p className="rounded-xl border border-dashed border-stone-200 bg-stone-50 px-5 py-6 text-center text-sm text-stone-400">
+              <p className="rounded-[var(--s-r)] border border-dashed border-stone-200 bg-stone-50 px-5 py-6 text-center text-sm text-stone-400">
                 No other products from this vendor yet.
               </p>
             ) : (
@@ -540,17 +548,17 @@ export default async function StoreProductPage({ params, searchParams }: Product
 
       {/* ── Related products ── */}
       <div className="mx-auto max-w-7xl px-4 pb-14 sm:px-6">
-        <div className="rounded-2xl border border-stone-200 bg-white shadow-sm">
+        <div className="rounded-[var(--s-r-lg)] border border-stone-200 bg-white shadow-sm">
           <div className="flex items-center justify-between border-b border-stone-100 px-5 py-5 sm:px-7">
             <div>
-              <h2 className="text-lg font-bold text-stone-900">You may also like</h2>
+              <h2 className="font-[family-name:var(--s-font-display)] text-lg font-bold text-stone-900">You may also like</h2>
               {product.category && (
                 <p className="mt-0.5 text-xs text-stone-400">More in {product.category}</p>
               )}
             </div>
             <Link
               href="/marketplace"
-              className="rounded-full border border-stone-200 px-4 py-1.5 text-xs font-semibold text-stone-600 transition-all hover:border-emerald-300 hover:text-emerald-700"
+              className="rounded-full border border-stone-200 px-4 py-1.5 text-xs font-semibold text-stone-600 transition-all hover:border-[color:var(--s-primary)] hover:text-[color:var(--s-primary)]"
             >
               Marketplace
             </Link>
@@ -558,7 +566,7 @@ export default async function StoreProductPage({ params, searchParams }: Product
 
           <div className="p-4 sm:p-6">
             {relatedProducts.length === 0 ? (
-              <p className="rounded-xl border border-dashed border-stone-200 bg-stone-50 px-5 py-6 text-center text-sm text-stone-400">
+              <p className="rounded-[var(--s-r)] border border-dashed border-stone-200 bg-stone-50 px-5 py-6 text-center text-sm text-stone-400">
                 Related products will appear here as more vendors list this category.
               </p>
             ) : (
@@ -580,7 +588,7 @@ export default async function StoreProductPage({ params, searchParams }: Product
           </div>
         </div>
       </div>
-    </main>
+    </ThemeScope>
     </DisplayCurrencyProvider>
   );
 }
