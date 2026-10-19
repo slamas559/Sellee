@@ -37,6 +37,11 @@ create table if not exists public.stores (
       'fashion_editorial',
       'lifestyle_showcase',
       'modern_grid',
+      'street_drop',
+      'soft_beauty',
+      'home_living',
+      'noir_gallery',
+      'lookbook',
       'classic',
       'bold',
       'minimal'

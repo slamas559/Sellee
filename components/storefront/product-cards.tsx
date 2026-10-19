@@ -3,27 +3,12 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
-import { useConvertedPrice } from "@/components/marketplace/currency-switcher";
-import { formatProductPathSegment } from "@/lib/format";
-import { storeProductUrl } from "@/lib/store-url";
-import { discountPercent, T } from "@/lib/storefront-theme";
+import { T } from "@/lib/storefront-theme";
+import { ProductImage, Rating, usePrices, type CardProduct } from "./card-parts";
+import { productHref } from "./utils";
+import { MoreProductCard, type MoreCardVariant } from "./product-cards-more";
 
-export type CardVariant = "market" | "plain" | "soft" | "dense";
-
-type CardProduct = {
-  id: string;
-  slug?: string;
-  name: string;
-  category: string | null;
-  brand?: string | null;
-  price: number;
-  compare_at_price?: number | null;
-  image_url: string | null;
-  image_urls: string[] | null;
-  rating_avg: number | null;
-  rating_count: number;
-  stock_count?: number;
-};
+export type CardVariant = "market" | "plain" | "soft" | "dense" | MoreCardVariant;
 
 type StoreProductCardProps = {
   product: CardProduct;
@@ -31,59 +16,30 @@ type StoreProductCardProps = {
   variant: CardVariant;
   /** soft variant only: image aspect, e.g. "4/5". */
   aspect?: string;
+  /** Position in the list (used by the numbered card styles). */
+  index?: number;
   /** Marks the first above-the-fold images as high priority. */
   priority?: boolean;
   className?: string;
 };
 
-function usePrices(product: CardProduct, currency: string | null | undefined) {
-  const price = useConvertedPrice(Number(product.price), currency ?? "NGN");
-  const compare = useConvertedPrice(Number(product.compare_at_price ?? 0), currency ?? "NGN");
-  const pct = discountPercent(Number(product.price), product.compare_at_price);
-  return { price, compare, pct, hasPromo: pct !== null };
-}
-
-function ProductImage({
-  src,
-  alt,
-  sizes,
-  className = "",
-  priority,
-}: {
-  src: string | null;
-  alt: string;
-  sizes: string;
-  className?: string;
-  priority?: boolean;
-}) {
-  if (!src) {
-    return (
-      <div className="flex h-full w-full items-center justify-center bg-black/[0.04] text-xs text-[color:var(--s-muted)]">
-        No image
-      </div>
-    );
+export function StoreProductCard(props: StoreProductCardProps) {
+  const { variant } = props;
+  if (variant === "brutal" || variant === "beauty" || variant === "gallery" || variant === "noir" || variant === "lookbook") {
+    return <MoreProductCard product={props.product} store={props.store} variant={variant} index={props.index} priority={props.priority} className={props.className} />;
   }
-  return <Image src={src} alt={alt} fill sizes={sizes} priority={priority} className={`object-cover ${className}`} />;
+  return <BaseProductCard {...props} variant={variant} />;
 }
 
-function Rating({ avg, count }: { avg: number | null; count: number }) {
-  if (!avg || count < 1) return null;
-  return (
-    <span className={`text-[11px] ${T.muted}`}>
-      <span aria-hidden="true" className="text-amber-500">★</span> {avg.toFixed(1)} ({count})
-    </span>
-  );
-}
-
-export function StoreProductCard({
+function BaseProductCard({
   product,
   store,
   variant,
   aspect = "4/5",
   priority,
   className = "",
-}: StoreProductCardProps) {
-  const href = `${storeProductUrl(store.slug, formatProductPathSegment(product))}?from=store`;
+}: StoreProductCardProps & { variant: "market" | "plain" | "soft" | "dense" }) {
+  const href = productHref(store.slug, product);
   const images = (product.image_urls ?? []).filter(Boolean);
   const primaryImage = images[0] ?? product.image_url;
   const secondImage = images[1] ?? null;

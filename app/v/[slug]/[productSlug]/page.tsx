@@ -9,7 +9,7 @@ import { StoreVisitTracker } from "@/components/store/store-visit-tracker";
 import { ThemeScope } from "@/components/storefront/theme-scope";
 import { canUseAllStoreTemplates } from "@/lib/plans";
 import { FREE_STORE_TEMPLATE, getThemeByPreset, normalizeThemePreset } from "@/lib/storefront";
-import { resolveTemplate, safePrimary } from "@/lib/storefront-theme";
+import { PLATFORM_PRIMARY, productScopeKey, resolveTemplate, safePrimary, type ThemeKey } from "@/lib/storefront-theme";
 import { OrderButton } from "@/components/store/order-button";
 import WishlistButton from "@/components/store/wishlist-button";
 import { ProductMediaGallery } from "@/components/store/product-media-gallery";
@@ -284,16 +284,26 @@ export default async function StoreProductPage({ params, searchParams }: Product
           ? { href: "/vendors", label: "Vendors" }
           : { href: buildStoreUrl(store.slug), label: store.name };
 
-  const canUseAllTemplates = await canUseAllStoreTemplates(store.vendor_id);
-  const template = resolveTemplate(canUseAllTemplates ? store.store_template : FREE_STORE_TEMPLATE);
-  const primary = safePrimary(store.theme_color ?? getThemeByPreset(normalizeThemePreset(store.store_theme_preset)).primary);
+  // The vendor's template only styles this page when the customer came from
+  // that vendor's own store (or opened a direct/shared link to it). From the
+  // marketplace, home, search, vendors or favourites lists, every product page
+  // keeps the same neutral Sellee look so customers comparing vendors are not
+  // confused by a different design per product.
+  const isFromVendorStore = !from || from === "store";
+  const canUseAllTemplates = isFromVendorStore ? await canUseAllStoreTemplates(store.vendor_id) : false;
+  const scopeTemplate: ThemeKey = isFromVendorStore
+    ? productScopeKey(resolveTemplate(canUseAllTemplates ? store.store_template : FREE_STORE_TEMPLATE))
+    : "platform";
+  const scopePrimary = isFromVendorStore
+    ? safePrimary(store.theme_color ?? getThemeByPreset(normalizeThemePreset(store.store_theme_preset)).primary)
+    : PLATFORM_PRIMARY;
 
   const isInStock = product.stock_count > 0;
   const isOwnerViewing = session?.user?.id === store.vendor_id;
 
   return (
     <DisplayCurrencyProvider authorizedCurrency={store.currency} activatedCurrencies={store.activated_currencies ?? []}>
-      <ThemeScope template={template} primary={primary}>
+      <ThemeScope template={scopeTemplate} primary={scopePrimary}>
       <StoreVisitTracker storeId={store.id} productId={product.id} isOwnerViewing={isOwnerViewing} />
       <script
         type="application/ld+json"

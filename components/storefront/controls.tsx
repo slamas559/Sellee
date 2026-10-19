@@ -73,6 +73,8 @@ export function CategoryNav({
   query,
   sort,
   variant = "pill",
+  counts,
+  total,
   className = "",
 }: {
   base: string;
@@ -80,11 +82,38 @@ export function CategoryNav({
   selected: string;
   query: string;
   sort: SortKey;
-  variant?: "pill" | "text" | "box";
+  variant?: "pill" | "text" | "box" | "list";
+  /** list variant: product count per category. */
+  counts?: Record<string, number>;
+  total?: number;
   className?: string;
 }) {
   if (categories.length === 0) return null;
   const items = [{ label: "All", value: "" }, ...categories.map((c) => ({ label: c, value: c }))];
+
+  if (variant === "list") {
+    return (
+      <nav aria-label="Categories" className={`flex flex-col ${className}`}>
+        {items.map((item) => {
+          const active = selected === item.value;
+          const count = item.value ? counts?.[item.value] : total;
+          return (
+            <Link
+              key={item.label}
+              href={buildHref(base, { q: query, category: item.value, sort })}
+              aria-current={active ? "page" : undefined}
+              className={`flex items-baseline justify-between gap-3 border-b py-2 text-sm uppercase tracking-wide transition ${T.line} ${
+                active ? "font-bold" : "text-[color:var(--s-muted)] hover:text-[color:var(--s-ink)]"
+              }`}
+            >
+              <span className="truncate">{active ? "— " : ""}{item.label}</span>
+              {typeof count === "number" ? <span className="text-xs tabular-nums opacity-70">{count}</span> : null}
+            </Link>
+          );
+        })}
+      </nav>
+    );
+  }
 
   const itemClass = (active: boolean) => {
     if (variant === "text") {

@@ -1,9 +1,9 @@
 import type { ReactNode } from "react";
 import { storefrontFontVars } from "@/lib/storefront-fonts";
-import { T, themeStyle, type TemplateKey } from "@/lib/storefront-theme";
+import { T, themeStyle, type ThemeKey } from "@/lib/storefront-theme";
 
 type ThemeScopeProps = {
-  template: TemplateKey;
+  template: ThemeKey;
   primary: string;
   as?: "main" | "div";
   className?: string;

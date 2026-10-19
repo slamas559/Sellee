@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
-import { BadgeCheck, Check, LockKeyhole, MapPin } from "lucide-react";
+import { BadgeCheck, Check, Eye, LockKeyhole, MapPin } from "lucide-react";
 import { AiRefineButton } from "@/components/ai/ai-refine-button";
 import {
   DEFAULT_STOREFRONT_CONFIG,
@@ -18,12 +18,18 @@ import type { StoreRecord, StoreTemplate, StorefrontSectionId } from "@/types";
 import { ChangeStoreUrlDialog } from "@/components/dashboard/change-store-url-dialog";
 import { EmailVerificationBanner } from "@/components/dashboard/email-verification-banner";
 import { storeUrl } from "@/lib/store-url";
+import { TemplatePreview } from "@/components/storefront/template-preview";
+import { StorefrontPreviewModal } from "@/components/dashboard/storefront-preview-modal";
+import { buildPreviewPayload, type PreviewProductInput } from "@/lib/storefront-samples";
+import { resolveTemplate, type TemplateKey } from "@/lib/storefront-theme";
 import { SUPPORTED_CURRENCIES } from "@/lib/currency";
 
 type StoreSetupFormProps = {
   initialStore: StoreRecord | null;
   initialEmailVerifiedAt?: string | null;
   canUseAllStoreTemplates: boolean;
+  /** The vendor's own products (newest first) used by the full-size preview. */
+  previewProducts?: PreviewProductInput[];
 };
 
 type UploadKind = "logo" | "hero" | "banner";
@@ -66,11 +72,13 @@ function TemplateCard({
   option,
   selected,
   locked,
+  primary,
   onSelect,
 }: {
   option: (typeof STOREFRONT_TEMPLATE_OPTIONS)[number];
   selected: boolean;
   locked: boolean;
+  primary: string;
   onSelect: () => void;
 }) {
   return (
@@ -89,66 +97,10 @@ function TemplateCard({
           : locked
             ? "cursor-not-allowed border-slate-200 bg-slate-50 opacity-75"
             : "border-slate-200 bg-white hover:border-emerald-300 hover:shadow-sm"
-      } min-w-[200px] max-w-[240px] sm:min-w-[220px]`}
+      } min-w-[240px] max-w-[260px] sm:min-w-[250px]`}
     >
-      {/* Visual icon area */}
-      <div className="mb-3 overflow-hidden rounded-xl border border-slate-100 bg-slate-50" style={{ height: 100 }}>
-        {option.key === "grocery_promo" && (
-          <div className="h-full w-full p-2" style={{ background: `linear-gradient(135deg, ${option.accent}15, ${option.accent}05)` }}>
-            {/* Bold hero bar */}
-            <div className="h-5 w-full rounded-md" style={{ backgroundColor: option.accent }} />
-            {/* Product grid */}
-            <div className="mt-2 grid grid-cols-3 gap-1">
-              {[...Array(6)].map((_, i) => (
-                <div key={i} className="h-8 rounded-md bg-white shadow-sm" />
-              ))}
-            </div>
-          </div>
-        )}
-        {option.key === "fashion_editorial" && (
-          <div className="relative h-full w-full overflow-hidden bg-slate-900">
-            {/* Dark full-bleed */}
-            <div className="absolute inset-0 bg-gradient-to-br from-slate-800 to-slate-950" />
-            <div className="absolute bottom-0 left-0 right-0 p-2">
-              <div className="h-2 w-20 rounded bg-white/80" />
-              <div className="mt-1 h-1.5 w-14 rounded bg-white/40" />
-              <div className="mt-2 flex gap-1">
-                {[...Array(3)].map((_, i) => (
-                  <div key={i} className="h-8 flex-1 rounded-md bg-white/20" />
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-        {option.key === "lifestyle_showcase" && (
-          <div className="grid h-full grid-cols-2 gap-1 p-2" style={{ background: `${option.accent}08` }}>
-            {/* Split screen */}
-            <div className="flex flex-col gap-1">
-              <div className="h-3 w-12 rounded bg-slate-300" />
-              <div className="h-2 w-10 rounded bg-slate-200" />
-              <div className="mt-auto h-5 w-14 rounded-full" style={{ backgroundColor: option.accent }} />
-            </div>
-            <div className="overflow-hidden rounded-xl" style={{ backgroundColor: `${option.accent}20` }}>
-              <div className="h-full w-full rounded-xl bg-gradient-to-br from-transparent to-white/40" />
-            </div>
-          </div>
-        )}
-        {option.key === "modern_grid" && (
-          <div className="grid h-full grid-cols-[40px_1fr] gap-1 p-2" style={{ backgroundColor: `${option.accent}08` }}>
-            {/* Sidebar + grid */}
-            <div className="flex flex-col gap-1">
-              {[...Array(5)].map((_, i) => (
-                <div key={i} className="h-2.5 rounded" style={{ backgroundColor: i === 0 ? option.accent : "#e2e8f0" }} />
-              ))}
-            </div>
-            <div className="grid grid-cols-2 gap-1">
-              {[...Array(6)].map((_, i) => (
-                <div key={i} className="rounded-md bg-white shadow-sm" />
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
+      {/* Miniature of the real layout, tinted with the vendor's colour */}
+      <TemplatePreview template={option.key} primary={primary} className="mb-3" />
 
       {selected && (
         <div className="absolute right-2.5 top-2.5 flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500">
@@ -308,6 +260,7 @@ export function StoreSetupForm({
   initialStore,
   initialEmailVerifiedAt = null,
   canUseAllStoreTemplates,
+  previewProducts = [],
 }: StoreSetupFormProps) {
   const initialConfig = normalizeStorefrontConfig(initialStore?.storefront_config);
   const [store, setStore] = useState<StoreRecord | null>(initialStore);
@@ -393,6 +346,39 @@ export function StoreSetupForm({
     if (secondaryBannerFile) return URL.createObjectURL(secondaryBannerFile);
     return form.banner_urls[0] ?? form.secondary_banner_url;
   }, [secondaryBannerFile, form.banner_urls, form.secondary_banner_url]);
+
+  // Full-size preview of the real template, using what the vendor has so far.
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewTemplate, setPreviewTemplate] = useState<TemplateKey>(() => resolveTemplate(form.store_template));
+  const previewPayload = useMemo(() => {
+    if (!previewOpen) return null;
+    const nicheNames = [
+      ...nicheOptions.filter((n) => form.niche_ids.includes(n.id)).map((n) => n.name),
+      ...form.custom_niches,
+    ];
+    return buildPreviewPayload({
+      template: previewTemplate,
+      primary: form.theme_color,
+      name: form.name,
+      slug: store?.slug ?? null,
+      logoUrl: previewLogoUrl,
+      heroUrl: previewHeroUrl,
+      bannerUrls: [previewBannerUrl, ...form.banner_urls.slice(1)].filter(Boolean),
+      currency: form.currency,
+      activatedCurrencies: form.activated_currencies,
+      whatsapp: form.whatsapp_number,
+      copy: { title: form.hero_title, subtitle: form.hero_subtitle, promo: form.promo_text, cta: form.hero_cta_text },
+      products: previewProducts,
+      nicheNames,
+      rating: store ? { avg: store.rating_avg ?? null, count: store.rating_count ?? 0 } : null,
+      completedOrders: store ? 0 : undefined,
+    });
+  }, [previewOpen, previewTemplate, form, store, nicheOptions, previewLogoUrl, previewHeroUrl, previewBannerUrl, previewProducts]);
+
+  function openPreview() {
+    setPreviewTemplate(resolveTemplate(form.store_template));
+    setPreviewOpen(true);
+  }
 
   const isAnyUploading = Object.values(uploadState).some((s) => s.isUploading);
 
@@ -951,9 +937,22 @@ export function StoreSetupForm({
                 option={option}
                 selected={form.store_template === option.key}
                 locked={!canUseAllStoreTemplates && option.key !== FREE_STORE_TEMPLATE}
+                primary={form.theme_color}
                 onSelect={() => updateFormField("store_template", option.key)}
               />
             ))}
+          </div>
+
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={openPreview}
+              className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
+            >
+              <Eye className="h-4 w-4" aria-hidden="true" />
+              Preview full size
+            </button>
+            <span className="text-xs text-slate-500">See your store in this template with your logo, colour and products.</span>
           </div>
         </StepSection>
 
@@ -968,6 +967,18 @@ export function StoreSetupForm({
                 onSelect={() => applyThemePreset(preset.key)}
               />
             ))}
+          </div>
+
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={openPreview}
+              className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
+            >
+              <Eye className="h-4 w-4" aria-hidden="true" />
+              Preview full size
+            </button>
+            <span className="text-xs text-slate-500">See your store in this template with your logo, colour and products.</span>
           </div>
           <label className="mt-4 block space-y-1.5 text-sm">
             <span className="font-medium text-slate-700">Custom primary colour</span>
@@ -1133,6 +1144,20 @@ export function StoreSetupForm({
           {message && <p className="w-full rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700">{message}</p>}
         </div>
       </form>
+
+      <StorefrontPreviewModal
+        open={previewOpen}
+        payload={previewPayload}
+        templates={STOREFRONT_TEMPLATE_OPTIONS.map((o) => ({
+          key: resolveTemplate(o.key),
+          label: o.label,
+          locked: !canUseAllStoreTemplates && o.key !== FREE_STORE_TEMPLATE,
+        }))}
+        selectedTemplate={resolveTemplate(form.store_template)}
+        onClose={() => setPreviewOpen(false)}
+        onTemplateChange={setPreviewTemplate}
+        onUse={(key) => updateFormField("store_template", key)}
+      />
     </section>
   );
 }

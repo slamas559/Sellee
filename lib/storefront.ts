@@ -16,26 +16,56 @@ export const STOREFRONT_TEMPLATE_OPTIONS: Array<{
   {
     key: FREE_STORE_TEMPLATE,
     label: "Market",
-    description: "Bold hero, vibrant promo strip, dense product grid — built for high-volume stores.",
+    description: "Search-first app bar, deals shelf and a dense grid. Best for groceries, provisions and high-volume shops.",
     accent: "#10b981",
   },
   {
     key: "fashion_editorial",
     label: "Editorial",
-    description: "Full-bleed imagery, typographic hierarchy, curated collection rows.",
+    description: "Serif masthead, full-bleed hero and a tall-image collection. Best for fashion, tailors and boutiques.",
     accent: "#0f172a",
   },
   {
     key: "lifestyle_showcase",
     label: "Showcase",
-    description: "Split-screen storytelling, horizontal product scroll, feature callouts.",
+    description: "Split hero with an arched photo and a staggered product wall. Best for beauty, home and lifestyle brands.",
     accent: "#0ea5e9",
   },
   {
     key: "modern_grid",
     label: "Grid",
-    description: "Sidebar navigation, compact card grid — fast, dense, browser-like.",
+    description: "Filter rail, sorting and spec-style cards. Best for phones, gadgets, parts and large catalogues.",
     accent: "#7c3aed",
+  },
+  {
+    key: "street_drop",
+    label: "Streetwear",
+    description: "Oversized type, hard borders and a contact-sheet grid. Best for sneakers, drops and urban fashion.",
+    accent: "#111111",
+  },
+  {
+    key: "soft_beauty",
+    label: "Beauty",
+    description: "Soft pastels, category bubbles and rating-led cards. Best for skincare, makeup and hair.",
+    accent: "#e11d74",
+  },
+  {
+    key: "home_living",
+    label: "Home & Living",
+    description: "Warm linen tones, shop-by-room tiles and wide photos. Best for furniture, decor and kitchenware.",
+    accent: "#a16207",
+  },
+  {
+    key: "noir_gallery",
+    label: "Noir Gallery",
+    description: "Dark, spaced-out luxury with a spotlight piece. Best for jewelry, watches and fragrance.",
+    accent: "#b8892d",
+  },
+  {
+    key: "lookbook",
+    label: "Lookbook",
+    description: "Sticky side menu and an editorial image mosaic. Best for designers and tailors showing collections.",
+    accent: "#111111",
   },
 ];
 
@@ -100,7 +130,12 @@ export function normalizeStoreTemplate(value: string | null | undefined): StoreT
     normalized === "grocery_promo" ||
     normalized === "fashion_editorial" ||
     normalized === "lifestyle_showcase" ||
-    normalized === "modern_grid"
+    normalized === "modern_grid" ||
+    normalized === "street_drop" ||
+    normalized === "soft_beauty" ||
+    normalized === "home_living" ||
+    normalized === "noir_gallery" ||
+    normalized === "lookbook"
   ) {
     return normalized;
   }

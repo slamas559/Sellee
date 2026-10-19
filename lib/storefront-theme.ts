@@ -13,14 +13,42 @@ export type TemplateKey =
   | "grocery_promo"
   | "fashion_editorial"
   | "lifestyle_showcase"
-  | "modern_grid";
+  | "modern_grid"
+  | "street_drop"
+  | "soft_beauty"
+  | "home_living"
+  | "noir_gallery"
+  | "lookbook";
+
+/**
+ * "platform" is Sellee's own neutral look. Product pages use it whenever a
+ * customer arrives from the marketplace, home, search or vendors lists, so
+ * product pages look the same no matter which vendor's product it is. A
+ * vendor's template only applies when the visit comes from their own store.
+ */
+export type ThemeKey = TemplateKey | "platform" | "noir_light";
+export const PLATFORM_PRIMARY = "#047857";
 
 export const TEMPLATE_KEYS: TemplateKey[] = [
   "grocery_promo",
   "fashion_editorial",
   "lifestyle_showcase",
   "modern_grid",
+  "street_drop",
+  "soft_beauty",
+  "home_living",
+  "noir_gallery",
+  "lookbook",
 ];
+
+/**
+ * The dark Noir storefront would put dark text on dark backgrounds on the
+ * (light-card) product page, so that page uses a light variant that keeps the
+ * template's fonts and the vendor's colour.
+ */
+export function productScopeKey(template: TemplateKey): ThemeKey {
+  return template === "noir_gallery" ? "noir_light" : template;
+}
 
 /** Maps any stored value (including legacy classic/bold/minimal) to a real template. */
 export function resolveTemplate(value: string | null | undefined): TemplateKey {
@@ -37,13 +65,92 @@ type Tokens = {
   ink: string;
   muted: string;
   line: string;
+  soft?: string;
   radius: string;
   radiusLg: string;
   fontDisplay: string;
   fontBody: string;
 };
 
-const TOKENS: Record<TemplateKey, (primary: string) => Tokens> = {
+const TOKENS: Record<ThemeKey, (primary: string) => Tokens> = {
+  street_drop: () => ({
+    bg: "#efeee8",
+    card: "#ffffff",
+    ink: "#0a0a0a",
+    muted: "#52525b",
+    line: "#0a0a0a",
+    radius: "0px",
+    radiusLg: "0px",
+    fontDisplay: "var(--font-anton)",
+    fontBody: "var(--font-archivo)",
+  }),
+  soft_beauty: () => ({
+    bg: "#fdf8f6",
+    card: "#ffffff",
+    ink: "#3b2f2f",
+    muted: "#8a7a78",
+    line: "#f0e1dc",
+    radius: "16px",
+    radiusLg: "28px",
+    fontDisplay: "var(--font-bodoni)",
+    fontBody: "var(--font-dm-sans)",
+  }),
+  home_living: () => ({
+    bg: "#f4efe8",
+    card: "#fbf8f3",
+    ink: "#2b2622",
+    muted: "#7a6f64",
+    line: "#e2d9cc",
+    radius: "4px",
+    radiusLg: "10px",
+    fontDisplay: "var(--font-instrument)",
+    fontBody: "var(--font-manrope)",
+  }),
+  noir_gallery: (primary) => ({
+    bg: "#0f0e0d",
+    card: "#171513",
+    ink: "#f3eee6",
+    muted: "#a0978a",
+    line: "#2d2926",
+    soft: `color-mix(in srgb, ${primary} 18%, #0f0e0d)`,
+    radius: "2px",
+    radiusLg: "4px",
+    fontDisplay: "var(--font-cormorant)",
+    fontBody: "var(--font-dm-sans)",
+  }),
+  noir_light: () => ({
+    bg: "#f8f7f5",
+    card: "#ffffff",
+    ink: "#1c1917",
+    muted: "#78716c",
+    line: "#e7e5e4",
+    radius: "4px",
+    radiusLg: "6px",
+    fontDisplay: "var(--font-cormorant)",
+    fontBody: "var(--font-dm-sans)",
+  }),
+  lookbook: () => ({
+    bg: "#f6f6f3",
+    card: "#ffffff",
+    ink: "#111111",
+    muted: "#6b6b66",
+    line: "#d9d9d3",
+    radius: "0px",
+    radiusLg: "0px",
+    fontDisplay: "var(--font-space-grotesk)",
+    fontBody: "var(--font-dm-sans)",
+  }),
+  platform: () => ({
+    bg: "#f8f7f5",
+    card: "#ffffff",
+    ink: "#1c1917",
+    muted: "#78716c",
+    line: "#e7e5e4",
+    radius: "12px",
+    radiusLg: "16px",
+    fontDisplay: "var(--font-geist-sans)",
+    fontBody: "var(--font-geist-sans)",
+  }),
   grocery_promo: () => ({
     bg: "#f5f6f3",
     card: "#ffffff",
@@ -117,13 +224,13 @@ export function safePrimary(value: string | null | undefined, fallback = "#05966
   return value && parseHex(value) ? value : fallback;
 }
 
-export function themeStyle(template: TemplateKey, primaryInput: string): CSSProperties {
+export function themeStyle(template: ThemeKey, primaryInput: string): CSSProperties {
   const primary = safePrimary(primaryInput);
   const t = TOKENS[template](primary);
   const vars: Record<string, string> = {
     "--s-primary": primary,
     "--s-primary-ink": readableOn(primary),
-    "--s-primary-soft": `color-mix(in srgb, ${primary} 10%, white)`,
+    "--s-primary-soft": t.soft ?? `color-mix(in srgb, ${primary} 10%, white)`,
     "--s-bg": t.bg,
     "--s-card": t.card,
     "--s-ink": t.ink,

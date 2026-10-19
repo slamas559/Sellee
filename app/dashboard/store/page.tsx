@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { StoreSetupForm } from "@/components/dashboard/store-setup-form";
 import { authOptions } from "@/lib/auth";
-import { getUserEmailVerifiedAt, getVendorStore } from "@/lib/dashboard-data";
+import { getUserEmailVerifiedAt, getVendorProducts, getVendorStore } from "@/lib/dashboard-data";
 import { canUseAllStoreTemplates } from "@/lib/plans";
 import { getEffectiveVendorId, getStaffPermissions } from "@/lib/staff";
 
@@ -28,6 +28,27 @@ export default async function DashboardStorePage() {
     ? await Promise.all([getVendorStore(vendorId), getUserEmailVerifiedAt(vendorId)])
     : [null, null];
   const canUseAllTemplates = vendorId ? await canUseAllStoreTemplates(vendorId) : true;
+  // Used by the full-size template preview. Only products customers can see.
+  const previewProducts = vendorId
+    ? (await getVendorProducts(vendorId))
+        .filter((p) => p.is_available)
+        .slice(0, 12)
+        .map((p) => ({
+          id: p.id,
+          slug: p.slug,
+          name: p.name,
+          description: p.description,
+          category: p.category,
+          brand: p.brand,
+          price: p.price,
+          compare_at_price: p.compare_at_price,
+          image_url: p.image_url,
+          image_urls: p.image_urls,
+          rating_avg: p.rating_avg,
+          rating_count: p.rating_count,
+          stock_count: p.stock_count,
+        }))
+    : [];
 
   return (
     <section className="space-y-4">
@@ -44,6 +65,7 @@ export default async function DashboardStorePage() {
         initialStore={store}
         initialEmailVerifiedAt={emailVerifiedAt}
         canUseAllStoreTemplates={canUseAllTemplates}
+        previewProducts={previewProducts}
       />
     </section>
   );

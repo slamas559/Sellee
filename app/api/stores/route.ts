@@ -28,7 +28,7 @@ const storeSchema = z.object({
   latitude: z.number().min(-90).max(90).nullable().optional(),
   longitude: z.number().min(-180).max(180).nullable().optional(),
   location_source: z.enum(["manual", "gps"]).nullable().optional(),
-  store_template: z.enum(["grocery_promo", "fashion_editorial", "lifestyle_showcase", "modern_grid"]).optional().default("grocery_promo"),
+  store_template: z.enum(["grocery_promo", "fashion_editorial", "lifestyle_showcase", "modern_grid", "street_drop", "soft_beauty", "home_living", "noir_gallery", "lookbook"]).optional().default("grocery_promo"),
   store_theme_preset: z.enum(["emerald_fresh", "sunlit_market", "midnight_luxe", "ocean_breeze", "rose_boutique"]).optional().default("emerald_fresh"),
   storefront_config: z
     .object({
