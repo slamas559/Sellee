@@ -9,6 +9,9 @@ import {
   DEFAULT_STOREFRONT_SECTIONS_ORDER,
   FREE_STORE_TEMPLATE,
   STOREFRONT_TEMPLATE_OPTIONS,
+  STORE_INDUSTRIES,
+  detectIndustries,
+  type StoreIndustry,
   STOREFRONT_THEME_PRESETS,
   normalizeStoreTemplate,
   normalizeStorefrontConfig,
@@ -73,12 +76,14 @@ function TemplateCard({
   selected,
   locked,
   primary,
+  recommended = false,
   onSelect,
 }: {
   option: (typeof STOREFRONT_TEMPLATE_OPTIONS)[number];
   selected: boolean;
   locked: boolean;
   primary: string;
+  recommended?: boolean;
   onSelect: () => void;
 }) {
   return (
@@ -102,6 +107,11 @@ function TemplateCard({
       {/* Miniature of the real layout, tinted with the vendor's colour */}
       <TemplatePreview template={option.key} primary={primary} className="mb-3" />
 
+      {recommended && !selected && !locked ? (
+        <span className="absolute left-2.5 top-2.5 rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-bold text-white shadow-sm">
+          Recommended
+        </span>
+      ) : null}
       {selected && (
         <div className="absolute right-2.5 top-2.5 flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500">
           <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" className="h-3 w-3"><path d="m5 12 5 5 9-9" /></svg>
@@ -350,6 +360,32 @@ export function StoreSetupForm({
   // Full-size preview of the real template, using what the vendor has so far.
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewTemplate, setPreviewTemplate] = useState<TemplateKey>(() => resolveTemplate(form.store_template));
+
+  // Template picker: filter by industry, and recommend templates that suit the
+  // categories the vendor selected.
+  const [industryFilter, setIndustryFilter] = useState<StoreIndustry | "all">("all");
+  const vendorIndustries = useMemo(
+    () =>
+      detectIndustries([
+        ...nicheOptions.filter((n) => form.niche_ids.includes(n.id)).map((n) => n.name),
+        ...form.custom_niches,
+      ]),
+    [nicheOptions, form.niche_ids, form.custom_niches],
+  );
+  const isRecommended = (option: (typeof STOREFRONT_TEMPLATE_OPTIONS)[number]) =>
+    vendorIndustries.some((i) => option.bestFor.includes(i));
+  const visibleTemplates = useMemo(() => {
+    const matches = STOREFRONT_TEMPLATE_OPTIONS.filter(
+      (o) => industryFilter === "all" || o.bestFor.includes(industryFilter) || o.key === form.store_template,
+    );
+    if (vendorIndustries.length === 0) return matches;
+    // Recommended first, otherwise keep the original order.
+    return [...matches].sort(
+      (a, b) =>
+        Number(vendorIndustries.some((i) => b.bestFor.includes(i))) -
+        Number(vendorIndustries.some((i) => a.bestFor.includes(i))),
+    );
+  }, [industryFilter, form.store_template, vendorIndustries]);
   const previewPayload = useMemo(() => {
     if (!previewOpen) return null;
     const nicheNames = [
@@ -930,14 +966,48 @@ export function StoreSetupForm({
 
         {/* ── Step 2: Template ───────────────────────────────────── */}
         <StepSection step="2" title="Storefront template" description="Choose the layout style for your public store page.">
+          <div className="mb-3" role="group" aria-label="Filter templates by industry">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="mr-1 text-xs font-semibold text-slate-500">Best for</span>
+              {([{ key: "all", label: "All" }, ...STORE_INDUSTRIES] as Array<{ key: StoreIndustry | "all"; label: string }>).map((chip) => {
+                const active = industryFilter === chip.key;
+                const suggested = chip.key !== "all" && vendorIndustries.includes(chip.key as StoreIndustry);
+                return (
+                  <button
+                    key={chip.key}
+                    type="button"
+                    onClick={() => setIndustryFilter(chip.key)}
+                    aria-pressed={active}
+                    className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${
+                      active
+                        ? "border-emerald-600 bg-emerald-600 text-white"
+                        : suggested
+                          ? "border-emerald-300 bg-emerald-50 text-emerald-800 hover:border-emerald-500"
+                          : "border-slate-200 bg-white text-slate-600 hover:border-slate-400"
+                    }`}
+                  >
+                    {chip.label}
+                  </button>
+                );
+              })}
+            </div>
+            {vendorIndustries.length > 0 ? (
+              <p className="mt-2 text-xs text-slate-500">
+                Templates marked <span className="font-semibold text-emerald-700">Recommended</span> suit the categories you selected.
+              </p>
+            ) : (
+              <p className="mt-2 text-xs text-slate-500">Select your store categories above to see recommended templates.</p>
+            )}
+          </div>
           <div className="-mx-1 flex snap-x snap-mandatory gap-3 overflow-x-auto px-1 pb-2 touch-pan-x">
-            {STOREFRONT_TEMPLATE_OPTIONS.map((option) => (
+            {visibleTemplates.map((option) => (
               <TemplateCard
                 key={option.key}
                 option={option}
                 selected={form.store_template === option.key}
                 locked={!canUseAllStoreTemplates && option.key !== FREE_STORE_TEMPLATE}
                 primary={form.theme_color}
+                recommended={isRecommended(option)}
                 onSelect={() => updateFormField("store_template", option.key)}
               />
             ))}

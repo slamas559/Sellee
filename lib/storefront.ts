@@ -7,65 +7,110 @@ export const DEFAULT_STOREFRONT_SECTIONS_ORDER: StorefrontSectionId[] = [
 
 export const FREE_STORE_TEMPLATE: StoreTemplate = "grocery_promo";
 
+export type StoreIndustry = "fashion" | "beauty" | "tech" | "home" | "jewelry" | "food" | "general";
+
+export const STORE_INDUSTRIES: Array<{ key: StoreIndustry; label: string }> = [
+  { key: "fashion", label: "Fashion" },
+  { key: "beauty", label: "Beauty" },
+  { key: "tech", label: "Electronics" },
+  { key: "home", label: "Home & decor" },
+  { key: "jewelry", label: "Jewelry & watches" },
+  { key: "food", label: "Food & groceries" },
+  { key: "general", label: "Other" },
+];
+
+const INDUSTRY_KEYWORDS: Record<Exclude<StoreIndustry, "general">, string[]> = {
+  fashion: ["fashion", "cloth", "wear", "apparel", "shoe", "sneaker", "footwear", "bag", "tailor", "ankara", "thrift", "dress", "native"],
+  beauty: ["beauty", "cosmetic", "skincare", "skin care", "makeup", "make-up", "hair", "wig", "salon", "personal care", "grooming"],
+  tech: ["electronic", "phone", "gadget", "computer", "laptop", "appliance", "tech", "mobile", "gaming", "solar", "auto part", "spare part"],
+  home: ["home", "furniture", "decor", "kitchen", "interior", "household", "bedding", "curtain", "lighting"],
+  jewelry: ["jewel", "watch", "perfume", "fragrance", "gold", "luxury", "bead"],
+  food: ["food", "grocer", "provision", "fresh", "drink", "beverage", "bakery", "snack", "supermarket", "farm", "meat", "fruit", "vegetable"],
+};
+
+/** Maps a vendor's niche names to the industries they belong to (keyword match). */
+export function detectIndustries(names: string[]): StoreIndustry[] {
+  const found = new Set<StoreIndustry>();
+  for (const raw of names) {
+    const name = raw.toLowerCase();
+    for (const [industry, words] of Object.entries(INDUSTRY_KEYWORDS) as Array<[StoreIndustry, string[]]>) {
+      // Match at the start of a word so "hair" does not match "chair".
+      if (words.some((w) => new RegExp(`\\b${w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`).test(name))) found.add(industry);
+    }
+  }
+  return [...found];
+}
+
 export const STOREFRONT_TEMPLATE_OPTIONS: Array<{
   key: StoreTemplate;
   label: string;
   description: string;
   accent: string; // accent colour shown in the picker card
+  /** Industries this template suits best (drives picker filter + "Recommended"). */
+  bestFor: StoreIndustry[];
 }> = [
   {
     key: FREE_STORE_TEMPLATE,
     label: "Market",
     description: "Search-first app bar, deals shelf and a dense grid. Best for groceries, provisions and high-volume shops.",
     accent: "#10b981",
+    bestFor: ["food", "general"],
   },
   {
     key: "fashion_editorial",
     label: "Editorial",
     description: "Serif masthead, full-bleed hero and a tall-image collection. Best for fashion, tailors and boutiques.",
     accent: "#0f172a",
+    bestFor: ["fashion", "beauty"],
   },
   {
     key: "lifestyle_showcase",
     label: "Showcase",
     description: "Split hero with an arched photo and a staggered product wall. Best for beauty, home and lifestyle brands.",
     accent: "#0ea5e9",
+    bestFor: ["beauty", "home", "general"],
   },
   {
     key: "modern_grid",
     label: "Grid",
     description: "Filter rail, sorting and spec-style cards. Best for phones, gadgets, parts and large catalogues.",
     accent: "#7c3aed",
+    bestFor: ["tech", "general"],
   },
   {
     key: "street_drop",
     label: "Streetwear",
     description: "Oversized type, hard borders and a contact-sheet grid. Best for sneakers, drops and urban fashion.",
     accent: "#111111",
+    bestFor: ["fashion"],
   },
   {
     key: "soft_beauty",
     label: "Beauty",
     description: "Soft pastels, category bubbles and rating-led cards. Best for skincare, makeup and hair.",
     accent: "#e11d74",
+    bestFor: ["beauty"],
   },
   {
     key: "home_living",
     label: "Home & Living",
     description: "Warm linen tones, shop-by-room tiles and wide photos. Best for furniture, decor and kitchenware.",
     accent: "#a16207",
+    bestFor: ["home"],
   },
   {
     key: "noir_gallery",
     label: "Noir Gallery",
     description: "Dark, spaced-out luxury with a spotlight piece. Best for jewelry, watches and fragrance.",
     accent: "#b8892d",
+    bestFor: ["jewelry"],
   },
   {
     key: "lookbook",
     label: "Lookbook",
     description: "Sticky side menu and an editorial image mosaic. Best for designers and tailors showing collections.",
     accent: "#111111",
+    bestFor: ["fashion"],
   },
 ];
 

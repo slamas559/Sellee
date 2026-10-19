@@ -22,14 +22,13 @@ export function NoirTemplate(p: TemplateProps) {
   const spot = home ? products[0] : undefined;
   const rest = spot ? products.slice(1) : products;
   const spotImg = spot ? (spot.image_urls ?? []).find(Boolean) ?? spot.image_url : null;
-  const shareClass = `inline-flex h-8 w-8 items-center justify-center rounded-full border ${T.line} bg-transparent text-[color:var(--s-ink)] hover:bg-white/10`;
 
   return (
     <>
       <header className="mx-auto max-w-7xl px-4 pt-6 sm:px-8">
         <div className="flex items-center justify-between">
           <span className={`hidden text-[10px] uppercase tracking-[0.3em] sm:block ${T.muted}`}>{p.nicheNames.slice(0, 2).join("  /  ")}</span>
-          <span className="ml-auto"><FollowAndShare p={p} shareClassName={shareClass} /></span>
+          <span className="ml-auto"><FollowAndShare p={p} upper /></span>
         </div>
         <div className="flex flex-col items-center pb-7 pt-3 text-center sm:pb-10">
           <StoreLogo store={store} size={44} className="mb-4 rounded-full" />

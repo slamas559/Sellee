@@ -46,7 +46,7 @@ export function StreetTemplate(p: TemplateProps) {
           </Link>
           <div className="flex items-center gap-3">
             <ChatButton href={p.whatsappUrl} label="Order" className="h-10 border-2 border-[color:var(--s-ink)] px-5 uppercase tracking-widest" />
-            <FollowAndShare p={p} />
+            <FollowAndShare p={p} upper heavy />
           </div>
         </div>
         <div className={`border-t-2 ${INK}`}>

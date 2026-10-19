@@ -11,6 +11,9 @@ type FollowStoreButtonProps = {
   isOwner: boolean;
   initialFollowing?: boolean;
   compact?: boolean;
+  /** Use the storefront design tokens (radius, colours) instead of the fixed slate/emerald look. */
+  themed?: boolean;
+  className?: string;
 };
 
 export function FollowStoreButton({
@@ -20,20 +23,27 @@ export function FollowStoreButton({
   isOwner,
   initialFollowing = false,
   compact = false,
+  themed = false,
+  className = "",
 }: FollowStoreButtonProps) {
   const [isFollowing, setIsFollowing] = useState(initialFollowing);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const baseClass = compact
-    ? "rounded-full px-3 py-1 text-[11px] font-semibold transition"
-    : "rounded-full px-4 py-2 text-sm font-semibold transition";
+  const shape = themed ? "rounded-[var(--s-r)]" : "rounded-full";
+  const baseClass = `${shape} ${compact ? "px-3 py-1 text-[11px]" : "px-4 py-2 text-sm"} font-semibold transition ${className}`;
+  const neutral = themed
+    ? "border border-[color:var(--s-line)] bg-[var(--s-card)] text-[color:var(--s-ink)] hover:border-[color:var(--s-primary)]"
+    : "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50";
+  const primaryAction = themed
+    ? "bg-[var(--s-primary)] text-[color:var(--s-primary-ink)] hover:opacity-90"
+    : "bg-emerald-600 text-white hover:bg-emerald-700";
 
   if (!isLoggedIn) {
     return (
       <Link
         href={buildLoginUrl(mainAppUrl("/vendors"))}
-        className={`${baseClass} border border-slate-300 bg-white text-slate-700 hover:bg-slate-50`}
+        className={`${baseClass} ${neutral}`}
       >
         Follow
       </Link>
@@ -42,7 +52,7 @@ export function FollowStoreButton({
 
   if (isOwner) {
     return (
-      <span className={`${baseClass} border border-slate-300 bg-white text-slate-600`}>
+      <span className={`${baseClass} ${neutral} opacity-80`}>
         Your store
       </span>
     );
@@ -72,9 +82,7 @@ export function FollowStoreButton({
         onClick={toggleFollow}
         disabled={isPending}
         className={`${baseClass} ${
-          isFollowing
-            ? "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
-            : "bg-emerald-600 text-white hover:bg-emerald-700"
+          isFollowing ? neutral : primaryAction
         } disabled:cursor-not-allowed disabled:opacity-60`}
       >
         {isPending ? "Saving..." : isFollowing ? "Unfollow" : "Follow"}

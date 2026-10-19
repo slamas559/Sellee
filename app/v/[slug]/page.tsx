@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import { DisplayCurrencyProvider } from "@/components/marketplace/currency-switcher";
 import { StoreVisitTracker } from "@/components/store/store-visit-tracker";
 import { STOREFRONT_TEMPLATES } from "@/components/storefront/registry";
+import { PoweredBySellee } from "@/components/storefront/powered-by";
 import { ThemeScope } from "@/components/storefront/theme-scope";
 import { normalizeSort, type SortKey, type TemplateProps } from "@/components/storefront/types";
 import { authOptions } from "@/lib/auth";
@@ -212,6 +213,7 @@ export default async function StorePage({ params, searchParams }: StorePageProps
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(storeJsonLd) }} />
       <ThemeScope template={template} primary={primary}>
         <Template {...props} />
+        <PoweredBySellee />
       </ThemeScope>
     </DisplayCurrencyProvider>
   );

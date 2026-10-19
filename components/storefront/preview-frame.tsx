@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { STOREFRONT_TEMPLATES } from "@/components/storefront/registry";
+import { PoweredBySellee } from "@/components/storefront/powered-by";
 import { ThemeScope } from "@/components/storefront/theme-scope";
 import type { PreviewPayload } from "@/lib/storefront-samples";
 
@@ -63,6 +64,7 @@ export function PreviewFrame() {
   return (
     <ThemeScope template={payload.template} primary={payload.primary}>
       <Template {...payload.props} />
+      <PoweredBySellee />
     </ThemeScope>
   );
 }

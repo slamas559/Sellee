@@ -232,11 +232,21 @@ export function FollowAndShare({
   p,
   compact = true,
   shareClassName,
+  upper = false,
+  heavy = false,
 }: {
   p: Pick<TemplateProps, "store" | "follow" | "storeUrl">;
   compact?: boolean;
   shareClassName?: string;
+  /** Uppercase, letter-spaced label (editorial / streetwear / lookbook). */
+  upper?: boolean;
+  /** 2px ink borders (streetwear). */
+  heavy?: boolean;
 }) {
+  const followClass = [upper ? "uppercase tracking-[0.15em]" : "", heavy ? "!border-2 !border-[color:var(--s-ink)]" : ""].join(" ").trim();
+  const shareBase = `inline-flex h-8 w-8 items-center justify-center rounded-[var(--s-r)] border bg-[var(--s-card)] text-[color:var(--s-ink)] transition hover:border-[color:var(--s-primary)] ${
+    heavy ? "border-2 border-[color:var(--s-ink)]" : T.line
+  }`;
   return (
     <div className="flex items-center gap-2">
       <FollowStoreButton
@@ -246,6 +256,8 @@ export function FollowAndShare({
         isOwner={p.follow.isOwner}
         initialFollowing={p.follow.isFollowing}
         compact={compact}
+        themed
+        className={followClass}
       />
       <SocialShareActions
         mode="menu"
@@ -254,10 +266,7 @@ export function FollowAndShare({
         title={p.store.name}
         text={`Shop at ${p.store.name}.`}
         triggerLabel="Share"
-        triggerClassName={
-          shareClassName ??
-          `inline-flex h-8 w-8 items-center justify-center rounded-full border ${T.line} bg-white text-[color:var(--s-ink)] hover:bg-black/5`
-        }
+        triggerClassName={shareClassName ?? shareBase}
       />
     </div>
   );

@@ -32,7 +32,7 @@ export function LookbookTemplate(p: TemplateProps) {
               <span className="mt-2 hidden items-center gap-2 lg:flex"><VerificationPill tier={effectiveTier(store)} size="sm" /></span>
             </span>
           </Link>
-          <div className="lg:mt-5"><FollowAndShare p={p} /></div>
+          <div className="lg:mt-5"><FollowAndShare p={p} upper /></div>
         </div>
         <TrustLine rating={store.rating_avg} ratingCount={store.rating_count} orders={p.completedOrdersCount} className={`mt-3 lg:mt-4 ${T.muted}`} />
 
