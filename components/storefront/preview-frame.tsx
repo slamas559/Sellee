@@ -64,7 +64,7 @@ export function PreviewFrame() {
   return (
     <ThemeScope template={payload.template} primary={payload.primary}>
       <Template {...payload.props} />
-      <PoweredBySellee />
+      {payload.showPoweredBy ? <PoweredBySellee /> : null}
     </ThemeScope>
   );
 }

@@ -4,7 +4,7 @@ import { getServerSession } from "next-auth";
 import { StoreSetupForm } from "@/components/dashboard/store-setup-form";
 import { authOptions } from "@/lib/auth";
 import { getUserEmailVerifiedAt, getVendorProducts, getVendorStore } from "@/lib/dashboard-data";
-import { canUseAllStoreTemplates } from "@/lib/plans";
+import { getStorefrontPlanAccess } from "@/lib/plans";
 import { getEffectiveVendorId, getStaffPermissions } from "@/lib/staff";
 
 export const metadata: Metadata = {
@@ -27,7 +27,10 @@ export default async function DashboardStorePage() {
   const [store, emailVerifiedAt] = vendorId
     ? await Promise.all([getVendorStore(vendorId), getUserEmailVerifiedAt(vendorId)])
     : [null, null];
-  const canUseAllTemplates = vendorId ? await canUseAllStoreTemplates(vendorId) : true;
+  const planAccess = vendorId
+    ? await getStorefrontPlanAccess(vendorId)
+    : { allTemplates: true, showPoweredBy: true };
+  const canUseAllTemplates = planAccess.allTemplates;
   // Used by the full-size template preview. Only products customers can see.
   const previewProducts = vendorId
     ? (await getVendorProducts(vendorId))
@@ -66,6 +69,7 @@ export default async function DashboardStorePage() {
         initialEmailVerifiedAt={emailVerifiedAt}
         canUseAllStoreTemplates={canUseAllTemplates}
         previewProducts={previewProducts}
+        showPoweredBy={planAccess.showPoweredBy}
       />
     </section>
   );

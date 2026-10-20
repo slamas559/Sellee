@@ -33,6 +33,8 @@ type StoreSetupFormProps = {
   canUseAllStoreTemplates: boolean;
   /** The vendor's own products (newest first) used by the full-size preview. */
   previewProducts?: PreviewProductInput[];
+  /** Business plans hide "Powered by Sellee"; the full-size preview matches. */
+  showPoweredBy?: boolean;
 };
 
 type UploadKind = "logo" | "hero" | "banner";
@@ -90,17 +92,16 @@ function TemplateCard({
     <button
       type="button"
       onClick={onSelect}
-      disabled={locked}
       aria-label={
         locked
-          ? `${option.label}. Only available on Pro and Business.`
+          ? `Preview ${option.label}. Using it requires Pro or Business.`
           : option.label
       }
       className={`group relative flex-shrink-0 snap-start rounded-2xl border-2 p-4 text-left transition-all duration-200 rounded-xl ${
         selected
           ? "border-emerald-500 bg-emerald-50 shadow-md"
           : locked
-            ? "cursor-not-allowed border-slate-200 bg-slate-50 opacity-75"
+            ? "border-slate-200 bg-slate-50 opacity-90 hover:border-amber-300 hover:opacity-100"
             : "border-slate-200 bg-white hover:border-emerald-300 hover:shadow-sm"
       } min-w-[240px] max-w-[260px] sm:min-w-[250px]`}
     >
@@ -129,7 +130,7 @@ function TemplateCard({
       {locked && (
         <p className="mt-2 flex items-center gap-1 text-xs font-semibold leading-4 text-amber-800">
           <LockKeyhole aria-hidden="true" className="h-3 w-3 shrink-0" />
-          Only available on Pro and Business
+          Preview now &middot; Pro and Business to use
         </p>
       )}
     </button>
@@ -271,6 +272,7 @@ export function StoreSetupForm({
   initialEmailVerifiedAt = null,
   canUseAllStoreTemplates,
   previewProducts = [],
+  showPoweredBy = true,
 }: StoreSetupFormProps) {
   const initialConfig = normalizeStorefrontConfig(initialStore?.storefront_config);
   const [store, setStore] = useState<StoreRecord | null>(initialStore);
@@ -408,8 +410,9 @@ export function StoreSetupForm({
       nicheNames,
       rating: store ? { avg: store.rating_avg ?? null, count: store.rating_count ?? 0 } : null,
       completedOrders: store ? 0 : undefined,
+      showPoweredBy,
     });
-  }, [previewOpen, previewTemplate, form, store, nicheOptions, previewLogoUrl, previewHeroUrl, previewBannerUrl, previewProducts]);
+  }, [previewOpen, previewTemplate, form, store, nicheOptions, previewLogoUrl, previewHeroUrl, previewBannerUrl, previewProducts, showPoweredBy]);
 
   function openPreview() {
     setPreviewTemplate(resolveTemplate(form.store_template));
@@ -1008,7 +1011,15 @@ export function StoreSetupForm({
                 locked={!canUseAllStoreTemplates && option.key !== FREE_STORE_TEMPLATE}
                 primary={form.theme_color}
                 recommended={isRecommended(option)}
-                onSelect={() => updateFormField("store_template", option.key)}
+                onSelect={() => {
+                  if (!canUseAllStoreTemplates && option.key !== FREE_STORE_TEMPLATE) {
+                    // Locked: free vendors can still look before they upgrade.
+                    setPreviewTemplate(resolveTemplate(option.key));
+                    setPreviewOpen(true);
+                    return;
+                  }
+                  updateFormField("store_template", option.key);
+                }}
               />
             ))}
           </div>

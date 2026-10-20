@@ -1,13 +1,7 @@
-import {
-  Button,
-  Heading,
-  Hr,
-  Img,
-  Link,
-  Section,
-  Text,
-} from "@react-email/components";
+import { Img } from "@react-email/components";
 import { EmailShell } from "./components/EmailShell";
+import { P, PrimaryButton, SubTitle, Title } from "./components/parts";
+import { color } from "./components/tokens";
 
 export interface UpdateEmailBlock {
   heading?: string;
@@ -29,92 +23,38 @@ export interface UpdateEmailProps {
 export default function UpdateEmail({
   headline,
   previewText = "A new update from Sellee.",
-  intro = "Here is what is new across the Sellee marketplace.",
+  intro,
   heroImageUrl,
-  heroAlt = "Sellee platform update",
+  heroAlt = "",
   blocks = [],
   actionLabel = "Learn more",
   actionUrl = "https://sellee.store",
-  footerNote = "You are receiving this because you use Sellee.",
+  footerNote = "You are receiving this because you have a Sellee account.",
 }: UpdateEmailProps) {
   return (
-    <EmailShell previewText={previewText} width={600} radius={10}>
-      <Section className="px-6 py-7">
-        <Text className="m-0 text-xs font-bold uppercase tracking-[0.18em] text-emerald-700">
-          Sellee update
-        </Text>
-        <Heading className="mb-0 mt-3 text-[25px] font-black leading-[1.15] text-slate-950">
-          {headline}
-        </Heading>
-        <Text className="mb-0 mt-4 text-[13px] leading-7 text-slate-600">
-          {intro}
-        </Text>
-      </Section>
+    <EmailShell previewText={previewText} reason={footerNote}>
+      <Title size={28}>{headline}</Title>
+      {intro ? <P>{intro}</P> : null}
 
       {heroImageUrl ? (
-        <Section className="px-6">
-          <Img
-            src={heroImageUrl}
-            alt={heroAlt}
-            className="h-auto w-full rounded-[16px] object-cover"
-          />
-        </Section>
-      ) : (
-        <Section className="px-6">
-          <Section className="rounded-[19px] bg-gradient-to-br from-emerald-600 to-sky-600 px-6 py-9">
-            <Text className="m-0 text-[10px] font-bold uppercase tracking-[0.18em] text-emerald-400">
-              Feature news
-            </Text>
-            <Text className="mb-0 mt-3 text-[22px] font-black leading-[1.2]">
-              Marketplace improvements, vendor tools, and customer
-              experience updates.
-            </Text>
-          </Section>
-        </Section>
-      )}
+        <Img
+          src={heroImageUrl}
+          alt={heroAlt}
+          width={480}
+          style={{ display: "block", width: "100%", height: "auto", borderRadius: 8, border: `1px solid ${color.line}`, margin: "8px 0 8px" }}
+        />
+      ) : null}
 
-      <Section className="px-6 py-7">
-        {blocks.length > 0 ? (
-          blocks.map((block, index) => (
-            <Section key={`${block.heading ?? "update"}-${index}`} className="pb-5">
-              {block.heading ? (
-                <Heading className="m-0 text-[19px] font-bold text-slate-950">
-                  {block.heading}
-                </Heading>
-              ) : null}
-              <Text className="mb-0 mt-2 text-[13px] leading-7 text-slate-700">
-                {block.body}
-              </Text>
-            </Section>
-          ))
-        ) : (
-          <Section className="rounded-[15px] bg-slate-50 px-5 py-4">
-            <Text className="m-0 text-[11px] leading-7 text-slate-700">
-              Use this template for feature announcements, policy
-              revisions, community news, product education, or marketplace
-              operations notices.
-            </Text>
-          </Section>
-        )}
+      {blocks.map((block, index) => (
+        <div key={`${block.heading ?? "update"}-${index}`}>
+          {block.heading ? <SubTitle>{block.heading}</SubTitle> : null}
+          <P style={block.heading ? undefined : { marginTop: 8 }}>{block.body}</P>
+        </div>
+      ))}
 
-        <Section className="pt-2">
-          <Button
-            href={actionUrl}
-            className="rounded-full bg-emerald-600 px-6 py-3 text-[12px] font-bold text-white"
-          >
-            {actionLabel}
-          </Button>
-        </Section>
-
-        <Hr className="my-6 border-slate-200" />
-        <Text className="m-0 text-[10px] leading-5 text-slate-500">
-          {footerNote} Need help?{" "}
-          <Link href="mailto:support@sellee.store" className="text-emerald-700">
-            Contact Sellee Support
-          </Link>
-          .
-        </Text>
-      </Section>
+      <PrimaryButton href={actionUrl}>{actionLabel}</PrimaryButton>
     </EmailShell>
   );
 }
+
+UpdateEmail.PreviewProps = { headline: "Your storefront, redesigned", intro: "Nine new storefront templates are live, with a full-size preview so you can see your store before you switch.", blocks: [{ heading: "Preview before you choose", body: "Open any template from your dashboard and see it with your own logo, colours and products." }, { heading: "Powered by your plan", body: "Free stores keep the Market template. Pro and Business unlock every layout." }], actionLabel: "Explore templates", actionUrl: "https://sellee.store/dashboard/store" } satisfies UpdateEmailProps;

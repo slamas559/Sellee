@@ -183,12 +183,15 @@ export type PreviewInput = {
   nicheNames: string[];
   rating?: { avg: number | null; count: number } | null;
   completedOrders?: number;
+  /** Business plans hide "Powered by Sellee"; the preview should match. */
+  showPoweredBy?: boolean;
 };
 
 export type PreviewPayload = {
   template: TemplateKey;
   primary: string;
   props: TemplateProps;
+  showPoweredBy: boolean;
   /** What was filled with sample content, so the UI can say so honestly. */
   sample: { logo: boolean; hero: boolean; banner: boolean; products: number; copy: boolean; storeName: boolean; ratings: boolean };
 };
@@ -308,6 +311,7 @@ export function buildPreviewPayload(input: PreviewInput): PreviewPayload {
     template: input.template,
     primary,
     props,
+    showPoweredBy: input.showPoweredBy !== false,
     sample: {
       logo: !input.logoUrl.trim(),
       hero: !hero,

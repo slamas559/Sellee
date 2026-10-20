@@ -1,5 +1,7 @@
-import { Button, Column, Heading, Hr, Img, Row, Section, Text } from "@react-email/components";
+import { Column, Row, Text } from "@react-email/components";
 import { EmailShell } from "./components/EmailShell";
+import { Avatar, P, PrimaryButton, Title } from "./components/parts";
+import { color, firstNameOf, font } from "./components/tokens";
 
 export interface VendorBroadcastEmailProps {
   storeName: string;
@@ -18,56 +20,45 @@ export default function VendorBroadcastEmail({
   message,
   recipientName,
 }: VendorBroadcastEmailProps) {
+  // This message is from the vendor, so the vendor's identity leads and Sellee
+  // steps back to "via Sellee" in the header and the footer.
+  const header = (
+    <Row>
+      <Column width={52} valign="middle">
+        <Avatar src={storeLogoUrl} alt={storeName} size={40} />
+      </Column>
+      <Column valign="middle">
+        <Text style={{ margin: 0, fontFamily: font.sans, fontSize: 15, lineHeight: "20px", fontWeight: 700, color: color.ink }}>{storeName}</Text>
+        <Text style={{ margin: 0, fontFamily: font.sans, fontSize: 12, lineHeight: "18px", color: color.muted }}>via Sellee</Text>
+      </Column>
+    </Row>
+  );
+
   return (
-    <EmailShell previewText={subject} width={480} radius={10}>
-      <Section className="bg-white px-6 py-7">
-        <Row>
-          {storeLogoUrl ? (
-            <Column width={40} style={{ verticalAlign: "middle" }}>
-              <Img
-                src={storeLogoUrl}
-                alt={storeName}
-                width={32}
-                height={32}
-                className="rounded-full"
-                style={{ objectFit: "cover" }}
-              />
-            </Column>
-          ) : null}
-          <Column style={{ verticalAlign: "middle" }}>
-            <Text className="m-0 text-[10px] font-bold uppercase tracking-[0.2em] text-[#16a34a]">
-              {storeName} · via Sellee
-            </Text>
-          </Column>
-        </Row>
+    <EmailShell
+      previewText={subject}
+      header={header}
+      reason={`You are receiving this because you follow ${storeName} or have ordered from them on Sellee.`}
+      help={
+        <>
+          To reach {storeName}, message them on WhatsApp from their store page. For help with Sellee itself, write to{" "}
+          <a href="mailto:support@sellee.store" style={{ color: color.muted, textDecoration: "underline" }}>
+            support@sellee.store
+          </a>
+          .
+        </>
+      }
+    >
+      <Title>{subject}</Title>
 
-        <Heading className="mb-4 mt-3 text-[20px] font-black leading-[1.25] text-slate-900">{subject}</Heading>
+      {recipientName ? <P>Hi {firstNameOf(recipientName)},</P> : null}
 
-        {recipientName ? (
-          <Text className="mb-3 text-[13px] text-slate-700">Hi {recipientName},</Text>
-        ) : null}
+      {/* pre-line keeps the vendor's own line breaks exactly as typed. */}
+      <P style={{ whiteSpace: "pre-line" }}>{message}</P>
 
-        {/* whiteSpace: pre-line preserves the vendor's own line breaks exactly
-            as typed in the composer, rather than collapsing them into one
-            run-on paragraph the way HTML normally treats plain text. */}
-        <Text className="mb-5 text-[13px] leading-6 text-slate-700" style={{ whiteSpace: "pre-line" }}>
-          {message}
-        </Text>
-
-        <Section className="text-center">
-          <Button
-            href={storeLink}
-            className="rounded-full bg-emerald-600 px-5 py-2.5 text-[12px] font-bold text-white"
-          >
-            Visit {storeName}
-          </Button>
-        </Section>
-
-        <Hr className="my-6 border-slate-200" />
-        <Text className="m-0 text-[10px] leading-5 text-slate-500">
-          You&apos;re receiving this because you follow {storeName} or have ordered from them on Sellee.
-        </Text>
-      </Section>
+      <PrimaryButton href={storeLink}>Visit {storeName}</PrimaryButton>
     </EmailShell>
   );
 }
+
+VendorBroadcastEmail.PreviewProps = { storeName: "Zuri Atelier", storeLink: "https://sellee.store/v/zuri", subject: "New Ankara pieces just landed", recipientName: "Amaka Obi", message: "Our new Ankara collection is in.\n\nFree delivery within Lagos this week. Message us on WhatsApp to reserve your size." } satisfies VendorBroadcastEmailProps;

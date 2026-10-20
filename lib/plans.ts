@@ -198,6 +198,35 @@ export async function isMonetizationEnabled(): Promise<boolean> {
   return data?.value === true || data?.value === "true";
 }
 
+export type StorefrontPlanAccess = {
+  /** Free vendors get only the free template; Pro and Business get all of them. */
+  allTemplates: boolean;
+  /** Everyone shows "Powered by Sellee" except Business. */
+  showPoweredBy: boolean;
+};
+
+/** Pure rule, kept separate from the data fetch so it can be tested. */
+export function storefrontAccessFor(
+  planKey: string | null | undefined,
+  monetizationEnabled: boolean,
+): StorefrontPlanAccess {
+  // Monetization off: every template is open, but the attribution stays.
+  if (!monetizationEnabled) return { allTemplates: true, showPoweredBy: true };
+  return {
+    allTemplates: planKey === "pro" || planKey === "business",
+    // Unknown plan fails toward keeping the attribution.
+    showPoweredBy: planKey !== "business",
+  };
+}
+
+/** One plan lookup for everything the public storefront needs. */
+export async function getStorefrontPlanAccess(vendorId: string): Promise<StorefrontPlanAccess> {
+  const monetizationEnabled = await isMonetizationEnabled();
+  if (!monetizationEnabled) return storefrontAccessFor(null, false);
+  const plan = await getVendorPlan(vendorId);
+  return storefrontAccessFor(plan?.planKey, true);
+}
+
 export async function canUseAllStoreTemplates(vendorId: string): Promise<boolean> {
   if (!(await isMonetizationEnabled())) return true;
 

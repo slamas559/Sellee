@@ -115,7 +115,7 @@ export function StorefrontPreviewModal({ open, payload, templates, selectedTempl
             {templates.map((t) => (
               <option key={t.key} value={t.key}>
                 {t.label}
-                {t.locked ? " (paid plans)" : ""}
+                {t.locked ? " (Pro / Business)" : ""}
               </option>
             ))}
           </select>
@@ -143,9 +143,19 @@ export function StorefrontPreviewModal({ open, payload, templates, selectedTempl
 
         <div className="ml-auto flex items-center gap-2">
           {locked ? (
-            <span className="inline-flex items-center gap-1.5 rounded-md bg-amber-400/15 px-3 py-1.5 text-xs font-semibold text-amber-200">
-              <Lock className="h-3.5 w-3.5" aria-hidden="true" /> Available on paid plans
-            </span>
+            <>
+              <span className="inline-flex items-center gap-1.5 rounded-md bg-amber-400/15 px-3 py-1.5 text-xs font-semibold text-amber-200">
+                <Lock className="h-3.5 w-3.5" aria-hidden="true" /> Preview only &middot; Pro and Business
+              </span>
+              <a
+                href="/dashboard/plans"
+                target="_blank"
+                rel="noopener"
+                className="rounded-md bg-amber-400 px-3 py-1.5 text-xs font-bold text-slate-900 hover:bg-amber-300"
+              >
+                See plans
+              </a>
+            </>
           ) : isSelected ? (
             <span className="inline-flex items-center gap-1.5 rounded-md bg-emerald-400/15 px-3 py-1.5 text-xs font-semibold text-emerald-200">
               <Check className="h-3.5 w-3.5" aria-hidden="true" /> Currently selected

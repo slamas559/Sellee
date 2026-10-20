@@ -8,7 +8,7 @@ import { PoweredBySellee } from "@/components/storefront/powered-by";
 import { ThemeScope } from "@/components/storefront/theme-scope";
 import { normalizeSort, type SortKey, type TemplateProps } from "@/components/storefront/types";
 import { authOptions } from "@/lib/auth";
-import { canUseAllStoreTemplates, hasFeature } from "@/lib/plans";
+import { getStorefrontPlanAccess, hasFeature } from "@/lib/plans";
 import { getStorefrontPublicDataCached } from "@/lib/public-cache";
 import {
   FREE_STORE_TEMPLATE,
@@ -143,8 +143,8 @@ export default async function StorePage({ params, searchParams }: StorePageProps
     sort,
   );
 
-  const canUseAllTemplates = await canUseAllStoreTemplates(store.vendor_id);
-  const template = resolveTemplate(canUseAllTemplates ? store.store_template : FREE_STORE_TEMPLATE);
+  const access = await getStorefrontPlanAccess(store.vendor_id);
+  const template = resolveTemplate(access.allTemplates ? store.store_template : FREE_STORE_TEMPLATE);
   const theme = getThemeByPreset(normalizeThemePreset(store.store_theme_preset));
   const primary = safePrimary(store.theme_color ?? theme.primary);
   const config = normalizeStorefrontConfig(store.storefront_config);
@@ -213,7 +213,7 @@ export default async function StorePage({ params, searchParams }: StorePageProps
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(storeJsonLd) }} />
       <ThemeScope template={template} primary={primary}>
         <Template {...props} />
-        <PoweredBySellee />
+        {access.showPoweredBy ? <PoweredBySellee /> : null}
       </ThemeScope>
     </DisplayCurrencyProvider>
   );

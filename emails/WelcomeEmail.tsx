@@ -1,90 +1,51 @@
-import {
-  Button,
-  Heading,
-  Hr,
-  Img,
-  Section,
-  Text,
-} from "@react-email/components";
 import { EmailShell } from "./components/EmailShell";
+import { P, PrimaryButton, Steps, SubTitle, Title } from "./components/parts";
+import { firstNameOf } from "./components/tokens";
 
 export interface WelcomeEmailProps {
   name?: string | null;
   marketplaceUrl?: string;
+  /** Where vendors land to set up their store. */
+  dashboardUrl?: string;
   role?: "vendor" | "customer";
 }
+
+const VENDOR_STEPS = [
+  { title: "Set up your store", body: "Add your logo, pick a template and choose your colours." },
+  { title: "List your products", body: "Photos, prices and stock. Customers browse them on your store page." },
+  { title: "Share your link", body: "Customers tap order and the conversation continues on your WhatsApp." },
+];
+
+const CUSTOMER_STEPS = [
+  { title: "Find a store you like", body: "Browse vendors and products near you, or search for something specific." },
+  { title: "Order on WhatsApp", body: "Tap order and message the vendor directly to confirm the details." },
+  { title: "Follow your favourites", body: "Follow a store to hear when it adds new items or has an offer." },
+];
 
 export default function WelcomeEmail({
   name,
   marketplaceUrl = "https://sellee.store/marketplace",
+  dashboardUrl = "https://sellee.store/dashboard",
   role = "customer",
 }: WelcomeEmailProps) {
-  const firstName = name?.trim()?.split(/\s+/)[0] ?? "there";
-  const roleCopy =
-    role === "vendor"
-      ? "You can build your storefront, list products, and receive WhatsApp-powered orders from customers nearby and faraway."
-      : "You can discover trusted vendors, compare products, and track orders through WhatsApp-powered workflows.";
+  const firstName = firstNameOf(name);
+  const isVendor = role === "vendor";
 
   return (
-    <EmailShell
-      previewText="Welcome to Sellee, your local marketplace for WhatsApp commerce."
-      width={600}
-      radius={10}
-    >
-      <Section className="bg-emerald-600 px-6 py-8 text-white">
-              <Img
-                src="https://sellee.store/icon2.png"
-                alt="Sellee"
-                className="mb-4 h-8 w-auto"
-              />
-              <Text className="m-0 text-xs font-bold uppercase tracking-[0.18em] text-emerald-50">
-                Hi, {firstName}
-              </Text>
-              <Heading className="mb-0 mt-3 text-[25px] font-black leading-[1.15] text-white">
-                Local shopping just got easier.
-              </Heading>
-            </Section>
+    <EmailShell previewText={isVendor ? "Your Sellee account is ready. Here is how to get your store live." : "Your Sellee account is ready."}>
+      <Title>Welcome to Sellee, {firstName}.</Title>
+      <P>
+        {isVendor
+          ? "Your account is ready. Sellee gives your business a proper online storefront while orders keep happening where your customers already are: WhatsApp."
+          : "Your account is ready. Sellee helps you discover trusted local vendors and order from them on WhatsApp, the way you already shop."}
+      </P>
 
-            <Section className="px-6 py-7">
-              <Text className="m-0 text-[12px] leading-7 text-slate-700">
-                Welcome. Thanks for joining Sellee. We are building a modern
-                marketplace where customers can discover nearby products and
-                vendors can sell with personalized store and   simple WhatsApp-integrated features.
-              </Text>
-              <Text className="mb-0 mt-4 text-[12px] leading-7 text-slate-700">
-                {roleCopy}
-              </Text>
+      <PrimaryButton href={isVendor ? dashboardUrl : marketplaceUrl}>{isVendor ? "Set up your store" : "Browse the marketplace"}</PrimaryButton>
 
-              <Section className="py-7 text-center">
-                <Button
-                  href={marketplaceUrl}
-                  className="rounded-full bg-emerald-600 px-6 py-3 text-[12px] font-bold text-white"
-                >
-                  Explore the Marketplace
-                </Button>
-              </Section>
-
-              <Section className="rounded-[14px] bg-emerald-50 px-5 py-4">
-                <Text className="m-0 text-[11px] font-bold text-emerald-800">
-                  What you can do next
-                </Text>
-                <Text className="mb-0 mt-2 text-[11px] leading-6 text-emerald-900">
-                  Browse products, save trusted stores, start orders through
-                  WhatsApp, and keep your local commerce activity organized in
-                  one place.
-                </Text>
-                <Text className="mb-0 mt-2 text-[11px] leading-6 text-emerald-900">
-                  Infact everything still happen through whatsapp without any hassle
-                  just like you normally do but with a touch of professionalism.
-                </Text>
-              </Section>
-
-              <Hr className="my-6 border-slate-200" />
-              <Text className="m-0 text-[10px] leading-5 text-slate-500">
-                If you need help, reply to this email and our support team will
-                receive your message.
-              </Text>
-            </Section>
+      <SubTitle>{isVendor ? "Getting started" : "How it works"}</SubTitle>
+      <Steps items={isVendor ? VENDOR_STEPS : CUSTOMER_STEPS} />
     </EmailShell>
   );
 }
+
+WelcomeEmail.PreviewProps = { name: "Amaka Obi", role: "customer" } satisfies WelcomeEmailProps;

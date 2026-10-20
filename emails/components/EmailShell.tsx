@@ -1,91 +1,162 @@
-import { Body, Head, Html, Preview, Tailwind } from "@react-email/components";
+import { Body, Column, Head, Html, Img, Link, Preview, Row, Section, Text } from "@react-email/components";
 import * as React from "react";
+import { color, EMAIL_WIDTH, font, LOGO_HEIGHT, LOGO_URL, LOGO_WIDTH, SITE_URL, SUPPORT_EMAIL } from "./tokens";
 
 export interface EmailShellProps {
-  /** Preview/inbox snippet text. */
+  /** Inbox preview text shown next to the subject line. */
   previewText: string;
+  /** Small label on the right of the header, e.g. "Atlas · Admin". */
+  headerTag?: string;
+  /** Replaces the default Sellee logo header (used for vendor-branded emails). */
+  header?: React.ReactNode;
+  /** Why the recipient is getting this email; shown at the top of the footer. */
+  reason?: React.ReactNode;
+  /**
+   * Replaces the default "reply to this email" help line. Pass `null` to hide it.
+   * Needed where replying would NOT reach the sender (vendor broadcasts) or
+   * where the line makes no sense (internal emails).
+   */
+  help?: React.ReactNode;
+  /** @deprecated Kept so older call sites compile. Every email is the same width now. */
   width?: number;
-  /** Card corner radius in px. */
+  /** @deprecated Kept so older call sites compile. */
   radius?: number;
   children: React.ReactNode;
 }
 
 /**
- * Shared wrapper for every Sellee email template.
- *
- * Why this exists: the Resend "preview" panel and `next dev` render your
- * React Email component in an actual browser, which supports the full CSS
- * spec. The email that actually lands in an inbox is rendered by the email
- * client's own (much more limited) HTML/CSS engine — Gmail in particular
- * strips or ignores properties like `justify-content`, and does not reliably
- * cap the width of a plain `<div>` the way a real browser does. That
- * mismatch is why a template can look correct in the dashboard preview but
- * render full-width / misaligned once actually sent.
- *
- * The fix is the standard "bulletproof email" pattern: lay out the outer
- * shell with a real HTML `<table>` (universally supported) and pin the width
- * with both an HTML attribute and inline CSS, instead of depending on
- * `max-width` alone.
+ * Mobile rules. Gmail, Apple Mail and most phone clients honour <style> media
+ * queries, so the fixed-width card collapses to the screen on small devices.
+ * Clients that ignore them (some desktop Outlook builds) keep the 560px card.
  */
-export function EmailShell({ previewText, width = 400, radius = 20, children }: EmailShellProps) {
+const RESPONSIVE_CSS = `
+  body { margin: 0 !important; padding: 0 !important; }
+  a { color: inherit; }
+  @media only screen and (max-width: 600px) {
+    .sl-outer { padding: 12px 8px 24px !important; }
+    .sl-card { width: 100% !important; max-width: 100% !important; border-radius: 10px !important; }
+    .sl-pad { padding-left: 22px !important; padding-right: 22px !important; }
+    .sl-foot { width: 100% !important; }
+  }
+`;
+
+/**
+ * Shared wrapper for every Sellee email.
+ *
+ * Layout is built from real <table>s with the width pinned both as an HTML
+ * attribute and in inline CSS. Email clients (Gmail especially) treat the
+ * attribute as authoritative and ignore flexbox and most max-width tricks, so
+ * this is the only pattern that renders the same everywhere.
+ */
+export function EmailShell({ previewText, headerTag, header, reason, help, children }: EmailShellProps) {
+  const year = new Date().getFullYear();
+
   return (
-    <Html>
-      <Head />
+    <Html lang="en">
+      <Head>
+        <meta name="color-scheme" content="light" />
+        <meta name="supported-color-schemes" content="light" />
+        <style>{RESPONSIVE_CSS}</style>
+      </Head>
       <Preview>{previewText}</Preview>
-      <Tailwind>
-        <Body
-          className="m-0 w-full bg-white font-sans text-slate-700"
-          style={{ backgroundColor: "#ffffff", margin: 0, padding: 0, width: "100%" }}
-        >
-          {/* Full-width, white outer table. Centers the card and guarantees a
-              white canvas even in clients that ignore the <body> background. */}
-          <table
-            role="presentation"
-            width="100%"
-            cellPadding={0}
-            cellSpacing={0}
-            style={{ width: "100%", backgroundColor: "#ffffff", margin: 0, padding: 0 }}
-          >
-            <tbody>
-              <tr>
-                <td align="center" style={{ padding: "32px 12px", backgroundColor: "#ffffff" }}>
-                  {/* Deliberately NOT using react-email's <Container>: it
-                      renders its outer <table> with a hard-coded
-                      `width="100%"` HTML attribute that you can't override via
-                      `style`. Email clients (Gmail included) treat that
-                      attribute as authoritative over CSS max-width/width, so
-                      the card kept rendering full-width no matter what inline
-                      style was applied. Setting the attribute itself to the
-                      real pixel value fixes it for good. */}
-                  <table
-                    align="center"
-                    role="presentation"
-                    width={width}
-                    cellPadding={0}
-                    cellSpacing={0}
-                    style={{
-                      width,
-                      maxWidth: width,
-                      margin: "0 auto",
-                      backgroundColor: "#ffffff",
-                      borderRadius: radius,
-                      overflow: "hidden",
-                    }}
-                  >
-                    <tbody>
-                      <tr>
-                        <td style={{ backgroundColor: "#ffffff" }}>{children}</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </Body>
-      </Tailwind>
+      <Body style={{ margin: 0, padding: 0, width: "100%", backgroundColor: color.canvas, fontFamily: font.sans }}>
+        <table role="presentation" width="100%" cellPadding={0} cellSpacing={0} style={{ width: "100%", backgroundColor: color.canvas }}>
+          <tbody>
+            <tr>
+              <td align="center" className="sl-outer" style={{ padding: "40px 16px 48px", backgroundColor: color.canvas }}>
+                {/* Card */}
+                <table
+                  role="presentation"
+                  className="sl-card"
+                  align="center"
+                  width={EMAIL_WIDTH}
+                  cellPadding={0}
+                  cellSpacing={0}
+                  style={{
+                    width: EMAIL_WIDTH,
+                    maxWidth: EMAIL_WIDTH,
+                    backgroundColor: color.card,
+                    border: `1px solid ${color.line}`,
+                    borderRadius: 12,
+                  }}
+                >
+                  <tbody>
+                    <tr>
+                      <td className="sl-pad" style={{ padding: "32px 40px 4px" }}>
+                        {header ?? (
+                          <Row>
+                            <Column>
+                              <Link href={SITE_URL}>
+                                <Img src={LOGO_URL} alt="Sellee" width={LOGO_WIDTH} height={LOGO_HEIGHT} style={{ display: "block", border: 0 }} />
+                              </Link>
+                            </Column>
+                            {headerTag ? (
+                              <Column align="right" valign="middle">
+                                <Text style={{ margin: 0, fontFamily: font.sans, fontSize: 12, lineHeight: "16px", letterSpacing: "0.02em", color: color.muted }}>
+                                  {headerTag}
+                                </Text>
+                              </Column>
+                            ) : null}
+                          </Row>
+                        )}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="sl-pad" style={{ padding: "24px 40px 40px" }}>
+                        {children}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+
+                {/* Footer, outside the card */}
+                <table role="presentation" className="sl-foot" align="center" width={EMAIL_WIDTH} cellPadding={0} cellSpacing={0} style={{ width: EMAIL_WIDTH, maxWidth: EMAIL_WIDTH }}>
+                  <tbody>
+                    <tr>
+                      <td className="sl-pad" style={{ padding: "24px 40px 0" }}>
+                        {reason ? (
+                          <Text style={{ margin: "0 0 12px", fontFamily: font.sans, fontSize: 12, lineHeight: "19px", color: color.muted }}>{reason}</Text>
+                        ) : null}
+                        {help === null ? null : (
+                          <Text style={{ margin: 0, fontFamily: font.sans, fontSize: 12, lineHeight: "19px", color: color.muted }}>
+                            {help ?? (
+                              <>
+                                Questions? Just reply to this email or write to{" "}
+                                <Link href={`mailto:${SUPPORT_EMAIL}`} style={{ color: color.muted, textDecoration: "underline" }}>
+                                  {SUPPORT_EMAIL}
+                                </Link>
+                                .
+                              </>
+                            )}
+                          </Text>
+                        )}
+                        <Text style={{ margin: help === null ? 0 : "8px 0 0", fontFamily: font.sans, fontSize: 12, lineHeight: "19px", color: color.muted }}>
+                          &copy; {year} Sellee &nbsp;&middot;&nbsp;{" "}
+                          <Link href={`${SITE_URL}/help`} style={{ color: color.muted, textDecoration: "underline" }}>
+                            Help
+                          </Link>{" "}
+                          &nbsp;&middot;&nbsp;{" "}
+                          <Link href={`${SITE_URL}/privacy`} style={{ color: color.muted, textDecoration: "underline" }}>
+                            Privacy
+                          </Link>{" "}
+                          &nbsp;&middot;&nbsp;{" "}
+                          <Link href={`${SITE_URL}/terms`} style={{ color: color.muted, textDecoration: "underline" }}>
+                            Terms
+                          </Link>
+                        </Text>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </Body>
     </Html>
   );
 }
 
 export default EmailShell;
+// Section is re-exported for templates that want a plain spacing wrapper.
+export { Section };

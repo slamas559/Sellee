@@ -10,7 +10,12 @@ import { AiShoppingAssistant } from "@/components/marketplace/ai-shopping-assist
 // corner Ellie's bubble would occupy. Note: this deliberately does NOT
 // include "/vendors" (plural) - that's the public, customer-facing vendor
 // directory, not the vendor's own dashboard.
-const HIDDEN_ROUTES = ["/dashboard", "/admin", "/login", "/register", "/map", "/store-preview"];
+//
+// Also off every vendor store ("/v/..." storefront, product and profile pages,
+// and "/store/..."): those are the vendor's own branded space and the assistant
+// searches across the whole marketplace, so it would send customers to other
+// vendors. A per-store assistant can replace this later.
+const HIDDEN_ROUTES = ["/dashboard", "/admin", "/login", "/register", "/map", "/store-preview", "/v/", "/store/"];
 
 export function ConditionalAiAssistant() {
   const pathname = usePathname();

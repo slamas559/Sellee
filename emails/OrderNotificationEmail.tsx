@@ -1,13 +1,5 @@
-import {
-  Button,
-  Column,
-  Heading,
-  Hr,
-  Row,
-  Section,
-  Text,
-} from "@react-email/components";
 import { EmailShell } from "./components/EmailShell";
+import { DetailTable, P, PrimaryButton, SubTitle, TextLink, Title } from "./components/parts";
 import { formatPrice } from "@/lib/currency";
 
 export interface OrderNotificationEmailProps {
@@ -23,45 +15,10 @@ export interface OrderNotificationEmailProps {
   dashboardUrl: string;
 }
 
-function DetailRow({
-  label,
-  value,
-  strong = false,
-}: {
-  label: string;
-  value: string;
-  strong?: boolean;
-}) {
-  // Table-based row instead of `flex justify-between`: flexbox alignment
-  // properties (justify-content especially) are stripped or ignored by a lot
-  // of email clients, which is what was collapsing the label and value
-  // together with no gap. A two-column table is universally supported.
-  return (
-    <Row>
-      <Column align="left">
-        <Text
-          className={
-            strong
-              ? "m-0 text-[14px] font-semibold text-slate-900"
-              : "m-0 text-[14px] text-slate-600"
-          }
-        >
-          {label}
-        </Text>
-      </Column>
-      <Column align="right">
-        <Text
-          className={
-            strong
-              ? "m-0 text-[16px] font-black text-emerald-600"
-              : "m-0 text-[14px] font-semibold text-slate-900"
-          }
-        >
-          {value}
-        </Text>
-      </Column>
-    </Row>
-  );
+/** wa.me wants digits only (no +, spaces or dashes). */
+function whatsappLink(number: string) {
+  const digits = number.replace(/\D/g, "");
+  return digits ? `https://wa.me/${digits}` : null;
 }
 
 export default function OrderNotificationEmail({
@@ -76,84 +33,42 @@ export default function OrderNotificationEmail({
   currency = "NGN",
   dashboardUrl = "https://sellee.store/dashboard/orders",
 }: OrderNotificationEmailProps) {
-  const formattedTotal = formatPrice(totalAmount, currency);
+  const waLink = whatsappLink(customerWhatsApp);
 
   return (
-    <EmailShell previewText={`New order received at ${storeName}`} width={500} radius={10}>
-      <Section className="bg-emerald-600 px-6 py-8 text-white">
-        <Text className="m-0 text-xs font-bold uppercase tracking-[0.18em] text-emerald-50">
-          New Order Alert
-        </Text>
-        <Heading className="mb-0 mt-3 text-[30px] font-black leading-[1.15] text-white">
-          Order #{orderRef}
-        </Heading>
-      </Section>
+    <EmailShell previewText={`${customerName} ordered ${productName} from ${storeName}.`} headerTag={`Order ${orderRef}`}>
+      <Title>You have a new order</Title>
+      <P>
+        {customerName} just ordered from <strong style={{ color: "#0B1629" }}>{storeName}</strong>. Confirm it in your dashboard, then follow up with them on WhatsApp.
+      </P>
 
-      <Section className="px-6 py-7">
-        <Text className="m-0 text-[16px] font-semibold text-slate-900">
-          Hi {storeName},
-        </Text>
+      <DetailTable
+        rows={[
+          {
+            label: productName,
+            lead: true,
+            value: formatPrice(unitPrice * quantity, currency),
+            hint: `${quantity} × ${formatPrice(unitPrice, currency)}`,
+          },
+          { label: "Total", value: formatPrice(totalAmount, currency), strong: true },
+        ]}
+      />
 
-        <Text className="mt-4 text-[15px] leading-7 text-slate-700">
-          You received a new order! Here are the details:
-        </Text>
+      <SubTitle>Customer</SubTitle>
+      <DetailTable
+        rows={[
+          { label: "Name", value: customerName },
+          {
+            label: "WhatsApp",
+            value: waLink ? <TextLink href={waLink}>{customerWhatsApp}</TextLink> : customerWhatsApp,
+          },
+        ]}
+      />
 
-        <Hr className="my-5 border-slate-200" />
-
-        <Section className="rounded-lg border border-emerald-100 bg-emerald-50 px-4 py-4">
-          <Text className="m-0 text-[13px] font-semibold uppercase tracking-[0.08em] text-emerald-700">
-            Order Details
-          </Text>
-
-          <Section className="mt-4">
-            <DetailRow label="Customer" value={customerName} />
-            <Row>
-              <Column style={{ height: 10 }} />
-            </Row>
-            <DetailRow label="WhatsApp" value={customerWhatsApp} />
-
-            <Hr className="my-3 border-emerald-200" />
-
-            <DetailRow label="Product" value={productName} />
-            <Row>
-              <Column style={{ height: 10 }} />
-            </Row>
-            <DetailRow label="Quantity" value={`${quantity}x`} />
-            <Row>
-              <Column style={{ height: 10 }} />
-            </Row>
-            <DetailRow label="Unit Price" value={formatPrice(unitPrice, currency)} />
-
-            <Hr className="my-3 border-emerald-200" />
-
-            <DetailRow label="Total" value={formattedTotal} strong />
-          </Section>
-        </Section>
-
-        <Text className="mt-6 text-[14px] leading-6 text-slate-700">
-          Log in to your dashboard to confirm or reject the order, and manage all your orders in one place.
-        </Text>
-      </Section>
-
-      <Section className="px-6 py-6">
-        <Button
-          className="inline-block rounded-lg bg-emerald-600 px-6 py-3 text-center font-semibold text-white"
-          href={dashboardUrl}
-        >
-          View in Dashboard
-        </Button>
-      </Section>
-
-      <Hr className="border-slate-200" />
-
-      <Section className="px-6 py-6 text-center">
-        <Text className="m-0 text-xs text-slate-500">
-          © 2026 Sellee. All rights reserved.
-        </Text>
-        <Text className="mt-2 text-xs text-slate-500">
-          This is an automated notification. Please do not reply to this email.
-        </Text>
-      </Section>
+      <div style={{ height: 8 }} />
+      <PrimaryButton href={dashboardUrl}>Review order</PrimaryButton>
     </EmailShell>
   );
 }
+
+OrderNotificationEmail.PreviewProps = { storeName: "Zuri Atelier", orderRef: "ORD-48213", customerName: "Ngozi Adeyemi", customerWhatsApp: "+234 801 234 5678", productName: "Ankara Midi Dress, size 12", quantity: 2, unitPrice: 22000, totalAmount: 44000, currency: "NGN", dashboardUrl: "https://sellee.store/dashboard/orders" } satisfies OrderNotificationEmailProps;

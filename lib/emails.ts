@@ -30,6 +30,8 @@ import VendorBroadcastEmail, {
 import VerificationDecisionEmail, {
   type VerificationDecisionEmailProps,
 } from "@/emails/VerificationDecisionEmail";
+import SupportRequestEmail from "@/emails/SupportRequestEmail";
+import ProductReportEmail from "@/emails/ProductReportEmail";
 
 const SYSTEM_FROM = "Sellee <hello@sellee.store>";
 const SUPPORT_FROM = "Sellee <support@sellee.store>";
@@ -127,15 +129,6 @@ function makeTicketId() {
   return `SEL-${stamp}-${suffix}`;
 }
 
-function escapeHtml(value: string) {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
-
 export async function sendWelcomeEmail({
   to,
   subject = "Welcome to Sellee",
@@ -154,6 +147,7 @@ export async function sendWelcomeEmail({
         name,
         role,
         marketplaceUrl,
+        dashboardUrl: appUrl("/dashboard"),
       }),
     });
 
@@ -373,32 +367,13 @@ export async function createHelpCenterTicket({
           to: SUPPORT_REPLY_TO,
           replyTo: SUPPORT_REPLY_TO,
           subject: `[${ticketId}] ${cleanIssueType}`,
-          html: `
-            <div style="font-family: Arial, sans-serif; color: #0f172a; line-height: 1.6;">
-              <h1 style="font-size: 22px; margin: 0 0 12px;">New Sellee support request</h1>
-              <p style="margin: 0 0 16px;">A user submitted the Help Center issue report form.</p>
-              <table style="border-collapse: collapse; width: 100%; max-width: 640px;">
-                <tr>
-                  <td style="border: 1px solid #e2e8f0; padding: 10px; font-weight: 700;">Ticket ID</td>
-                  <td style="border: 1px solid #e2e8f0; padding: 10px;">${escapeHtml(ticketId)}</td>
-                </tr>
-                <tr>
-                  <td style="border: 1px solid #e2e8f0; padding: 10px; font-weight: 700;">Issue type</td>
-                  <td style="border: 1px solid #e2e8f0; padding: 10px;">${escapeHtml(cleanIssueType)}</td>
-                </tr>
-                <tr>
-                  <td style="border: 1px solid #e2e8f0; padding: 10px; font-weight: 700;">Name</td>
-                  <td style="border: 1px solid #e2e8f0; padding: 10px;">${escapeHtml(cleanName)}</td>
-                </tr>
-                <tr>
-                  <td style="border: 1px solid #e2e8f0; padding: 10px; font-weight: 700;">Requester email</td>
-                  <td style="border: 1px solid #e2e8f0; padding: 10px;">${escapeHtml(cleanEmail)}</td>
-                </tr>
-              </table>
-              <h2 style="font-size: 16px; margin: 22px 0 8px;">Details</h2>
-              <p style="white-space: pre-wrap; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 14px;">${escapeHtml(cleanDetails)}</p>
-            </div>
-          `,
+          react: SupportRequestEmail({
+            ticketId,
+            issueType: cleanIssueType,
+            requesterName: cleanName,
+            requesterEmail: cleanEmail,
+            details: cleanDetails,
+          }),
           text: [
             "New Sellee support request",
             "",
@@ -603,32 +578,16 @@ export async function sendProductReportNotificationEmail({
       to: SUPPORT_REPLY_TO,
       replyTo: SUPPORT_REPLY_TO,
       subject: `[Report] ${productName}`,
-      html: `
-        <div style="font-family: Arial, sans-serif; color: #0f172a; line-height: 1.6;">
-          <h1 style="font-size: 22px; margin: 0 0 12px;">A product was reported</h1>
-          <table style="border-collapse: collapse; width: 100%; max-width: 640px;">
-            <tr>
-              <td style="border: 1px solid #e2e8f0; padding: 10px; font-weight: 700;">Product</td>
-              <td style="border: 1px solid #e2e8f0; padding: 10px;">${escapeHtml(productName)}</td>
-            </tr>
-            <tr>
-              <td style="border: 1px solid #e2e8f0; padding: 10px; font-weight: 700;">Store</td>
-              <td style="border: 1px solid #e2e8f0; padding: 10px;">${escapeHtml(storeName)}</td>
-            </tr>
-            <tr>
-              <td style="border: 1px solid #e2e8f0; padding: 10px; font-weight: 700;">Reason</td>
-              <td style="border: 1px solid #e2e8f0; padding: 10px;">${escapeHtml(reason)}</td>
-            </tr>
-            <tr>
-              <td style="border: 1px solid #e2e8f0; padding: 10px; font-weight: 700;">Reporter</td>
-              <td style="border: 1px solid #e2e8f0; padding: 10px;">${escapeHtml(reporterEmail || "Anonymous")}</td>
-            </tr>
-          </table>
-          ${details ? `<h2 style="font-size: 16px; margin: 22px 0 8px;">Details</h2><p>${escapeHtml(details)}</p>` : ""}
-          <p style="margin-top: 22px;"><a href="${productUrl}">View the product</a> · <a href="${adminConsoleUrl("/admin-console/support")}">Open in Atlas</a></p>
-          <p style="margin-top: 10px; font-size: 12px; color: #64748b;">Product ID: ${escapeHtml(productId)}</p>
-        </div>
-      `,
+      react: ProductReportEmail({
+        productId,
+        productName,
+        productUrl,
+        storeName,
+        reason,
+        details,
+        reporterEmail,
+        adminUrl: adminConsoleUrl("/admin-console/support"),
+      }),
     });
 
     if (error) {
